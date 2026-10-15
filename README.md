@@ -63,6 +63,10 @@ A replaceable language model (OpenAI or Gemini via `LLM_PROVIDER`) reads one lea
 
 The Laundry calendar (`/calendar`) lets you pick days, filter the month, and assign blue/white activities. `external_calendar_id` is reserved for trading with your own Google Calendar later.
 
+## Billing
+
+Invoices (`/invoices`) support logo + address on the business profile, PDF download, a public share link, paid/unpaid/overdue status, monthly customers with due-date alerts, and a tax log (`/billing/tax-log`) that records tax when an invoice is marked paid.
+
 - `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` must all be set. The Intelligence page shows configured or missing for each name and never shows the values. If any one is missing, a read is stored as unavailable. No summary or score is invented.
 - `LLM_BASE_URL` is an OpenAI-compatible root such as `https://api.openai.com/v1`. The desk posts to `{base}/chat/completions`.
 - "Read the conversation" stores a `lead_analyses` row, then asks the model for JSON: summary, extracted lead fields, a score from 0 to 100 with reasons, a suggested stage, and a reply draft.

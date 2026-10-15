@@ -1,17 +1,22 @@
 <?php
 
 use App\Http\Controllers\AiSettingsController;
+use App\Http\Controllers\BillingSubscriptionController;
+use App\Http\Controllers\BusinessProfileController;
 use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeskUserController;
 use App\Http\Controllers\FlareSendWebhookController;
 use App\Http\Controllers\FollowUpController;
+use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LeadAnalysisController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadMessagingController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SharedInvoiceController;
+use App\Http\Controllers\TaxLedgerController;
 use App\Http\Controllers\TwilioWebhookController;
 use App\Http\Controllers\WhatsAppSettingsController;
 use App\Http\Controllers\WhatsAppWebhookController;
@@ -22,6 +27,9 @@ Route::get('webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->n
 Route::post('webhooks/whatsapp', [WhatsAppWebhookController::class, 'store'])->name('whatsapp.webhook.store');
 Route::post('webhooks/flaresend', [FlareSendWebhookController::class, 'store'])->name('flaresend.webhook.store');
 Route::post('webhooks/twilio', [TwilioWebhookController::class, 'store'])->name('twilio.webhook.store');
+
+Route::get('share/invoices/{token}', [SharedInvoiceController::class, 'show'])->name('invoices.share');
+Route::get('share/invoices/{token}/pdf', [SharedInvoiceController::class, 'pdf'])->name('invoices.share.pdf');
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -100,6 +108,27 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('users', [DeskUserController::class, 'index'])->name('users.index');
     Route::post('users', [DeskUserController::class, 'store'])->name('users.store');
     Route::put('users/{user}', [DeskUserController::class, 'update'])->name('users.update');
+
+    Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
+    Route::get('invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
+    Route::post('invoices', [InvoiceController::class, 'store'])->name('invoices.store');
+    Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
+    Route::put('invoices/{invoice}', [InvoiceController::class, 'update'])->name('invoices.update');
+    Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'pdf'])->name('invoices.pdf');
+    Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])->name('invoices.mark-paid');
+    Route::post('invoices/{invoice}/mark-unpaid', [InvoiceController::class, 'markUnpaid'])->name('invoices.mark-unpaid');
+    Route::post('invoices/{invoice}/mark-sent', [InvoiceController::class, 'markSent'])->name('invoices.mark-sent');
+
+    Route::get('billing/profile', [BusinessProfileController::class, 'edit'])->name('billing.profile.edit');
+    Route::post('billing/profile', [BusinessProfileController::class, 'update'])->name('billing.profile.update');
+
+    Route::get('billing/subscriptions', [BillingSubscriptionController::class, 'index'])->name('billing.subscriptions.index');
+    Route::post('billing/subscriptions', [BillingSubscriptionController::class, 'store'])->name('billing.subscriptions.store');
+    Route::put('billing/subscriptions/{subscription}', [BillingSubscriptionController::class, 'update'])->name('billing.subscriptions.update');
+    Route::delete('billing/subscriptions/{subscription}', [BillingSubscriptionController::class, 'destroy'])->name('billing.subscriptions.destroy');
+    Route::post('billing/subscriptions/{subscription}/invoice', [BillingSubscriptionController::class, 'invoiceNow'])->name('billing.subscriptions.invoice');
+
+    Route::get('billing/tax-log', [TaxLedgerController::class, 'index'])->name('billing.tax-log');
 });
 
 require __DIR__.'/settings.php';
