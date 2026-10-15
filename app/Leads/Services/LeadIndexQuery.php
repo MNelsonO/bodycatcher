@@ -2,6 +2,8 @@
 
 namespace App\Leads\Services;
 
+use App\Contacts\InvalidPhoneNumber;
+use App\Contacts\PhoneNormalizer;
 use App\Leads\Lead;
 use App\Settings\DisplayClock;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -52,18 +54,22 @@ class LeadIndexQuery
 
         if ($search !== '') {
             $needle = '%'.mb_strtolower($search).'%';
-            $digits = preg_replace('/\D+/', '', $search) ?? '';
+            $phoneNeedles = $this->phoneNeedles($search);
 
-            $query->whereHas('contact', function (Builder $contact) use ($needle, $digits): void {
-                $contact->whereRaw('lower(full_name) like ?', [$needle])
-                    ->orWhereRaw('lower(coalesce(business_name, \'\')) like ?', [$needle])
-                    ->orWhereHas('phones', function (Builder $phones) use ($needle, $digits): void {
-                        $phones->whereRaw('lower(phone) like ?', [$needle]);
+            $query->whereHas('contact', function (Builder $contact) use ($needle, $phoneNeedles): void {
+                $contact->where(function (Builder $match) use ($needle, $phoneNeedles): void {
+                    $match->whereRaw('lower(full_name) like ?', [$needle])
+                        ->orWhereRaw('lower(coalesce(business_name, \'\')) like ?', [$needle])
+                        ->orWhereHas('phones', function (Builder $phones) use ($needle, $phoneNeedles): void {
+                            $phones->where(function (Builder $phone) use ($needle, $phoneNeedles): void {
+                                $phone->whereRaw('lower(phone) like ?', [$needle]);
 
-                        if ($digits !== '') {
-                            $phones->orWhere('phone', 'like', '%'.$digits.'%');
-                        }
-                    });
+                                foreach ($phoneNeedles as $candidate) {
+                                    $phone->orWhere('phone', 'like', '%'.$candidate.'%');
+                                }
+                            });
+                        });
+                });
             });
         }
 
@@ -94,6 +100,38 @@ class LeadIndexQuery
             'next_follow_up_label' => $this->clock->formatDate($lead->next_follow_up_on),
             'follow_up_state' => $this->state($lead),
         ];
+    }
+
+    /**
+     * Local Kenyan numbers are stored as +254. A search for 07… must still match.
+     *
+     * @return list<string>
+     */
+    private function phoneNeedles(string $search): array
+    {
+        $digits = preg_replace('/\D+/', '', $search) ?? '';
+        $needles = [];
+
+        if ($digits !== '') {
+            $needles[] = $digits;
+
+            if (str_starts_with($digits, '0')) {
+                $national = substr($digits, 1);
+
+                if ($national !== '') {
+                    $needles[] = $national;
+                    $needles[] = '254'.$national;
+                }
+            }
+        }
+
+        try {
+            $needles[] = ltrim((new PhoneNormalizer)->normalize($search), '+');
+        } catch (InvalidPhoneNumber) {
+            // A fragment such as 0722 is not a full number. Digit variants above cover it.
+        }
+
+        return array_values(array_unique($needles));
     }
 
     private function state(Lead $lead): string

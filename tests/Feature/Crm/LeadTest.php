@@ -198,3 +198,34 @@ it('forbids a sales user from deleting a pipeline', function () {
 it('sends guests away from the dashboard', function () {
     $this->get(route('dashboard'))->assertRedirect(route('login'));
 });
+
+it('finds a lead by business name or a local Kenyan phone', function () {
+    $desk = crmDesk();
+    $this->actingAs(crmSalesUser());
+
+    $amina = Contact::factory()->create([
+        'full_name' => 'Amina Wanjiku',
+        'business_name' => 'FreshFold Laundry',
+        'primary_phone' => '+254722100201',
+    ]);
+    $brian = Contact::factory()->create([
+        'full_name' => 'Brian Otieno',
+        'business_name' => 'Sparkle and Mop',
+        'primary_phone' => '+254733200302',
+    ]);
+
+    $this->post(route('leads.store'), leadPayload($desk, ['contact' => $amina]))->assertRedirect();
+    $this->post(route('leads.store'), leadPayload($desk, ['contact' => $brian]))->assertRedirect();
+
+    $this->get(route('leads.index', ['q' => 'FreshFold']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('leads.data', 1)
+            ->where('leads.data.0.contact_name', 'Amina Wanjiku'));
+
+    $this->get(route('leads.index', ['q' => '0722100201']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('leads.data', 1)
+            ->where('leads.data.0.phone', '+254722100201'));
+});
