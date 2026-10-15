@@ -1,8 +1,10 @@
 <?php
 
+use App\Http\Controllers\AiSettingsController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeskUserController;
+use App\Http\Controllers\LeadAnalysisController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadMessagingController;
 use App\Http\Controllers\PipelineController;
@@ -45,6 +47,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('leads/{lead}/follow-up', [LeadController::class, 'followUp'])->name('leads.follow-up.update');
     Route::post('leads/{lead}/whatsapp', [LeadMessagingController::class, 'send'])->name('leads.whatsapp.send');
     Route::post('leads/{lead}/messaging', [LeadMessagingController::class, 'update'])->name('leads.messaging.update');
+    Route::post('leads/{lead}/analyses', [LeadAnalysisController::class, 'store'])->name('leads.analyses.store');
+    Route::post('leads/{lead}/analyses/{analysis}/apply', [LeadAnalysisController::class, 'apply'])->name('leads.analyses.apply');
+    Route::post('leads/{lead}/analyses/{analysis}/stage', [LeadAnalysisController::class, 'stage'])->name('leads.analyses.stage');
+    Route::post('leads/{lead}/drafts/{draft}', [LeadAnalysisController::class, 'draft'])->name('leads.drafts.update');
+
+    Route::get('ai', [AiSettingsController::class, 'index'])->name('ai.settings');
+    Route::post('ai/articles', [AiSettingsController::class, 'store'])->name('ai.articles.store');
+    Route::put('ai/articles/{article}', [AiSettingsController::class, 'update'])->name('ai.articles.update');
 
     Route::get('whatsapp', [WhatsAppSettingsController::class, 'index'])->name('whatsapp.settings');
     Route::put('whatsapp', [WhatsAppSettingsController::class, 'update'])->name('whatsapp.settings.update');

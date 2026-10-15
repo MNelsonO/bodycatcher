@@ -2,6 +2,11 @@
 
 namespace App\Providers;
 
+use App\Ai\AnalysisDispatcher;
+use App\Ai\FakeLlmClient;
+use App\Ai\LaravelAnalysisDispatcher;
+use App\Ai\LlmClient;
+use App\Ai\OpenAiCompatibleClient;
 use App\WhatsApp\CloudWhatsAppClient;
 use App\WhatsApp\FakeWhatsAppClient;
 use App\WhatsApp\LaravelWebhookDispatcher;
@@ -30,6 +35,15 @@ class AppServiceProvider extends ServiceProvider
             return $app->make(CloudWhatsAppClient::class);
         });
         $this->app->bind(WebhookDispatcher::class, LaravelWebhookDispatcher::class);
+        $this->app->singleton(FakeLlmClient::class);
+        $this->app->bind(LlmClient::class, function (Application $app): LlmClient {
+            if ($app->environment('testing')) {
+                return $app->make(FakeLlmClient::class);
+            }
+
+            return $app->make(OpenAiCompatibleClient::class);
+        });
+        $this->app->bind(AnalysisDispatcher::class, LaravelAnalysisDispatcher::class);
     }
 
     /**

@@ -2,6 +2,9 @@
 
 namespace App\Leads;
 
+use App\Ai\KnowledgeArticle;
+use App\Ai\LeadAnalysis;
+use App\Ai\LlmConfiguration;
 use App\Conversations\Message;
 use App\Conversations\MessageAttachment;
 use App\Settings\DisplayClock;
@@ -13,6 +16,7 @@ class LeadPageData
     public function __construct(
         private DisplayClock $clock,
         private ServiceWindow $window,
+        private LlmConfiguration $llm,
     ) {}
 
     /**
@@ -136,6 +140,7 @@ class LeadPageData
                 ])->all(),
             ])->all() ?? [],
             'whatsapp' => $this->whatsapp($lead),
+            'intelligence' => $this->intelligence($lead),
             'notes' => $lead->notes->map(fn (LeadNote $note): array => [
                 'id' => $note->id,
                 'body' => $note->body,
@@ -182,6 +187,17 @@ class LeadPageData
                 ? $properties['label']
                 : 'Messaging controls changed',
             ActivityEvent::ContactOptedOut => 'Contact opted out of WhatsApp',
+            ActivityEvent::AnalysisCompleted => 'Conversation analyzed'
+                .(isset($properties['score']) && is_numeric($properties['score'])
+                    ? ' · score '.$properties['score']
+                    : ''),
+            ActivityEvent::AnalysisFailed => 'Analysis did not run'
+                .(isset($properties['reason']) && is_string($properties['reason'])
+                    ? ': '.$properties['reason']
+                    : ''),
+            ActivityEvent::ExtractionApplied => 'Analysis fields applied',
+            ActivityEvent::DraftEdited => 'Reply draft edited',
+            ActivityEvent::DraftSent => 'Approved reply sent on WhatsApp',
         };
     }
 
@@ -208,5 +224,99 @@ class LeadPageData
             'automatic_sends_paused' => DeskSetting::current()->automatic_sends_paused,
             'opted_out' => $lead->contact->consent_status->value === 'opted_out',
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function intelligence(Lead $lead): array
+    {
+        $configured = $this->llm->ready();
+        $latest = LeadAnalysis::query()
+            ->with(['draft', 'suggestedStage'])
+            ->where('lead_id', $lead->id)
+            ->orderByDesc('id')
+            ->first();
+
+        if ($latest === null) {
+            return [
+                'configured' => $configured,
+                'latest' => null,
+            ];
+        }
+
+        $articleIds = $latest->knowledge_article_ids ?? [];
+        $articles = $articleIds === []
+            ? collect()
+            : KnowledgeArticle::query()->whereIn('id', $articleIds)->get(['id', 'title']);
+
+        return [
+            'configured' => $configured,
+            'latest' => [
+                'id' => $latest->id,
+                'status' => $latest->status->value,
+                'summary' => $latest->summary,
+                'score' => $latest->score,
+                'score_reasons' => $latest->score_reasons ?? [],
+                'extraction' => $this->extractionFields($latest->extraction),
+                'suggested_stage' => $latest->suggestedStage === null ? null : [
+                    'id' => $latest->suggestedStage->id,
+                    'name' => $latest->suggestedStage->name,
+                ],
+                'stage_reason' => $latest->stage_reason,
+                'stage_rejected_reason' => $latest->stage_rejected_reason,
+                'knowledge' => $articles->map(fn (KnowledgeArticle $article): array => [
+                    'id' => $article->id,
+                    'title' => $article->title,
+                ])->values()->all(),
+                'error' => $latest->error,
+                'completed_at_label' => $this->clock->formatDateTime($latest->completed_at),
+                'draft' => $latest->draft === null ? null : [
+                    'id' => $latest->draft->id,
+                    'original_body' => $latest->draft->original_body,
+                    'body' => $latest->draft->body,
+                    'status' => $latest->draft->status->value,
+                ],
+            ],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $extraction
+     * @return list<array{key: string, label: string, value: string}>
+     */
+    private function extractionFields(?array $extraction): array
+    {
+        if ($extraction === null) {
+            return [];
+        }
+
+        $labels = [
+            'business_problem' => 'Business problem',
+            'current_solution' => 'Current solution',
+            'branch_count' => 'Branch count',
+            'budget_note' => 'Budget note',
+            'decision_maker_status' => 'Decision maker',
+            'purchase_timeline_note' => 'Purchase timeline',
+            'next_action' => 'Next action',
+            'next_follow_up_on' => 'Follow-up date',
+        ];
+        $rows = [];
+
+        foreach ($labels as $key => $label) {
+            $value = $extraction[$key] ?? null;
+
+            if ($value === null || $value === '' || ! is_scalar($value)) {
+                continue;
+            }
+
+            $rows[] = [
+                'key' => $key,
+                'label' => $label,
+                'value' => (string) $value,
+            ];
+        }
+
+        return $rows;
     }
 }

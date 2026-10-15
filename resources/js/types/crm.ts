@@ -118,6 +118,29 @@ export type LeadDetail = {
         automatic_sends_paused: boolean;
         opted_out: boolean;
     };
+    intelligence: {
+        configured: boolean;
+        latest: null | {
+            id: number;
+            status: string;
+            summary: string | null;
+            score: number | null;
+            score_reasons: string[];
+            extraction: Array<{ key: string; label: string; value: string }>;
+            suggested_stage: { id: number; name: string } | null;
+            stage_reason: string | null;
+            stage_rejected_reason: string | null;
+            knowledge: Array<{ id: number; title: string }>;
+            error: string | null;
+            completed_at_label: string | null;
+            draft: null | {
+                id: number;
+                original_body: string;
+                body: string;
+                status: string;
+            };
+        };
+    };
     notes: Array<{
         id: number;
         body: string;

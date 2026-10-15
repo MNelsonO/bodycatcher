@@ -1,6 +1,7 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
+import { LeadAnalysisPanel } from '@/components/crm/lead-analysis';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +43,12 @@ export default function LeadShow({
                         <div className="mt-2 flex flex-wrap gap-2">
                             <Badge>{lead.stage.name}</Badge>
                             <Badge variant="outline">{lead.outcome}</Badge>
+                            {lead.intelligence.latest?.status === 'completed' &&
+                            lead.intelligence.latest.score !== null ? (
+                                <Badge variant="outline">
+                                    Score {lead.intelligence.latest.score}
+                                </Badge>
+                            ) : null}
                             {lead.contact.consent_status === 'opted_out' ? (
                                 <Badge variant="outline">Opted out</Badge>
                             ) : null}
@@ -237,6 +244,11 @@ export default function LeadShow({
                         <History history={lead.history} />
                     </aside>
                 </div>
+
+                <LeadAnalysisPanel
+                    leadId={lead.id}
+                    intelligence={lead.intelligence}
+                />
 
                 <section className="rounded-lg border p-4">
                     <h2 className="text-sm font-medium">Conversation</h2>

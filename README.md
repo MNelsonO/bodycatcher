@@ -1,6 +1,6 @@
 # Kemet Tech sales desk
 
-Personal sales desk for Kemet Tech. Phase 1 is the CRM. Phase 2 adds the official WhatsApp Business Cloud API on top of that CRM.
+Personal sales desk for Kemet Tech. Phase 1 is the CRM. Phase 2 adds the official WhatsApp Business Cloud API. Phase 3 adds a language model that proposes structured outcomes. Laravel still decides what is stored and what is sent.
 
 Nelson Mboya is the first operator. The seeded owner is created from `SEED_USER_EMAIL` and `SEED_USER_PASSWORD`.
 
@@ -53,16 +53,30 @@ php artisan queue:work
 
 `QUEUE_CONNECTION=sync` still processes the job before the response, which is what the test suite uses. `php artisan whatsapp:retry` replays stored events and queued sends if Redis was down when the row was saved.
 
+## Phase 3
+
+A replaceable language model reads one lead. It does not send WhatsApp and it does not move a stage by itself.
+
+- `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` must all be set. The Intelligence page shows configured or missing for each name and never shows the values. If any one is missing, a read is stored as unavailable. No summary or score is invented.
+- `LLM_BASE_URL` is an OpenAI-compatible root such as `https://api.openai.com/v1`. The desk posts to `{base}/chat/completions`.
+- "Read the conversation" stores a `lead_analyses` row, then asks the model for JSON: summary, extracted lead fields, a score from 0 to 100 with reasons, a suggested stage, and a reply draft.
+- Knowledge notes on the Intelligence page are retrieved by shared words. A note tied to the lead's product is boosted. Inactive notes are skipped. The article ids used are stored on the analysis.
+- A suggested stage is kept only when it is a permitted move from the current stage. Anything else is dropped and the reason is shown. The lead stays put until someone applies the suggestion, which goes through `SalesStageTransitionService`.
+- Extracted fields are applied only when an operator selects them.
+- The reply draft can be edited. The original model wording is kept. "Approve and send" uses the existing manual WhatsApp send, including opt-out and the 24-hour window. Saving the draft does not send.
+- If the model request fails, the conversation messages stay and the analysis is marked failed.
+- If the queue push fails, the row stays `queued`. `php artisan ai:retry` runs it.
+
 ## Not built yet
 
 These are intentionally absent.
 
-- LLM analysis, scoring, or reply suggestions
 - An automation engine that fires follow-ups (delay hours are stored only; automatic-send flags are checked, nothing schedules them)
 - Template sending
 - Downloading WhatsApp media
 - Google Calendar
-- Reply learning
+- Reply learning from edits (the original draft and the edited text are stored; nothing trains on them)
+- Analytics beyond the command-centre counts and the score on a lead
 - Production VPS hardening
 
 ## Run locally
@@ -108,4 +122,4 @@ That runs Pint, PHPStan, and Pest. Feature tests use SQLite in memory. The schem
 
 ## Deployment
 
-Not yet. This repository is the Phase 1 desk, not a production deploy guide.
+Not yet. This repository is the sales desk, not a production deploy guide.

@@ -17,9 +17,10 @@ export default function Welcome() {
                         Sales desk
                     </h1>
                     <p className="text-sm leading-6 text-muted-foreground">
-                        The lead book for Kemet Tech. Contacts, pipelines, and
-                        the messages you log by hand. Phase 1 does not send
-                        WhatsApp, call a model, or book a calendar.
+                        The lead book for Kemet Tech. WhatsApp and a language
+                        model propose a summary, a score, and a reply. Nothing
+                        is sent and no stage moves until you approve it.
+                        Calendar is not connected.
                     </p>
                 </div>
                 <div>

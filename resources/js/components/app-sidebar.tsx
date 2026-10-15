@@ -4,6 +4,7 @@ import {
     MessageCircle,
     Package,
     Rows3,
+    Sparkles,
     UserRound,
     Users,
 } from 'lucide-react';
@@ -31,6 +32,7 @@ export function AppSidebar() {
         { title: 'Leads', href: '/leads', icon: Rows3 },
         { title: 'Contacts', href: '/contacts', icon: UserRound },
         { title: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
+        { title: 'Intelligence', href: '/ai', icon: Sparkles },
     ];
 
     if (owner) {

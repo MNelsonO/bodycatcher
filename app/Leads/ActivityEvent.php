@@ -14,4 +14,9 @@ enum ActivityEvent: string
     case MessageRefused = 'message_refused';
     case MessagingFlagChanged = 'messaging_flag_changed';
     case ContactOptedOut = 'contact_opted_out';
+    case AnalysisCompleted = 'analysis_completed';
+    case AnalysisFailed = 'analysis_failed';
+    case ExtractionApplied = 'extraction_applied';
+    case DraftEdited = 'draft_edited';
+    case DraftSent = 'draft_sent';
 }
