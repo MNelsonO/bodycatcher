@@ -9,7 +9,7 @@ Nelson Mboya is the first operator. The seeded owner is created from `SEED_USER_
 - Login, logout, and password reset (the reset link is written to the log when `MAIL_MAILER=log`).
 - Products with a name, slug, description, active flag, and optional pricing notes. No prices are hardcoded and there is no checkout.
 - Pipelines, stages (active, won, lost, archived-nurture), reorder, archive, and permitted transitions. A stage can store a follow-up delay in hours. A stage-delay rule uses that number.
-- Contacts with E.164 phones. Local Kenyan numbers default to +254. The same number updates the existing contact. The same name does not.
+- Contacts with E.164 phones. Local Kenyan numbers default to +254; other markets use `+` country code. Classify each client by country and conversation area for multi-country ads. Desk notes on a contact are read by the live WhatsApp assistant and lead analysis. The same number updates the existing contact. The same name does not.
 - Manual merge keeps leads, notes, and message history on the surviving contact and writes a merge audit row.
 - Leads tied to a contact, product, and pipeline stage. One open lead per contact and product. A closed lead does not block a new one.
 - Stage changes go through `SalesStageTransitionService`, inside a database transaction, with history and the actor. Lost stages require a reason. Illegal moves are rejected and do not write history.

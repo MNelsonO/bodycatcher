@@ -44,7 +44,7 @@ class LiveConversationAssistant
             return;
         }
 
-        $lead->loadMissing(['contact', 'product', 'currentStage', 'conversation.messages']);
+        $lead->loadMissing(['contact.notes', 'product', 'currentStage', 'conversation.messages']);
 
         if ($this->guard->pauseReason($lead) !== null) {
             return;
@@ -116,12 +116,17 @@ class LiveConversationAssistant
         $followUp = $lead->next_follow_up_on
             ? 'Follow-up date: '.$lead->next_follow_up_on->toDateString()
             : 'No follow-up date set.';
+        $clientContext = $lead->contact->aiContextBlock();
+        $clientContextBlock = $clientContext !== ''
+            ? "\nClient market context:\n{$clientContext}\n"
+            : "\n";
 
         $system = <<<PROMPT
 You are the live WhatsApp sales assistant for Kemet Tech.
 Provider in use: {$provider}.
 Stay on the conversation topic. Do not invent prices, discounts, or contracts.
 Only discuss products from the catalog. If the customer asks about something else, steer back to the catalog and the current topic.
+Respect the client's country and conversation area. Use desk notes on this client as standing context for how to talk to them.
 Reply in short plain WhatsApp text. No markdown. No bullet walls.
 
 Current lead product: {$productName}
@@ -129,7 +134,7 @@ Contact: {$contactName}
 Stage: {$stageName}
 {$marked}
 {$followUp}
-Running topic: {$topic}
+{$clientContextBlock}Running topic: {$topic}
 Topic notes: {$topicSummary}
 
 Product catalog:

@@ -19,6 +19,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string|null $business_name
  * @property string|null $business_type
  * @property string|null $location
+ * @property string|null $country_code
+ * @property string|null $country
+ * @property string|null $conversation_area
  * @property string|null $email
  * @property PreferredChannel $preferred_channel
  * @property ConsentStatus $consent_status
@@ -34,6 +37,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'business_name',
     'business_type',
     'location',
+    'country_code',
+    'country',
+    'conversation_area',
     'email',
     'preferred_channel',
     'consent_status',
@@ -65,6 +71,14 @@ class Contact extends Model
     public function phones(): HasMany
     {
         return $this->hasMany(ContactPhone::class);
+    }
+
+    /**
+     * @return HasMany<ContactNote, $this>
+     */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(ContactNote::class);
     }
 
     /**
@@ -100,5 +114,42 @@ class Contact extends Model
         }
 
         return $current;
+    }
+
+    /**
+     * Compact block for LLM prompts: country, conversation area, desk notes.
+     */
+    public function aiContextBlock(): string
+    {
+        $lines = [];
+
+        $country = $this->country ?? $this->country_code;
+        if ($country !== null && $country !== '') {
+            $lines[] = 'Client country: '.$country
+                .($this->country_code ? ' ('.$this->country_code.')' : '');
+        }
+
+        if (filled($this->location)) {
+            $lines[] = 'Location: '.$this->location;
+        }
+
+        if (filled($this->conversation_area)) {
+            $lines[] = 'Conversation area: '.$this->conversation_area;
+        }
+
+        $notes = $this->relationLoaded('notes')
+            ? $this->notes
+            : $this->notes()->orderByDesc('id')->limit(12)->get();
+
+        if ($notes->isNotEmpty()) {
+            $noteLines = $notes
+                ->sortBy('id')
+                ->values()
+                ->map(fn (ContactNote $note): string => '- '.mb_substr(trim($note->body), 0, 800))
+                ->implode("\n");
+            $lines[] = "Desk notes on this client (follow these):\n".$noteLines;
+        }
+
+        return $lines === [] ? '' : implode("\n", $lines);
     }
 }

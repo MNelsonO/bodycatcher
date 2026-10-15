@@ -1,15 +1,17 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { TextField } from '@/components/crm/fields';
+import { SelectField, TextField } from '@/components/crm/fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { ContactSummary, Paginator } from '@/types/crm';
+import type { ContactSummary, Option, Paginator } from '@/types/crm';
 
 export default function ContactsIndex({
     contacts,
     filters,
+    country_options,
 }: {
     contacts: Paginator<ContactSummary>;
-    filters: { q: string };
+    filters: { q: string; country: string };
+    country_options: Option[];
 }) {
     return (
         <>
@@ -21,28 +23,45 @@ export default function ContactsIndex({
                             Contacts
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            People are matched on phone number, not on name or
-                            business name.
+                            Classify clients by country for multi-market ads.
+                            Desk notes travel with the AI conversation area.
                         </p>
                     </div>
                     <Button asChild>
                         <Link href="/contacts/create">Add contact</Link>
                     </Button>
                 </div>
-                <Form action="/contacts" method="get" className="max-w-md">
+                <Form
+                    action="/contacts"
+                    method="get"
+                    className="grid max-w-3xl gap-3 sm:grid-cols-[1fr_12rem_auto]"
+                >
                     {({ processing }) => (
-                        <div className="flex items-end gap-2">
-                            <div className="flex-1">
-                                <TextField
-                                    name="q"
-                                    label="Search"
-                                    defaultValue={filters.q}
-                                />
+                        <>
+                            <TextField
+                                name="q"
+                                label="Search"
+                                defaultValue={filters.q}
+                            />
+                            <SelectField
+                                name="country"
+                                label="Country"
+                                options={[
+                                    { value: '__all__', label: 'All countries' },
+                                    ...country_options,
+                                ]}
+                                defaultValue={
+                                    filters.country !== ''
+                                        ? filters.country
+                                        : '__all__'
+                                }
+                            />
+                            <div className="flex items-end">
+                                <Button type="submit" disabled={processing}>
+                                    Filter
+                                </Button>
                             </div>
-                            <Button type="submit" disabled={processing}>
-                                Search
-                            </Button>
-                        </div>
+                        </>
                     )}
                 </Form>
                 {contacts.data.length === 0 ? (
@@ -66,14 +85,27 @@ export default function ContactsIndex({
                                             {contact.business_name ??
                                                 'No business name'}{' '}
                                             · {contact.primary_phone}
+                                            {contact.country
+                                                ? ` · ${contact.country}`
+                                                : ''}
+                                            {contact.conversation_area
+                                                ? ` · ${contact.conversation_area}`
+                                                : ''}
                                         </span>
                                     </span>
-                                    <Badge variant="outline">
-                                        {contact.consent_status.replace(
-                                            '_',
-                                            ' ',
-                                        )}
-                                    </Badge>
+                                    <span className="flex flex-wrap gap-2">
+                                        {contact.country_code ? (
+                                            <Badge variant="secondary">
+                                                {contact.country_code}
+                                            </Badge>
+                                        ) : null}
+                                        <Badge variant="outline">
+                                            {contact.consent_status.replace(
+                                                '_',
+                                                ' ',
+                                            )}
+                                        </Badge>
+                                    </span>
                                 </Link>
                             </li>
                         ))}

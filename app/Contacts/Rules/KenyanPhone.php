@@ -20,7 +20,9 @@ class KenyanPhone implements ValidationRule
         try {
             app(PhoneNormalizer::class)->normalize($value);
         } catch (InvalidPhoneNumber $exception) {
-            $fail($exception->getMessage());
+            $fail($exception->getMessage() !== ''
+                ? $exception->getMessage()
+                : 'Enter a valid phone number.');
         }
     }
 }

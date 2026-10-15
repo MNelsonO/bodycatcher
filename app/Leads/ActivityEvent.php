@@ -9,6 +9,7 @@ enum ActivityEvent: string
     case StageChanged = 'stage_changed';
     case MessageLogged = 'message_logged';
     case NoteAdded = 'note_added';
+    case ContactNoteAdded = 'contact_note_added';
     case ContactMerged = 'contact_merged';
     case FollowUpChanged = 'follow_up_changed';
     case MessageRefused = 'message_refused';

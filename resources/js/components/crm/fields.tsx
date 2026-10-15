@@ -89,6 +89,7 @@ export function SelectField({
     error,
     placeholder = 'Select',
     required = false,
+    hint,
     onValueChange,
 }: {
     name: string;
@@ -98,6 +99,7 @@ export function SelectField({
     error?: string;
     placeholder?: string;
     required?: boolean;
+    hint?: string;
     onValueChange?: (value: string) => void;
 }) {
     const [value, setValue] = useState(defaultValue);
@@ -110,7 +112,6 @@ export function SelectField({
         <div className="grid gap-2">
             <Label htmlFor={name}>{label}</Label>
             <Select
-                name={name}
                 required={required}
                 value={value === '' ? undefined : value}
                 onValueChange={(next) => {
@@ -129,6 +130,10 @@ export function SelectField({
                     ))}
                 </SelectContent>
             </Select>
+            <input type="hidden" name={name} value={value} />
+            {hint ? (
+                <p className="text-xs text-muted-foreground">{hint}</p>
+            ) : null}
             <InputError message={error} />
         </div>
     );

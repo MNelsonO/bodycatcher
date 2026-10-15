@@ -52,6 +52,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('contacts/{contact}', [ContactController::class, 'show'])->name('contacts.show');
     Route::get('contacts/{contact}/edit', [ContactController::class, 'edit'])->name('contacts.edit');
     Route::put('contacts/{contact}', [ContactController::class, 'update'])->name('contacts.update');
+    Route::post('contacts/{contact}/notes', [ContactController::class, 'note'])->name('contacts.notes.store');
     Route::post('contacts/{contact}/merge', [ContactController::class, 'merge'])->name('contacts.merge');
 
     Route::get('leads', [LeadController::class, 'index'])->name('leads.index');

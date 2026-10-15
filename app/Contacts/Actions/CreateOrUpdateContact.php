@@ -6,6 +6,7 @@ use App\Contacts\ConsentStatus;
 use App\Contacts\Contact;
 use App\Contacts\ContactPhone;
 use App\Contacts\ContactWriteResult;
+use App\Contacts\CountryCatalog;
 use App\Contacts\PhoneNormalizer;
 use App\Contacts\PreferredChannel;
 use App\Leads\Actions\RecordActivity;
@@ -19,6 +20,7 @@ class CreateOrUpdateContact
     public function __construct(
         private PhoneNormalizer $phones,
         private RecordActivity $activity,
+        private CountryCatalog $countries,
     ) {}
 
     /**
@@ -130,12 +132,20 @@ class CreateOrUpdateContact
             $optedOutAt = null;
         }
 
+        $countryCode = $this->nullableString($data['country_code'] ?? null);
+        if ($countryCode !== null) {
+            $countryCode = strtoupper($countryCode);
+        }
+
         $contact->fill([
             'full_name' => trim((string) $data['full_name']),
             'primary_phone' => $primary,
             'business_name' => $this->nullableString($data['business_name'] ?? null),
             'business_type' => $this->nullableString($data['business_type'] ?? null),
             'location' => $this->nullableString($data['location'] ?? null),
+            'country_code' => $countryCode,
+            'country' => $this->countries->nameFor($countryCode),
+            'conversation_area' => $this->nullableString($data['conversation_area'] ?? null),
             'email' => $this->nullableString($data['email'] ?? null),
             'preferred_channel' => PreferredChannel::from((string) $data['preferred_channel']),
             'consent_status' => $consent,

@@ -87,7 +87,7 @@ class AnalyzeLead
     private function complete(LeadAnalysis $analysis): void
     {
         $lead = Lead::query()->findOrFail($analysis->lead_id);
-        $lead->load(['contact', 'product', 'currentStage.outgoingTransitions.toStage', 'conversation.messages']);
+        $lead->load(['contact.notes', 'product', 'currentStage.outgoingTransitions.toStage', 'conversation.messages']);
         $articles = $this->knowledge->forLead($lead);
         $permitted = $this->permittedStages($lead);
         $raw = $this->client->complete(
@@ -210,10 +210,13 @@ PROMPT;
             ->map(fn (Message $message): string => $message->direction->value.': '.mb_substr($message->body, 0, 1000))
             ->implode("\n");
 
-        return implode("\n\n", [
+        $clientContext = $lead->contact->aiContextBlock();
+
+        return implode("\n\n", array_values(array_filter([
             'Contact: '.$lead->contact->full_name,
             'Phone: '.$lead->contact->primary_phone,
             'Business: '.($lead->contact->business_name ?? 'unknown'),
+            $clientContext !== '' ? $clientContext : null,
             'Product: '.$lead->product->name,
             'Product notes: '.($lead->product->description ?? 'none'),
             'Current stage: '.$lead->currentStage->name,
@@ -226,7 +229,7 @@ PROMPT;
             'Timeline note: '.($lead->purchase_timeline_note ?? 'none'),
             "Knowledge:\n".($knowledge !== '' ? $knowledge : 'none'),
             "Conversation:\n".($transcript !== null && $transcript !== '' ? $transcript : 'none'),
-        ]);
+        ], fn ($line): bool => $line !== null)));
     }
 
     /**

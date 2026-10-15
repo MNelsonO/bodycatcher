@@ -87,6 +87,9 @@ class LeadPageData
                 'business_name' => $lead->contact->business_name,
                 'business_type' => $lead->contact->business_type,
                 'location' => $lead->contact->location,
+                'country_code' => $lead->contact->country_code,
+                'country' => $lead->contact->country,
+                'conversation_area' => $lead->contact->conversation_area,
                 'email' => $lead->contact->email,
                 'primary_phone' => $lead->contact->primary_phone,
                 'additional_phones' => $lead->contact->phones
@@ -178,6 +181,7 @@ class LeadPageData
             ActivityEvent::MessageLogged => 'Message logged'
                 .(isset($properties['direction']) ? ' ('.$properties['direction'].')' : ''),
             ActivityEvent::NoteAdded => 'Note added',
+            ActivityEvent::ContactNoteAdded => 'Client note added',
             ActivityEvent::ContactMerged => 'Contact merged'
                 .(isset($properties['merged_name'], $properties['survivor_name'])
                     ? ': '.$properties['merged_name'].' into '.$properties['survivor_name']

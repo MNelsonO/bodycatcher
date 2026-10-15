@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Contacts\Actions\AddContactNote;
 use App\Contacts\Actions\CreateOrUpdateContact;
 use App\Contacts\Actions\MergeContacts;
 use App\Contacts\ConsentStatus;
 use App\Contacts\Contact;
+use App\Contacts\CountryCatalog;
 use App\Contacts\PreferredChannel;
+use App\Http\Requests\ContactNoteRequest;
 use App\Http\Requests\ContactRequest;
 use App\Http\Requests\MergeContactRequest;
 use App\Models\User;
@@ -18,11 +21,19 @@ use Inertia\Response;
 
 class ContactController extends Controller
 {
-    public function index(Request $request, DisplayClock $clock): Response
+    public function index(Request $request, DisplayClock $clock, CountryCatalog $countries): Response
     {
         $this->authorize('viewAny', Contact::class);
 
         $search = trim($request->string('q')->toString());
+        $countryRaw = trim($request->string('country')->toString());
+        $country = ($countryRaw === '' || $countryRaw === '__all__')
+            ? ''
+            : strtoupper($countryRaw);
+
+        if ($country !== '' && ! $countries->isValid($country)) {
+            $country = '';
+        }
 
         $contacts = Contact::query()
             ->whereNull('merged_into_contact_id')
@@ -33,6 +44,8 @@ class ContactController extends Controller
                 $query->where(function ($inner) use ($needle, $digits): void {
                     $inner->whereRaw('lower(full_name) like ?', [$needle])
                         ->orWhereRaw('lower(coalesce(business_name, \'\')) like ?', [$needle])
+                        ->orWhereRaw('lower(coalesce(country, \'\')) like ?', [$needle])
+                        ->orWhereRaw('lower(coalesce(conversation_area, \'\')) like ?', [$needle])
                         ->orWhereHas('phones', function ($phones) use ($needle, $digits): void {
                             $phones->whereRaw('lower(phone) like ?', [$needle]);
                             if ($digits !== '') {
@@ -41,6 +54,7 @@ class ContactController extends Controller
                         });
                 });
             })
+            ->when($country !== '', fn ($query) => $query->where('country_code', $country))
             ->orderBy('full_name')
             ->paginate(20)
             ->withQueryString()
@@ -48,17 +62,21 @@ class ContactController extends Controller
 
         return Inertia::render('contacts/index', [
             'contacts' => $contacts,
-            'filters' => ['q' => $search],
+            'filters' => [
+                'q' => $search,
+                'country' => $country,
+            ],
+            'country_options' => $countries->options(),
         ]);
     }
 
-    public function create(): Response
+    public function create(CountryCatalog $countries): Response
     {
         $this->authorize('create', Contact::class);
 
         return Inertia::render('contacts/create', [
             'contact' => null,
-            'options' => $this->options(),
+            'options' => $this->options($countries),
         ]);
     }
 
@@ -85,7 +103,7 @@ class ContactController extends Controller
             return redirect()->route('contacts.show', $contact->merged_into_contact_id);
         }
 
-        $contact->load(['phones', 'leads.product', 'leads.currentStage']);
+        $contact->load(['phones', 'leads.product', 'leads.currentStage', 'notes.author']);
 
         $others = Contact::query()
             ->whereNull('merged_into_contact_id')
@@ -95,6 +113,16 @@ class ContactController extends Controller
 
         return Inertia::render('contacts/show', [
             'contact' => $this->summary($contact, $clock),
+            'notes' => $contact->notes
+                ->sortByDesc('id')
+                ->values()
+                ->map(fn ($note): array => [
+                    'id' => $note->id,
+                    'body' => $note->body,
+                    'author' => $note->author->name,
+                    'at' => $clock->formatDateTime($note->created_at),
+                ])
+                ->all(),
             'leads' => $contact->leads->map(fn ($lead): array => [
                 'id' => $lead->id,
                 'product_name' => $lead->product->name,
@@ -108,7 +136,7 @@ class ContactController extends Controller
         ]);
     }
 
-    public function edit(Contact $contact): Response|RedirectResponse
+    public function edit(Contact $contact, CountryCatalog $countries): Response|RedirectResponse
     {
         $this->authorize('update', $contact);
 
@@ -127,12 +155,14 @@ class ContactController extends Controller
                 'business_name' => $contact->business_name,
                 'business_type' => $contact->business_type,
                 'location' => $contact->location,
+                'country_code' => $contact->country_code,
+                'conversation_area' => $contact->conversation_area,
                 'email' => $contact->email,
                 'preferred_channel' => $contact->preferred_channel->value,
                 'consent_status' => $contact->consent_status->value,
                 'lead_source' => $contact->lead_source,
             ],
-            'options' => $this->options(),
+            'options' => $this->options($countries),
         ]);
     }
 
@@ -145,6 +175,17 @@ class ContactController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Contact updated.']);
 
         return redirect()->route('contacts.show', $result->contact);
+    }
+
+    public function note(ContactNoteRequest $request, Contact $contact, AddContactNote $action): RedirectResponse
+    {
+        /** @var User $actor */
+        $actor = $request->user();
+        $action->handle($contact, (string) $request->validated('body'), $actor);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Client note saved. The AI will read it on the next reply.']);
+
+        return redirect()->route('contacts.show', $contact);
     }
 
     public function merge(MergeContactRequest $request, Contact $contact, MergeContacts $action): RedirectResponse
@@ -174,6 +215,9 @@ class ContactController extends Controller
             'business_name' => $contact->business_name,
             'business_type' => $contact->business_type,
             'location' => $contact->location,
+            'country_code' => $contact->country_code,
+            'country' => $contact->country,
+            'conversation_area' => $contact->conversation_area,
             'email' => $contact->email,
             'preferred_channel' => $contact->preferred_channel->value,
             'consent_status' => $contact->consent_status->value,
@@ -186,7 +230,7 @@ class ContactController extends Controller
     /**
      * @return array<string, array<int, array{value: string, label: string}>>
      */
-    private function options(): array
+    private function options(CountryCatalog $countries): array
     {
         return [
             'channels' => collect(PreferredChannel::cases())->map(fn (PreferredChannel $channel): array => [
@@ -205,6 +249,10 @@ class ContactController extends Controller
                     ConsentStatus::OptedOut => 'Opted out',
                 },
             ])->all(),
+            'countries' => array_merge(
+                [['value' => '__none__', 'label' => 'Not set']],
+                $countries->options(),
+            ),
         ];
     }
 }

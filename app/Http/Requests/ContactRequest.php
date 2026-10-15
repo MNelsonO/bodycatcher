@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Contacts\ConsentStatus;
 use App\Contacts\Contact;
+use App\Contacts\CountryCatalog;
 use App\Contacts\PreferredChannel;
 use App\Contacts\Rules\KenyanPhone;
 use Illuminate\Foundation\Http\FormRequest;
@@ -35,6 +36,11 @@ class ContactRequest extends FormRequest
                 ), fn (string $line): bool => $line !== '')),
             ]);
         }
+
+        $code = $this->input('country_code');
+        if (! is_string($code) || trim($code) === '' || trim($code) === '__none__') {
+            $this->merge(['country_code' => null]);
+        }
     }
 
     /**
@@ -42,6 +48,10 @@ class ContactRequest extends FormRequest
      */
     public function rules(): array
     {
+        $codes = collect(app(CountryCatalog::class)->all())
+            ->pluck('code')
+            ->all();
+
         return [
             'full_name' => ['required', 'string', 'max:255'],
             'primary_phone' => ['required', 'string', 'max:40', new KenyanPhone],
@@ -50,6 +60,8 @@ class ContactRequest extends FormRequest
             'business_name' => ['nullable', 'string', 'max:255'],
             'business_type' => ['nullable', 'string', 'max:255'],
             'location' => ['nullable', 'string', 'max:255'],
+            'country_code' => ['nullable', 'string', Rule::in($codes)],
+            'conversation_area' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'preferred_channel' => ['required', Rule::enum(PreferredChannel::class)],
             'consent_status' => ['required', Rule::enum(ConsentStatus::class)],

@@ -4,6 +4,7 @@ namespace App\Contacts\Actions;
 
 use App\Contacts\Contact;
 use App\Contacts\ContactMerge;
+use App\Contacts\ContactNote;
 use App\Contacts\ContactPhone;
 use App\Conversations\Conversation;
 use App\Leads\Actions\RecordActivity;
@@ -56,7 +57,21 @@ class MergeContacts
 
             Lead::query()->where('contact_id', $merged->id)->update(['contact_id' => $survivor->id]);
             LeadNote::query()->where('contact_id', $merged->id)->update(['contact_id' => $survivor->id]);
+            ContactNote::query()->where('contact_id', $merged->id)->update(['contact_id' => $survivor->id]);
             Conversation::query()->where('contact_id', $merged->id)->update(['contact_id' => $survivor->id]);
+
+            if (! filled($survivor->country_code) && filled($merged->country_code)) {
+                $survivor->country_code = $merged->country_code;
+                $survivor->country = $merged->country;
+            }
+
+            if (! filled($survivor->conversation_area) && filled($merged->conversation_area)) {
+                $survivor->conversation_area = $merged->conversation_area;
+            }
+
+            if ($survivor->isDirty()) {
+                $survivor->save();
+            }
 
             $merged->load('phones');
 

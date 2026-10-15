@@ -1,5 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { SelectField } from '@/components/crm/fields';
+import { AreaField, SelectField } from '@/components/crm/fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,10 +14,17 @@ import type { ContactSummary } from '@/types/crm';
 
 export default function ContactShow({
     contact,
+    notes,
     leads,
     merge_candidates,
 }: {
     contact: ContactSummary;
+    notes: Array<{
+        id: number;
+        body: string;
+        author: string;
+        at: string | null;
+    }>;
     leads: Array<{
         id: number;
         product_name: string;
@@ -38,6 +45,7 @@ export default function ContactShow({
                         <p className="text-sm text-muted-foreground">
                             {contact.business_name ?? 'No business name'} ·{' '}
                             {contact.primary_phone}
+                            {contact.country ? ` · ${contact.country}` : ''}
                         </p>
                     </div>
                     <div className="flex gap-2">
@@ -55,6 +63,11 @@ export default function ContactShow({
                 </div>
 
                 <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                    <Item label="Country" value={contact.country} />
+                    <Item
+                        label="Conversation area"
+                        value={contact.conversation_area}
+                    />
                     <Item label="Business type" value={contact.business_type} />
                     <Item label="Location" value={contact.location} />
                     <Item label="Email" value={contact.email} />
@@ -81,6 +94,76 @@ export default function ContactShow({
                         }
                     />
                 </dl>
+
+                <section className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                        <div>
+                            <h2 className="text-sm font-medium">
+                                Client notes
+                            </h2>
+                            <p className="text-sm text-muted-foreground">
+                                Standing context the live AI reads so it knows
+                                this client&apos;s conversation area.
+                            </p>
+                        </div>
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="outline">Add note</Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Add client note</DialogTitle>
+                                    <DialogDescription>
+                                        Keep it short. The assistant will use
+                                        this on the next WhatsApp reply and on
+                                        lead analysis.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <Form
+                                    action={`/contacts/${contact.id}/notes`}
+                                    method="post"
+                                    className="grid gap-3"
+                                >
+                                    {({ errors, processing }) => (
+                                        <>
+                                            <AreaField
+                                                name="body"
+                                                label="Note"
+                                                required
+                                                error={errors.body}
+                                                hint="e.g. Speaks Luganda, quoted in UGX, came from Kampala FB ads."
+                                            />
+                                            <Button
+                                                type="submit"
+                                                disabled={processing}
+                                            >
+                                                Save note
+                                            </Button>
+                                        </>
+                                    )}
+                                </Form>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
+                    {notes.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                            No client notes yet.
+                        </p>
+                    ) : (
+                        <ul className="divide-y rounded-lg border">
+                            {notes.map((note) => (
+                                <li key={note.id} className="px-3 py-2 text-sm">
+                                    <p className="whitespace-pre-wrap">
+                                        {note.body}
+                                    </p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        {note.author} · {note.at}
+                                    </p>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
 
                 <section className="space-y-2">
                     <h2 className="text-sm font-medium">Leads</h2>

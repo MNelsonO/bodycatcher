@@ -20,6 +20,9 @@ export type ContactSummary = {
     business_name: string | null;
     business_type: string | null;
     location: string | null;
+    country_code: string | null;
+    country: string | null;
+    conversation_area: string | null;
     email: string | null;
     preferred_channel: string;
     consent_status: string;
@@ -31,6 +34,7 @@ export type ContactSummary = {
 export type ContactFormOptions = {
     channels: Option[];
     consent: Option[];
+    countries: Option[];
 };
 
 export type LeadRow = {
