@@ -112,7 +112,7 @@ class BillingSubscriptionController extends Controller
             'message' => 'Payment of '.$payment->amount.' recorded for '.$payment->paid_on?->toDateString().'. Next due advanced.',
         ]);
 
-        return redirect()->route('billing.subscriptions.index');
+        return redirect()->back();
     }
 
     public function invoiceNow(Request $request, BillingSubscription $subscription, InvoiceService $invoices): RedirectResponse
