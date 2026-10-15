@@ -37,6 +37,9 @@ use Illuminate\Support\Carbon;
  * @property CarbonInterface|null $next_follow_up_on
  * @property string|null $lost_reason
  * @property CarbonInterface|null $closed_at
+ * @property bool $automation_paused
+ * @property bool $taken_over
+ * @property bool $needs_personal_attention
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Contact $contact
@@ -60,6 +63,9 @@ use Illuminate\Support\Carbon;
     'next_follow_up_on',
     'lost_reason',
     'closed_at',
+    'automation_paused',
+    'taken_over',
+    'needs_personal_attention',
 ])]
 #[UseFactory(LeadFactory::class)]
 class Lead extends Model
@@ -77,6 +83,9 @@ class Lead extends Model
             'decision_maker_status' => DecisionMakerStatus::class,
             'next_follow_up_on' => 'date',
             'closed_at' => 'datetime',
+            'automation_paused' => 'boolean',
+            'taken_over' => 'boolean',
+            'needs_personal_attention' => 'boolean',
         ];
     }
 

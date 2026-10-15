@@ -15,12 +15,12 @@ use Illuminate\Support\Carbon;
  * @property int|null $from_stage_id
  * @property int $to_stage_id
  * @property string|null $reason
- * @property int $actor_user_id
+ * @property int|null $actor_user_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read PipelineStage|null $fromStage
  * @property-read PipelineStage $toStage
- * @property-read User $actor
+ * @property-read User|null $actor
  */
 #[Fillable(['lead_id', 'from_stage_id', 'to_stage_id', 'reason', 'actor_user_id'])]
 class LeadStageHistory extends Model

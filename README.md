@@ -1,6 +1,6 @@
 # Kemet Tech sales desk
 
-Personal sales desk for Kemet Tech. Phase 1 is the foundation and CRM: sign in, products, pipelines, contacts, leads, manual message logging, and a command centre that counts what is actually in the database.
+Personal sales desk for Kemet Tech. Phase 1 is the CRM. Phase 2 adds the official WhatsApp Business Cloud API on top of that CRM.
 
 Nelson Mboya is the first operator. The seeded owner is created from `SEED_USER_EMAIL` and `SEED_USER_PASSWORD`.
 
@@ -17,13 +17,50 @@ Nelson Mboya is the first operator. The seeded owner is created from `SEED_USER_
 - An activity log on the lead profile.
 - A desktop-first command centre: total leads, new leads today, follow-ups due today, overdue follow-ups, leads by stage, won and lost. Dates display in Africa/Nairobi. Timestamps are stored in UTC.
 
-## Not in this phase
+## Phase 2
 
-These are intentionally absent. There are no buttons that pretend they exist.
+Official WhatsApp Business Cloud API. Text in and out. No WhatsApp Web, no browser automation, and no unofficial protocol.
 
-- WhatsApp Cloud API sending or inbound webhooks
+- `GET /webhooks/whatsapp` verifies the subscription with `WHATSAPP_VERIFY_TOKEN`.
+- `POST /webhooks/whatsapp` checks `X-Hub-Signature-256` against `WHATSAPP_APP_SECRET`. A bad signature is rejected and stored nowhere.
+- A valid body is saved in `webhook_events` with a unique hash before anything else. The same delivery does not create a second contact, lead, or message. Processing runs on the queue. If the queue push fails, the row stays and `php artisan whatsapp:retry` can run it. The message row is written by that job. No model is called.
+- An unknown `wa_id` becomes a contact (E.164, Kenya +254) and one open lead on the default pipeline at New Lead, source `whatsapp`.
+- A known contact with an open lead gets the message on the most recently updated open lead. A known contact with only closed leads gets a new lead. Won and lost leads are not reopened.
+- Attachment metadata (id, mime type, caption) is stored. Media files are not downloaded.
+- The whole inbound text `stop` or `unsubscribe` (any case) sets the contact to opted out. No other wording does.
+- Status webhooks (`sent`, `delivered`, `read`, `failed`) update the outbound row and append `message_status_events`. A send request is never treated as delivered.
+- Operators send free-form text from the lead. The local row is created as `queued` with an idempotency key, then the Cloud API is called. The provider message id and raw response are stored.
+- Network failures, HTTP 429, and HTTP 5xx can retry that same row. A timeout that might have reached WhatsApp becomes `unknown` and is not sent again.
+- Opted-out contacts cannot be sent to. Outside the 24-hour window after the last inbound WhatsApp message, free-form text is refused and a template would be required. There is no template catalog. Refusals are stored and are not left queued.
+- Pause automation, resume, take over, and needs personal attention are lead flags. A desk-wide switch pauses automatic sends. Those checks run in the messaging service. Manual sends still work during takeover, pause, and the global pause.
+
+Point Meta at `https://<public-host>/webhooks/whatsapp` and subscribe to the `messages` field. The verify token is `WHATSAPP_VERIFY_TOKEN`.
+
+Required environment variables, all empty in `.env.example`:
+
+- `WHATSAPP_TOKEN`
+- `WHATSAPP_PHONE_NUMBER_ID`
+- `WHATSAPP_APP_SECRET`
+- `WHATSAPP_VERIFY_TOKEN`
+
+The WhatsApp page shows configured or missing for each name. It does not display the values.
+
+For a public webhook, run a queue worker so the HTTP handler can return before the job finishes:
+
+```bash
+php artisan queue:work
+```
+
+`QUEUE_CONNECTION=sync` still processes the job before the response, which is what the test suite uses. `php artisan whatsapp:retry` replays stored events and queued sends if Redis was down when the row was saved.
+
+## Not built yet
+
+These are intentionally absent.
+
 - LLM analysis, scoring, or reply suggestions
-- An automation engine that fires follow-ups
+- An automation engine that fires follow-ups (delay hours are stored only; automatic-send flags are checked, nothing schedules them)
+- Template sending
+- Downloading WhatsApp media
 - Google Calendar
 - Reply learning
 - Production VPS hardening

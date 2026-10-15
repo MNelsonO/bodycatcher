@@ -3,6 +3,7 @@
 namespace App\Contacts;
 
 use App\Leads\Lead;
+use Carbon\CarbonInterface;
 use Database\Factories\ContactFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\UseFactory;
@@ -10,7 +11,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -22,11 +22,11 @@ use Illuminate\Support\Carbon;
  * @property string|null $email
  * @property PreferredChannel $preferred_channel
  * @property ConsentStatus $consent_status
- * @property Carbon|null $opted_out_at
+ * @property CarbonInterface|null $opted_out_at
  * @property string|null $lead_source
  * @property int|null $merged_into_contact_id
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonInterface|null $created_at
+ * @property CarbonInterface|null $updated_at
  */
 #[Fillable([
     'full_name',

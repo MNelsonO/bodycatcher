@@ -1,12 +1,22 @@
 <?php
 
+use App\Contacts\ConsentStatus;
+use App\Contacts\Contact;
+use App\Conversations\Message;
+use App\Conversations\MessageChannel;
+use App\Conversations\MessageDirection;
+use App\Conversations\MessageOrigin;
+use App\Conversations\MessageStatus;
+use App\Leads\Lead;
 use App\Models\User;
 use App\SalesPipelines\Pipeline;
 use App\SalesPipelines\PipelineStage;
 use App\SalesPipelines\PipelineStageTransition;
 use App\SalesPipelines\StageKind;
 use App\Settings\Product;
+use Carbon\CarbonInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /*
@@ -103,4 +113,124 @@ function crmDesk(): array
         'product' => Product::factory()->create(['name' => 'Kemet Laundry OS', 'slug' => 'kemet-laundry-os']),
         'other' => Product::factory()->create(['name' => 'Kemet Route Desk', 'slug' => 'kemet-route-desk']),
     ];
+}
+
+function whatsappConfig(): void
+{
+    config([
+        'whatsapp.token' => 'test-token',
+        'whatsapp.phone_number_id' => '123456',
+        'whatsapp.app_secret' => 'test-secret',
+        'whatsapp.verify_token' => 'verify-me',
+    ]);
+}
+
+/**
+ * @param  array<string, mixed>  $payload
+ */
+function postWhatsAppWebhook(array $payload, ?string $signature = null): TestResponse
+{
+    $body = json_encode($payload, JSON_THROW_ON_ERROR);
+    $digest = 'sha256='.hash_hmac('sha256', $body, (string) config('whatsapp.app_secret'));
+
+    return test()->call('POST', '/webhooks/whatsapp', [], [], [], [
+        'CONTENT_TYPE' => 'application/json',
+        'HTTP_ACCEPT' => 'application/json',
+        'HTTP_X_HUB_SIGNATURE_256' => $signature ?? $digest,
+    ], $body);
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function whatsappTextPayload(string $from, string $text, string $wamid, ?int $timestamp = null, string $name = 'Amina Wanjiku'): array
+{
+    return [
+        'object' => 'whatsapp_business_account',
+        'entry' => [[
+            'id' => 'WABA',
+            'changes' => [[
+                'field' => 'messages',
+                'value' => [
+                    'messaging_product' => 'whatsapp',
+                    'metadata' => ['display_phone_number' => '254700000000', 'phone_number_id' => '123456'],
+                    'contacts' => [[
+                        'profile' => ['name' => $name],
+                        'wa_id' => $from,
+                    ]],
+                    'messages' => [[
+                        'from' => $from,
+                        'id' => $wamid,
+                        'timestamp' => (string) ($timestamp ?? now()->timestamp),
+                        'type' => 'text',
+                        'text' => ['body' => $text],
+                    ]],
+                ],
+            ]],
+        ]],
+    ];
+}
+
+/**
+ * @return array<string, mixed>
+ */
+function whatsappStatusPayload(string $wamid, string $status, ?int $timestamp = null): array
+{
+    return [
+        'object' => 'whatsapp_business_account',
+        'entry' => [[
+            'id' => 'WABA',
+            'changes' => [[
+                'field' => 'messages',
+                'value' => [
+                    'messaging_product' => 'whatsapp',
+                    'statuses' => [[
+                        'id' => $wamid,
+                        'status' => $status,
+                        'timestamp' => (string) ($timestamp ?? now()->timestamp),
+                        'recipient_id' => '254722100201',
+                    ]],
+                ],
+            ]],
+        ]],
+    ];
+}
+
+function whatsappOpenLead(): Lead
+{
+    whatsappConfig();
+    $desk = crmDesk();
+    $user = crmSalesUser();
+    $contact = Contact::factory()->create([
+        'full_name' => 'Amina Wanjiku',
+        'primary_phone' => '+254722100201',
+        'consent_status' => ConsentStatus::Unknown,
+    ]);
+
+    test()->actingAs($user)->post(route('leads.store'), [
+        'contact_id' => $contact->id,
+        'product_id' => $desk['product']->id,
+        'pipeline_id' => $desk['pipeline']->id,
+        'stage_id' => $desk['stage']->id,
+        'source' => 'Referral',
+        'decision_maker_status' => 'unknown',
+    ])->assertRedirect();
+
+    return Lead::query()->firstOrFail();
+}
+
+function whatsappInbound(Lead $lead, ?CarbonInterface $sentAt = null): Message
+{
+    $conversation = $lead->conversation()->firstOrFail();
+
+    return Message::query()->create([
+        'conversation_id' => $conversation->id,
+        'direction' => MessageDirection::Inbound,
+        'channel' => MessageChannel::WhatsApp,
+        'origin' => MessageOrigin::Inbound,
+        'status' => MessageStatus::Received,
+        'body' => 'Can you visit the shop on Saturday?',
+        'sent_at' => $sentAt ?? now()->subHour(),
+        'provider_message_id' => 'wamid.in.'.uniqid(),
+    ]);
 }

@@ -11,4 +11,7 @@ enum ActivityEvent: string
     case NoteAdded = 'note_added';
     case ContactMerged = 'contact_merged';
     case FollowUpChanged = 'follow_up_changed';
+    case MessageRefused = 'message_refused';
+    case MessagingFlagChanged = 'messaging_flag_changed';
+    case ContactOptedOut = 'contact_opted_out';
 }

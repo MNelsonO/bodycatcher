@@ -2,7 +2,13 @@
 
 namespace App\Providers;
 
+use App\WhatsApp\CloudWhatsAppClient;
+use App\WhatsApp\FakeWhatsAppClient;
+use App\WhatsApp\LaravelWebhookDispatcher;
+use App\WhatsApp\WebhookDispatcher;
+use App\WhatsApp\WhatsAppClient;
 use Carbon\CarbonImmutable;
+use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -15,7 +21,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(FakeWhatsAppClient::class);
+        $this->app->bind(WhatsAppClient::class, function (Application $app): WhatsAppClient {
+            if ($app->environment('testing')) {
+                return $app->make(FakeWhatsAppClient::class);
+            }
+
+            return $app->make(CloudWhatsAppClient::class);
+        });
+        $this->app->bind(WebhookDispatcher::class, LaravelWebhookDispatcher::class);
     }
 
     /**

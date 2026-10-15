@@ -1,5 +1,12 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, Package, Rows3, UserRound, Users } from 'lucide-react';
+import {
+    LayoutGrid,
+    MessageCircle,
+    Package,
+    Rows3,
+    UserRound,
+    Users,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -23,6 +30,7 @@ export function AppSidebar() {
         { title: 'Command centre', href: dashboard(), icon: LayoutGrid },
         { title: 'Leads', href: '/leads', icon: Rows3 },
         { title: 'Contacts', href: '/contacts', icon: UserRound },
+        { title: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
     ];
 
     if (owner) {

@@ -1,4 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,7 @@ export default function LeadShow({
                         <NoteDialog leadId={lead.id} />
                         <MessageDialog leadId={lead.id} />
                         <FollowUpDialog lead={lead} />
+                        <MessagingControls lead={lead} />
                         {won ? (
                             <Form
                                 action={`/leads/${lead.id}/stage`}
@@ -239,11 +241,13 @@ export default function LeadShow({
                 <section className="rounded-lg border p-4">
                     <h2 className="text-sm font-medium">Conversation</h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                        Logged on this desk. Nothing is sent to WhatsApp.
+                        Desk logs stay on this lead. WhatsApp rows are the
+                        Cloud API messages, with their real status.
                     </p>
+                    <WhatsAppSend lead={lead} />
                     {lead.messages.length === 0 ? (
                         <p className="mt-3 text-sm text-muted-foreground">
-                            No messages logged yet.
+                            No messages yet.
                         </p>
                     ) : (
                         <ol className="mt-3 space-y-3">
@@ -252,14 +256,46 @@ export default function LeadShow({
                                     key={message.id}
                                     className="rounded-md bg-muted/40 px-3 py-2 text-sm"
                                 >
-                                    <div className="text-xs text-muted-foreground">
-                                        {message.direction} ·{' '}
-                                        {message.sent_at_label} ·{' '}
-                                        {message.logged_by}
+                                    <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
+                                        <span>{message.direction}</span>
+                                        <span>·</span>
+                                        <span>
+                                            {message.channel === 'whatsapp'
+                                                ? 'WhatsApp'
+                                                : 'Desk log'}
+                                        </span>
+                                        <span>·</span>
+                                        <span>{message.status}</span>
+                                        <span>·</span>
+                                        <span>{message.sent_at_label}</span>
+                                        {message.logged_by ? (
+                                            <span>· {message.logged_by}</span>
+                                        ) : null}
                                     </div>
                                     <p className="mt-1 whitespace-pre-wrap">
                                         {message.body}
                                     </p>
+                                    {message.refusal_reason ? (
+                                        <p className="mt-1 text-xs text-destructive">
+                                            {message.refusal_reason}
+                                        </p>
+                                    ) : null}
+                                    {message.attachments.length > 0 ? (
+                                        <ul className="mt-1 text-xs text-muted-foreground">
+                                            {message.attachments.map(
+                                                (attachment) => (
+                                                    <li key={attachment.id}>
+                                                        Attachment{' '}
+                                                        {attachment.provider_media_id}
+                                                        {attachment.mime_type
+                                                            ? ` · ${attachment.mime_type}`
+                                                            : ''}
+                                                        . Not downloaded.
+                                                    </li>
+                                                ),
+                                            )}
+                                        </ul>
+                                    ) : null}
                                 </li>
                             ))}
                         </ol>
@@ -444,6 +480,120 @@ function NoteDialog({ leadId }: { leadId: number }) {
                 </Form>
             </DialogContent>
         </Dialog>
+    );
+}
+
+function MessagingControls({ lead }: { lead: LeadDetail }) {
+    const flags = [
+        lead.whatsapp.automation_paused
+            ? ['resume', 'Resume automation']
+            : ['pause', 'Pause automation'],
+        lead.whatsapp.taken_over
+            ? ['release', 'End takeover']
+            : ['take_over', 'Take over'],
+        lead.whatsapp.needs_personal_attention
+            ? ['clear_attention', 'Clear personal attention']
+            : ['attention', 'Needs personal attention'],
+    ] as const;
+
+    return (
+        <>
+            {flags.map(([action, label]) => (
+                <Form
+                    key={action}
+                    action={`/leads/${lead.id}/messaging`}
+                    method="post"
+                >
+                    <input type="hidden" name="action" value={action} />
+                    <Button type="submit" variant="outline">
+                        {label}
+                    </Button>
+                </Form>
+            ))}
+        </>
+    );
+}
+
+function WhatsAppSend({ lead }: { lead: LeadDetail }) {
+    const [idempotencyKey, setIdempotencyKey] = useState(() =>
+        crypto.randomUUID(),
+    );
+    const desk = lead.whatsapp;
+
+    return (
+        <Form
+            action={`/leads/${lead.id}/whatsapp`}
+            method="post"
+            className="mt-4 grid gap-3 rounded-md border border-dashed p-3"
+            onSuccess={() => setIdempotencyKey(crypto.randomUUID())}
+        >
+            {({ errors, processing }) => (
+                <>
+                    <div className="text-sm">
+                        <p className="font-medium">Send WhatsApp text</p>
+                        {desk.opted_out ? (
+                            <p className="mt-1 text-destructive">
+                                This contact opted out. No WhatsApp message can
+                                be sent.
+                            </p>
+                        ) : null}
+                        {!desk.configured ? (
+                            <p className="mt-1 text-muted-foreground">
+                                The WhatsApp token or phone number id is
+                                missing. Nothing will be sent until an owner
+                                sets those environment variables.
+                            </p>
+                        ) : null}
+                        {desk.window_open ? (
+                            <p className="mt-1 text-muted-foreground">
+                                Customer-service window is open
+                                {desk.window_closes_label
+                                    ? ` until ${desk.window_closes_label}`
+                                    : ''}
+                                . Last inbound{' '}
+                                {desk.last_inbound_label ?? 'unknown'}.
+                            </p>
+                        ) : (
+                            <p className="mt-1 text-muted-foreground">
+                                The 24-hour window is closed
+                                {desk.last_inbound_label
+                                    ? ` (last inbound ${desk.last_inbound_label})`
+                                    : ' because there is no inbound WhatsApp message'}
+                                . Free-form text needs a template. This desk
+                                does not send templates.
+                            </p>
+                        )}
+                        {desk.automation_paused ||
+                        desk.taken_over ||
+                        desk.needs_personal_attention ||
+                        desk.automatic_sends_paused ? (
+                            <p className="mt-1 text-muted-foreground">
+                                Automatic sends are blocked
+                                {desk.automatic_sends_paused
+                                    ? ' for the whole desk'
+                                    : ' on this lead'}
+                                . A message you send from here is still a
+                                manual send.
+                            </p>
+                        ) : null}
+                    </div>
+                    <input
+                        type="hidden"
+                        name="idempotency_key"
+                        value={idempotencyKey}
+                    />
+                    <AreaField
+                        name="body"
+                        label="Message"
+                        required
+                        error={errors.body}
+                    />
+                    <Button type="submit" disabled={processing}>
+                        Send on WhatsApp
+                    </Button>
+                </>
+            )}
+        </Form>
     );
 }
 

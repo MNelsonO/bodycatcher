@@ -4,10 +4,16 @@ use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeskUserController;
 use App\Http\Controllers\LeadController;
+use App\Http\Controllers\LeadMessagingController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\WhatsAppSettingsController;
+use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+Route::get('webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('whatsapp.webhook.verify');
+Route::post('webhooks/whatsapp', [WhatsAppWebhookController::class, 'store'])->name('whatsapp.webhook.store');
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -37,6 +43,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('leads/{lead}/notes', [LeadController::class, 'note'])->name('leads.notes.store');
     Route::post('leads/{lead}/messages', [LeadController::class, 'message'])->name('leads.messages.store');
     Route::put('leads/{lead}/follow-up', [LeadController::class, 'followUp'])->name('leads.follow-up.update');
+    Route::post('leads/{lead}/whatsapp', [LeadMessagingController::class, 'send'])->name('leads.whatsapp.send');
+    Route::post('leads/{lead}/messaging', [LeadMessagingController::class, 'update'])->name('leads.messaging.update');
+
+    Route::get('whatsapp', [WhatsAppSettingsController::class, 'index'])->name('whatsapp.settings');
+    Route::put('whatsapp', [WhatsAppSettingsController::class, 'update'])->name('whatsapp.settings.update');
 
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::post('products', [ProductController::class, 'store'])->name('products.store');

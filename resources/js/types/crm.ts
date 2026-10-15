@@ -92,10 +92,32 @@ export type LeadDetail = {
     messages: Array<{
         id: number;
         direction: string;
+        channel: string;
+        origin: string;
+        status: string;
         body: string;
         sent_at_label: string | null;
-        logged_by: string;
+        logged_by: string | null;
+        refusal_reason: string | null;
+        provider_message_id: string | null;
+        attachments: Array<{
+            id: number;
+            provider_media_id: string;
+            mime_type: string | null;
+            caption: string | null;
+        }>;
     }>;
+    whatsapp: {
+        configured: boolean;
+        window_open: boolean;
+        last_inbound_label: string | null;
+        window_closes_label: string | null;
+        automation_paused: boolean;
+        taken_over: boolean;
+        needs_personal_attention: boolean;
+        automatic_sends_paused: boolean;
+        opted_out: boolean;
+    };
     notes: Array<{
         id: number;
         body: string;

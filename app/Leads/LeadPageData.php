@@ -2,11 +2,18 @@
 
 namespace App\Leads;
 
+use App\Conversations\Message;
+use App\Conversations\MessageAttachment;
 use App\Settings\DisplayClock;
+use App\WhatsApp\DeskSetting;
+use App\WhatsApp\Services\ServiceWindow;
 
 class LeadPageData
 {
-    public function __construct(private DisplayClock $clock) {}
+    public function __construct(
+        private DisplayClock $clock,
+        private ServiceWindow $window,
+    ) {}
 
     /**
      * @return array<string, mixed>
@@ -23,6 +30,7 @@ class LeadPageData
             'stageHistory.actor',
             'notes.author',
             'conversation.messages.loggedBy',
+            'conversation.messages.attachments',
         ]);
 
         $permitted = $lead->currentStage->outgoingTransitions()
@@ -106,16 +114,28 @@ class LeadPageData
                 'from_stage' => $row->fromStage?->name,
                 'to_stage' => $row->toStage->name,
                 'reason' => $row->reason,
-                'actor' => $row->actor->name,
+                'actor' => $row->actor_user_id === null ? 'System' : $row->actor->name,
                 'at' => $this->clock->formatDateTime($row->created_at),
             ])->all(),
-            'messages' => $lead->conversation?->messages->map(fn ($message): array => [
+            'messages' => $lead->conversation?->messages->map(fn (Message $message): array => [
                 'id' => $message->id,
                 'direction' => $message->direction->value,
+                'channel' => $message->channel->value,
+                'origin' => $message->origin->value,
+                'status' => $message->status->value,
                 'body' => $message->body,
                 'sent_at_label' => $this->clock->formatDateTime($message->sent_at),
-                'logged_by' => $message->loggedBy->name,
+                'logged_by' => $message->loggedBy?->name,
+                'refusal_reason' => $message->refusal_reason,
+                'provider_message_id' => $message->provider_message_id,
+                'attachments' => $message->attachments->map(fn (MessageAttachment $attachment): array => [
+                    'id' => $attachment->id,
+                    'provider_media_id' => $attachment->provider_media_id,
+                    'mime_type' => $attachment->mime_type,
+                    'caption' => $attachment->caption,
+                ])->all(),
             ])->all() ?? [],
+            'whatsapp' => $this->whatsapp($lead),
             'notes' => $lead->notes->map(fn (LeadNote $note): array => [
                 'id' => $note->id,
                 'body' => $note->body,
@@ -154,6 +174,39 @@ class LeadPageData
                 .(array_key_exists('to', $properties)
                     ? ': '.($properties['from'] ?: 'none').' → '.($properties['to'] ?: 'none')
                     : ''),
+            ActivityEvent::MessageRefused => 'WhatsApp send refused'
+                .(isset($properties['reason']) && is_string($properties['reason'])
+                    ? ': '.$properties['reason']
+                    : ''),
+            ActivityEvent::MessagingFlagChanged => is_string($properties['label'] ?? null)
+                ? $properties['label']
+                : 'Messaging controls changed',
+            ActivityEvent::ContactOptedOut => 'Contact opted out of WhatsApp',
         };
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function whatsapp(Lead $lead): array
+    {
+        $token = config('whatsapp.token');
+        $phoneNumberId = config('whatsapp.phone_number_id');
+        $lastInbound = $this->window->lastInboundAt($lead->contact);
+        $open = $this->window->isOpen($lead->contact);
+        $hours = (int) config('whatsapp.service_window_hours');
+        $closesAt = $lastInbound?->copy()->addHours($hours);
+
+        return [
+            'configured' => is_string($token) && $token !== '' && is_string($phoneNumberId) && $phoneNumberId !== '',
+            'window_open' => $open,
+            'last_inbound_label' => $this->clock->formatDateTime($lastInbound),
+            'window_closes_label' => $open ? $this->clock->formatDateTime($closesAt) : null,
+            'automation_paused' => $lead->automation_paused,
+            'taken_over' => $lead->taken_over,
+            'needs_personal_attention' => $lead->needs_personal_attention,
+            'automatic_sends_paused' => DeskSetting::current()->automatic_sends_paused,
+            'opted_out' => $lead->contact->consent_status->value === 'opted_out',
+        ];
     }
 }
