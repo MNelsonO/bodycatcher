@@ -34,6 +34,7 @@ class LeadPageData
             'stageHistory.toStage',
             'stageHistory.actor',
             'notes.author',
+            'interactions.author',
             'conversation.messages.loggedBy',
             'conversation.messages.attachments',
         ]);
@@ -74,6 +75,11 @@ class LeadPageData
             'next_action' => $lead->next_action,
             'next_follow_up_on' => $lead->next_follow_up_on?->toDateString(),
             'next_follow_up_label' => $this->clock->formatDate($lead->next_follow_up_on),
+            'next_conversation_at' => $lead->next_conversation_at
+                ? $this->clock->formatDateTimeLocal($lead->next_conversation_at)
+                : null,
+            'next_conversation_label' => $this->clock->formatDateTime($lead->next_conversation_at),
+            'conversations_stopped' => $lead->conversations_stopped,
             'marked_on' => $lead->marked_on?->toDateString(),
             'marked_on_label' => $this->clock->formatDate($lead->marked_on),
             'marked_label' => $lead->marked_label,
@@ -157,6 +163,17 @@ class LeadPageData
                 'author' => $note->author->name,
                 'at' => $this->clock->formatDateTime($note->created_at),
             ])->all(),
+            'interactions' => $lead->interactions->map(fn (LeadInteraction $row): array => [
+                'id' => $row->id,
+                'type' => $row->type->value,
+                'type_label' => $row->type->label(),
+                'direction' => $row->direction->value,
+                'body' => $row->body,
+                'occurred_at_label' => $this->clock->formatDateTime($row->occurred_at),
+                'duration_minutes' => $row->duration_minutes,
+                'outcome' => $row->outcome,
+                'author' => $row->author->name,
+            ])->all(),
             'activities' => $activities->map(fn (ActivityLog $row): array => [
                 'id' => $row->id,
                 'event' => $row->event->value,
@@ -182,6 +199,14 @@ class LeadPageData
                 .(isset($properties['direction']) ? ' ('.$properties['direction'].')' : ''),
             ActivityEvent::NoteAdded => 'Note added',
             ActivityEvent::ContactNoteAdded => 'Client note added',
+            ActivityEvent::InteractionRecorded => 'Interaction recorded'
+                .(isset($properties['type']) && is_string($properties['type'])
+                    ? ': '.str_replace('_', ' ', $properties['type'])
+                    : ''),
+            ActivityEvent::ConversationScheduled => 'Conversation scheduled'
+                .(array_key_exists('to', $properties)
+                    ? ': '.($properties['to'] ?: 'cleared')
+                    : ''),
             ActivityEvent::ContactMerged => 'Contact merged'
                 .(isset($properties['merged_name'], $properties['survivor_name'])
                     ? ': '.$properties['merged_name'].' into '.$properties['survivor_name']
@@ -250,6 +275,7 @@ class LeadPageData
             'automation_paused' => $lead->automation_paused,
             'taken_over' => $lead->taken_over,
             'needs_personal_attention' => $lead->needs_personal_attention,
+            'conversations_stopped' => $lead->conversations_stopped,
             'automatic_sends_paused' => DeskSetting::current()->automatic_sends_paused,
             'opted_out' => $lead->contact->consent_status->value === 'opted_out',
         ];

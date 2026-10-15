@@ -67,9 +67,11 @@ export default function LeadShow({
                     </div>
                     <div className="flex flex-wrap gap-2">
                         <StageDialog lead={lead} />
+                        <InteractionDialog leadId={lead.id} />
                         <NoteDialog leadId={lead.id} />
                         <MessageDialog leadId={lead.id} />
                         <FollowUpDialog lead={lead} />
+                        <ScheduleConversationDialog lead={lead} />
                         <MarkDateDialog lead={lead} />
                         <MessagingControls lead={lead} />
                         {won ? (
@@ -353,6 +355,69 @@ export default function LeadShow({
                     )}
                 </section>
 
+                <section className="rounded-lg border p-4">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                            <h2 className="text-sm font-medium">
+                                Touches & calls
+                            </h2>
+                            <p className="text-sm text-muted-foreground">
+                                Every phone call, meeting, or desk note with
+                                date and time — backdating allowed. The sales
+                                agent keeps the stage while you speak.
+                            </p>
+                        </div>
+                        {lead.next_conversation_label ? (
+                            <Badge variant="laundry">
+                                Next talk · {lead.next_conversation_label}
+                            </Badge>
+                        ) : null}
+                        {lead.conversations_stopped ? (
+                            <Badge variant="destructive">
+                                Conversations stopped
+                            </Badge>
+                        ) : null}
+                    </div>
+                    {lead.interactions.length === 0 ? (
+                        <p className="mt-3 text-sm text-muted-foreground">
+                            No calls or meetings logged yet. Record each touch.
+                        </p>
+                    ) : (
+                        <ul className="mt-3 divide-y rounded-lg border">
+                            {lead.interactions.map((row) => (
+                                <li key={row.id} className="px-3 py-2 text-sm">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Badge variant="outline">
+                                            {row.type_label}
+                                        </Badge>
+                                        {row.direction !== 'none' ? (
+                                            <span className="text-xs text-muted-foreground">
+                                                {row.direction}
+                                            </span>
+                                        ) : null}
+                                        {row.duration_minutes !== null ? (
+                                            <span className="text-xs text-muted-foreground">
+                                                {row.duration_minutes} min
+                                            </span>
+                                        ) : null}
+                                        {row.outcome ? (
+                                            <span className="text-xs text-muted-foreground">
+                                                {row.outcome}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                    <p className="mt-1 whitespace-pre-wrap">
+                                        {row.body}
+                                    </p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        {row.author} · {row.occurred_at_label}
+                                    </p>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
+
                 <div className="grid gap-6 lg:grid-cols-2">
                     <section className="rounded-lg border p-4">
                         <h2 className="text-sm font-medium">Notes</h2>
@@ -536,6 +601,9 @@ function NoteDialog({ leadId }: { leadId: number }) {
 
 function MessagingControls({ lead }: { lead: LeadDetail }) {
     const flags = [
+        lead.whatsapp.conversations_stopped
+            ? ['allow_conversations', 'Allow conversations']
+            : ['stop_conversations', 'Stop future conversations'],
         lead.whatsapp.automation_paused
             ? ['resume', 'Resume automation']
             : ['pause', 'Pause automation'],
@@ -556,12 +624,154 @@ function MessagingControls({ lead }: { lead: LeadDetail }) {
                     method="post"
                 >
                     <input type="hidden" name="action" value={action} />
-                    <Button type="submit" variant="outline">
+                    <Button
+                        type="submit"
+                        variant={
+                            action === 'stop_conversations'
+                                ? 'destructive'
+                                : 'outline'
+                        }
+                    >
                         {label}
                     </Button>
                 </Form>
             ))}
         </>
+    );
+}
+
+function InteractionDialog({ leadId }: { leadId: number }) {
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline">Record touch</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Record a call or meeting</DialogTitle>
+                    <DialogDescription>
+                        Log every time you spoke. Set the date and time —
+                        including backdating — so the automated agent keeps
+                        context on this stage.
+                    </DialogDescription>
+                </DialogHeader>
+                <Form
+                    action={`/leads/${leadId}/interactions`}
+                    method="post"
+                    resetOnSuccess
+                    className="grid gap-3"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <SelectField
+                                name="type"
+                                label="Type"
+                                required
+                                options={[
+                                    {
+                                        value: 'phone_call',
+                                        label: 'Phone call',
+                                    },
+                                    { value: 'meeting', label: 'Meeting' },
+                                    { value: 'note', label: 'Note' },
+                                    { value: 'visit', label: 'Visit' },
+                                    { value: 'other', label: 'Other' },
+                                ]}
+                                defaultValue="phone_call"
+                                error={errors.type}
+                            />
+                            <SelectField
+                                name="direction"
+                                label="Direction"
+                                options={[
+                                    { value: 'outbound', label: 'Outbound' },
+                                    { value: 'inbound', label: 'Inbound' },
+                                    { value: 'none', label: 'Not applicable' },
+                                ]}
+                                defaultValue="outbound"
+                                error={errors.direction}
+                            />
+                            <AreaField
+                                name="body"
+                                label="What happened"
+                                required
+                                error={errors.body}
+                                hint="Short note the AI can read later."
+                            />
+                            <TextField
+                                name="occurred_at"
+                                label="When"
+                                type="datetime-local"
+                                hint="Africa/Nairobi. Leave blank for now. Backdating is allowed."
+                                error={errors.occurred_at}
+                            />
+                            <TextField
+                                name="duration_minutes"
+                                label="Duration (minutes)"
+                                type="number"
+                                error={errors.duration_minutes}
+                            />
+                            <TextField
+                                name="outcome"
+                                label="Outcome"
+                                hint="e.g. Left voicemail, booked demo, almost buying."
+                                error={errors.outcome}
+                            />
+                            <Button type="submit" disabled={processing}>
+                                Save interaction
+                            </Button>
+                        </>
+                    )}
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function ScheduleConversationDialog({ lead }: { lead: LeadDetail }) {
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline">Schedule conversation</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Schedule next conversation</DialogTitle>
+                    <DialogDescription>
+                        Keeps this lead on its stage and tells the automated
+                        agent when to talk again. Clearing the time removes the
+                        schedule.
+                    </DialogDescription>
+                </DialogHeader>
+                <Form
+                    action={`/leads/${lead.id}/conversation-schedule`}
+                    method="put"
+                    className="grid gap-3"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <TextField
+                                name="next_conversation_at"
+                                label="Next conversation"
+                                type="datetime-local"
+                                defaultValue={lead.next_conversation_at}
+                                hint="Africa/Nairobi. Leave blank to clear."
+                                error={errors.next_conversation_at}
+                            />
+                            <TextField
+                                name="next_action"
+                                label="Next action"
+                                defaultValue={lead.next_action}
+                                error={errors.next_action}
+                            />
+                            <Button type="submit" disabled={processing}>
+                                Save schedule
+                            </Button>
+                        </>
+                    )}
+                </Form>
+            </DialogContent>
+        </Dialog>
     );
 }
 

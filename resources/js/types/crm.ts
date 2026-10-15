@@ -73,6 +73,9 @@ export type LeadDetail = {
     next_action: string | null;
     next_follow_up_on: string | null;
     next_follow_up_label: string | null;
+    next_conversation_at: string | null;
+    next_conversation_label: string | null;
+    conversations_stopped: boolean;
     marked_on: string | null;
     marked_on_label: string | null;
     marked_label: string | null;
@@ -124,9 +127,21 @@ export type LeadDetail = {
         automation_paused: boolean;
         taken_over: boolean;
         needs_personal_attention: boolean;
+        conversations_stopped: boolean;
         automatic_sends_paused: boolean;
         opted_out: boolean;
     };
+    interactions: Array<{
+        id: number;
+        type: string;
+        type_label: string;
+        direction: string;
+        body: string;
+        occurred_at_label: string | null;
+        duration_minutes: number | null;
+        outcome: string | null;
+        author: string;
+    }>;
     intelligence: {
         configured: boolean;
         latest: null | {
@@ -231,6 +246,26 @@ export type DashboardMetrics = {
         in_flight: number;
         total: number;
     };
+    stage_buckets: {
+        follow_up: { total: number; stages: string[] };
+        almost_buying: { total: number; stages: string[] };
+        meetings: {
+            total: number;
+            requested: number;
+            scheduled: number;
+            completed: number;
+            stages: string[];
+        };
+        nurture: { total: number; stages: string[] };
+    };
+    interactions: {
+        today: number;
+        phone_calls_today: number;
+        meetings_today: number;
+        notes_today: number;
+    };
+    scheduled_conversations: number;
+    stopped_conversations: number;
     orders: {
         bought_count: number;
         bought_revenue: number;

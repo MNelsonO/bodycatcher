@@ -52,6 +52,8 @@ class IntegrationController extends Controller
                 'META_PAGE_ID' => filled(config('integrations.meta.page_id')),
                 'GSC_SITE_URL' => filled(config('integrations.google_search_console.site_url')),
                 'GSC_ACCESS_TOKEN' => filled(config('integrations.google_search_console.access_token')),
+                'GOOGLE_CALENDAR_ID' => filled(config('integrations.google_calendar.calendar_id')),
+                'GOOGLE_CALENDAR_ACCESS_TOKEN' => filled(config('integrations.google_calendar.access_token')),
             ],
         ]);
     }
@@ -64,6 +66,28 @@ class IntegrationController extends Controller
             $meta->sync($account);
         } elseif ($account->provider === 'google_search_console') {
             $gsc->sync($account);
+        } elseif ($account->provider === 'google_calendar') {
+            if (! filled(config('integrations.google_calendar.access_token'))
+                || ! filled(config('integrations.google_calendar.calendar_id'))) {
+                $account->last_sync_error = 'Set GOOGLE_CALENDAR_ACCESS_TOKEN and GOOGLE_CALENDAR_ID first.';
+                $account->save();
+                Inertia::flash('toast', [
+                    'type' => 'error',
+                    'message' => 'Google Calendar credentials are missing.',
+                ]);
+
+                return redirect()->route('integrations.index');
+            }
+
+            $account->last_synced_at = now();
+            $account->last_sync_error = null;
+            $account->save();
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => 'Google Calendar is activated. New desk calendar items push when you save them.',
+            ]);
+
+            return redirect()->route('integrations.index');
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Sync finished for '.$account->label.'.']);
@@ -77,9 +101,10 @@ class IntegrationController extends Controller
 
         $data = $request->validate([
             'label' => ['required', 'string', 'max:120'],
-            'is_active' => ['required', 'boolean'],
+            'is_active' => ['nullable', 'boolean'],
             'page_id' => ['nullable', 'string', 'max:80'],
             'site_url' => ['nullable', 'string', 'max:255'],
+            'calendar_id' => ['nullable', 'string', 'max:255'],
         ]);
 
         $settings = $account->settings ?? [];
@@ -92,12 +117,25 @@ class IntegrationController extends Controller
             $settings['site_url'] = $data['site_url'] ?? ($settings['site_url'] ?? null);
         }
 
+        if ($account->provider === 'google_calendar') {
+            $settings['calendar_id'] = $data['calendar_id']
+                ?? config('integrations.google_calendar.calendar_id')
+                ?: ($settings['calendar_id'] ?? null);
+        }
+
         $account->label = $data['label'];
-        $account->is_active = $data['is_active'];
+        if (array_key_exists('is_active', $data) && $data['is_active'] !== null) {
+            $account->is_active = (bool) $data['is_active'];
+        }
         $account->settings = $settings;
         $account->save();
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Integration updated.']);
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $account->provider === 'google_calendar' && $account->is_active
+                ? 'Google Calendar activated. Desk calendar items will push when credentials are set.'
+                : 'Integration updated.',
+        ]);
 
         return redirect()->route('integrations.index');
     }
@@ -123,6 +161,16 @@ class IntegrationController extends Controller
                 ],
             ],
         );
+
+        IntegrationAccount::query()->firstOrCreate(
+            ['provider' => 'google_calendar', 'label' => 'Google Calendar'],
+            [
+                'is_active' => false,
+                'settings' => [
+                    'calendar_id' => config('integrations.google_calendar.calendar_id') ?: null,
+                ],
+            ],
+        );
     }
 
     private function configured(IntegrationAccount $account): bool
@@ -132,6 +180,8 @@ class IntegrationController extends Controller
                 && filled($account->settings['page_id'] ?? config('integrations.meta.page_id')),
             'google_search_console' => filled(config('integrations.google_search_console.access_token'))
                 && filled($account->settings['site_url'] ?? config('integrations.google_search_console.site_url')),
+            'google_calendar' => filled(config('integrations.google_calendar.access_token'))
+                && filled(config('integrations.google_calendar.calendar_id')),
             default => false,
         };
     }

@@ -7,13 +7,18 @@ use App\Conversations\Actions\LogMessage;
 use App\Conversations\MessageDirection;
 use App\Calendar\CalendarActivity;
 use App\Http\Requests\FollowUpRequest;
+use App\Http\Requests\LeadInteractionRequest;
 use App\Http\Requests\LeadMessageRequest;
 use App\Http\Requests\LeadNoteRequest;
 use App\Http\Requests\LeadRequest;
 use App\Http\Requests\LeadStageRequest;
 use App\Http\Requests\MarkDateRequest;
+use App\Http\Requests\ScheduleConversationRequest;
+use App\Integrations\Services\GoogleCalendarSync;
 use App\Leads\Actions\AddLeadNote;
 use App\Leads\Actions\CreateLead;
+use App\Leads\Actions\RecordLeadInteraction;
+use App\Leads\Actions\ScheduleLeadConversation;
 use App\Leads\Actions\SetFollowUp;
 use App\Leads\DecisionMakerStatus;
 use App\Leads\Lead;
@@ -162,6 +167,20 @@ class LeadController extends Controller
         return redirect()->route('leads.show', $lead);
     }
 
+    public function interaction(LeadInteractionRequest $request, Lead $lead, RecordLeadInteraction $action): RedirectResponse
+    {
+        /** @var User $actor */
+        $actor = $request->user();
+        $action->handle($lead, $request->validated(), $actor);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Interaction recorded. Backdating is kept on the occurred-at time.',
+        ]);
+
+        return redirect()->route('leads.show', $lead);
+    }
+
     public function message(LeadMessageRequest $request, Lead $lead, LogMessage $action): RedirectResponse
     {
         /** @var User $actor */
@@ -199,7 +218,29 @@ class LeadController extends Controller
         return redirect()->route('leads.show', $lead);
     }
 
-    public function markDate(MarkDateRequest $request, Lead $lead): RedirectResponse
+    public function scheduleConversation(
+        ScheduleConversationRequest $request,
+        Lead $lead,
+        ScheduleLeadConversation $action,
+    ): RedirectResponse {
+        /** @var User $actor */
+        $actor = $request->user();
+        $at = $request->input('next_conversation_at');
+        $nextAction = $request->input('next_action');
+
+        $action->handle(
+            $lead,
+            is_string($at) ? $at : null,
+            is_string($nextAction) ? $nextAction : null,
+            $actor,
+        );
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Conversation schedule saved.']);
+
+        return redirect()->route('leads.show', $lead);
+    }
+
+    public function markDate(MarkDateRequest $request, Lead $lead, GoogleCalendarSync $google): RedirectResponse
     {
         /** @var User $actor */
         $actor = $request->user();
@@ -211,7 +252,7 @@ class LeadController extends Controller
         $lead->save();
 
         if ($request->boolean('add_to_calendar')) {
-            CalendarActivity::query()->create([
+            $activity = CalendarActivity::query()->create([
                 'user_id' => $actor->id,
                 'activity_on' => $date,
                 'title' => ($label !== '' ? $label.' · ' : '').$lead->contact->full_name,
@@ -220,6 +261,18 @@ class LeadController extends Controller
                 'color' => 'blue',
                 'lead_id' => $lead->id,
             ]);
+
+            if ($google->activated()) {
+                $push = $google->push($activity);
+                if (! $push['ok']) {
+                    Inertia::flash('toast', [
+                        'type' => 'warning',
+                        'message' => 'Date marked. Local calendar saved. '.$push['message'],
+                    ]);
+
+                    return redirect()->route('leads.show', $lead);
+                }
+            }
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Date marked on the lead.']);

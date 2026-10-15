@@ -44,7 +44,7 @@ class LiveConversationAssistant
             return;
         }
 
-        $lead->loadMissing(['contact.notes', 'product', 'currentStage', 'conversation.messages']);
+        $lead->loadMissing(['contact.notes', 'interactions', 'product', 'currentStage', 'conversation.messages']);
 
         if ($this->guard->pauseReason($lead) !== null) {
             return;
@@ -120,13 +120,32 @@ class LiveConversationAssistant
         $clientContextBlock = $clientContext !== ''
             ? "\nClient market context:\n{$clientContext}\n"
             : "\n";
+        $touchLines = $lead->interactions
+            ->sortByDesc('occurred_at')
+            ->take(8)
+            ->map(function ($row): string {
+                $when = $row->occurred_at?->toDateTimeString() ?? 'unknown time';
+
+                return '- '.$row->type->label().' @ '.$when.': '.mb_substr(trim($row->body), 0, 400);
+            })
+            ->implode("\n");
+        $touchesBlock = $touchLines !== ''
+            ? "Recent desk touches (calls/meetings/notes):\n{$touchLines}\n"
+            : '';
+        $scheduleLine = $lead->next_conversation_at
+            ? 'Next scheduled conversation: '.$lead->next_conversation_at->toDateTimeString()
+            : 'No conversation scheduled.';
+        $stoppedLine = $lead->conversations_stopped
+            ? 'Future automated conversations are STOPPED on this lead.'
+            : 'Automated conversations are allowed.';
 
         $system = <<<PROMPT
 You are the live WhatsApp sales assistant for Kemet Tech.
 Provider in use: {$provider}.
 Stay on the conversation topic. Do not invent prices, discounts, or contracts.
 Only discuss products from the catalog. If the customer asks about something else, steer back to the catalog and the current topic.
-Respect the client's country and conversation area. Use desk notes on this client as standing context for how to talk to them.
+Respect the client's country and conversation area. Use desk notes and recorded touches as standing context.
+Keep this lead on its current sales stage unless an operator moves it.
 Reply in short plain WhatsApp text. No markdown. No bullet walls.
 
 Current lead product: {$productName}
@@ -134,7 +153,9 @@ Contact: {$contactName}
 Stage: {$stageName}
 {$marked}
 {$followUp}
-{$clientContextBlock}Running topic: {$topic}
+{$scheduleLine}
+{$stoppedLine}
+{$clientContextBlock}{$touchesBlock}Running topic: {$topic}
 Topic notes: {$topicSummary}
 
 Product catalog:

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Calendar\CalendarActivity;
 use App\Http\Requests\CalendarActivityRequest;
+use App\Integrations\Services\GoogleCalendarSync;
 use App\Settings\DisplayClock;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\RedirectResponse;
@@ -13,7 +14,7 @@ use Inertia\Response;
 
 class CalendarController extends Controller
 {
-    public function index(Request $request, DisplayClock $clock): Response
+    public function index(Request $request, DisplayClock $clock, GoogleCalendarSync $google): Response
     {
         $month = $request->string('month')->toString();
         $day = $request->string('day')->toString();
@@ -51,17 +52,30 @@ class CalendarController extends Controller
             'activities' => $activities,
             'prev_month' => $anchor->subMonth()->format('Y-m'),
             'next_month' => $anchor->addMonth()->format('Y-m'),
+            'google_calendar' => $google->status(),
         ]);
     }
 
-    public function store(CalendarActivityRequest $request): RedirectResponse
+    public function store(CalendarActivityRequest $request, GoogleCalendarSync $google): RedirectResponse
     {
-        CalendarActivity::query()->create([
+        $activity = CalendarActivity::query()->create([
             ...$request->validated(),
             'user_id' => $request->user()->id,
         ]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Calendar activity saved.']);
+        $message = 'Calendar activity saved.';
+
+        if ($google->activated()) {
+            $push = $google->push($activity);
+            $message = $push['ok']
+                ? 'Calendar activity saved and pushed to Google Calendar.'
+                : 'Calendar activity saved locally. '.$push['message'];
+        }
+
+        Inertia::flash('toast', [
+            'type' => $google->activated() && ! ($push['ok'] ?? true) ? 'warning' : 'success',
+            'message' => $message,
+        ]);
 
         return redirect()->route('calendar.index', [
             'month' => substr($request->string('activity_on')->toString(), 0, 7),

@@ -35,6 +35,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $purchase_timeline_note
  * @property string|null $next_action
  * @property CarbonInterface|null $next_follow_up_on
+ * @property CarbonInterface|null $next_conversation_at
  * @property CarbonInterface|null $marked_on
  * @property string|null $marked_label
  * @property string|null $lost_reason
@@ -42,6 +43,7 @@ use Illuminate\Support\Carbon;
  * @property bool $automation_paused
  * @property bool $taken_over
  * @property bool $needs_personal_attention
+ * @property bool $conversations_stopped
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Contact $contact
@@ -63,6 +65,7 @@ use Illuminate\Support\Carbon;
     'purchase_timeline_note',
     'next_action',
     'next_follow_up_on',
+    'next_conversation_at',
     'marked_on',
     'marked_label',
     'lost_reason',
@@ -70,6 +73,7 @@ use Illuminate\Support\Carbon;
     'automation_paused',
     'taken_over',
     'needs_personal_attention',
+    'conversations_stopped',
 ])]
 #[UseFactory(LeadFactory::class)]
 class Lead extends Model
@@ -86,11 +90,13 @@ class Lead extends Model
             'branch_count' => 'integer',
             'decision_maker_status' => DecisionMakerStatus::class,
             'next_follow_up_on' => 'date',
+            'next_conversation_at' => 'datetime',
             'marked_on' => 'date',
             'closed_at' => 'datetime',
             'automation_paused' => 'boolean',
             'taken_over' => 'boolean',
             'needs_personal_attention' => 'boolean',
+            'conversations_stopped' => 'boolean',
         ];
     }
 
@@ -140,6 +146,14 @@ class Lead extends Model
     public function notes(): HasMany
     {
         return $this->hasMany(LeadNote::class)->orderByDesc('id');
+    }
+
+    /**
+     * @return HasMany<LeadInteraction, $this>
+     */
+    public function interactions(): HasMany
+    {
+        return $this->hasMany(LeadInteraction::class)->orderByDesc('occurred_at')->orderByDesc('id');
     }
 
     /**

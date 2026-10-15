@@ -62,6 +62,10 @@ class MessagingGuard
             return 'Automatic sends are paused for the whole desk.';
         }
 
+        if ($lead->conversations_stopped) {
+            return 'Future conversations are stopped on this lead.';
+        }
+
         if ($lead->automation_paused) {
             return 'Automatic sends are paused on this lead.';
         }

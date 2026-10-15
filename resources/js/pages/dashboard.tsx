@@ -123,6 +123,101 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                     />
                 </section>
 
+                {/* Stage buckets for the automated sales agent */}
+                <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <MetricBlock
+                        title="Follow-up stages"
+                        href="/leads"
+                        tone="blue"
+                        rows={[
+                            ['In stage', metrics.stage_buckets.follow_up.total],
+                            [
+                                'Due today',
+                                metrics.follow_ups_due_today,
+                            ],
+                            ['Overdue', metrics.overdue_follow_ups],
+                            [
+                                'Scheduled talks',
+                                metrics.scheduled_conversations,
+                            ],
+                            [
+                                'Stopped',
+                                metrics.stopped_conversations,
+                            ],
+                        ]}
+                    />
+                    <MetricBlock
+                        title="Almost buying"
+                        href="/leads"
+                        tone="lead"
+                        rows={[
+                            [
+                                'In stage',
+                                metrics.stage_buckets.almost_buying.total,
+                            ],
+                            ...metrics.stage_buckets.almost_buying.stages.map(
+                                (name) => {
+                                    const row = metrics.leads_by_stage.find(
+                                        (item) => item.stage_name === name,
+                                    );
+                                    return [name, row?.total ?? 0] as [
+                                        string,
+                                        number,
+                                    ];
+                                },
+                            ),
+                        ]}
+                    />
+                    <MetricBlock
+                        title="Meetings / demos"
+                        href="/calendar"
+                        tone="blue"
+                        rows={[
+                            [
+                                'All meeting stages',
+                                metrics.stage_buckets.meetings.total,
+                            ],
+                            [
+                                'Requested',
+                                metrics.stage_buckets.meetings.requested,
+                            ],
+                            [
+                                'Scheduled',
+                                metrics.stage_buckets.meetings.scheduled,
+                            ],
+                            [
+                                'Completed',
+                                metrics.stage_buckets.meetings.completed,
+                            ],
+                            [
+                                'Nurture',
+                                metrics.stage_buckets.nurture.total,
+                            ],
+                        ]}
+                    />
+                    <MetricBlock
+                        title="Touches today"
+                        href="/leads"
+                        tone="green"
+                        rows={[
+                            ['All touches', metrics.interactions.today],
+                            [
+                                'Phone calls',
+                                metrics.interactions.phone_calls_today,
+                            ],
+                            [
+                                'Meetings',
+                                metrics.interactions.meetings_today,
+                            ],
+                            ['Notes', metrics.interactions.notes_today],
+                            [
+                                'Bought (paid)',
+                                metrics.orders.bought_count,
+                            ],
+                        ]}
+                    />
+                </section>
+
                 {/* WhatsApp + Demos + Bought + Pipeline counts */}
                 <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                     <MetricBlock

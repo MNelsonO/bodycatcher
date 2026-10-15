@@ -41,12 +41,12 @@ export default function IntegrationsIndex({
             <div className="flex flex-col gap-6 p-4 md:p-6">
                 <div>
                     <h1 className="text-xl font-semibold tracking-tight text-primary">
-                        Traffic & Meta reports
+                        Integrations
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Connect Google Search Console and Meta Business to pull
-                        traffic, engagement, and advanced report rows into the
-                        desk.
+                        Meta Business and Search Console for traffic reports.
+                        Activate Google Calendar so meetings and marked dates
+                        push out of the desk calendar.
                     </p>
                 </div>
 
@@ -113,11 +113,24 @@ export default function IntegrationsIndex({
                                             defaultValue={account.label}
                                             error={errors.label}
                                         />
-                                        <input
-                                            type="hidden"
-                                            name="is_active"
-                                            value="1"
-                                        />
+                                        {account.provider ===
+                                        'google_calendar' ? (
+                                            <input
+                                                type="hidden"
+                                                name="is_active"
+                                                value={
+                                                    account.is_active
+                                                        ? '0'
+                                                        : '1'
+                                                }
+                                            />
+                                        ) : (
+                                            <input
+                                                type="hidden"
+                                                name="is_active"
+                                                value="1"
+                                            />
+                                        )}
                                         {account.provider ===
                                         'meta_business' ? (
                                             <TextField
@@ -129,7 +142,9 @@ export default function IntegrationsIndex({
                                                 }
                                                 error={errors.page_id}
                                             />
-                                        ) : (
+                                        ) : null}
+                                        {account.provider ===
+                                        'google_search_console' ? (
                                             <TextField
                                                 name="site_url"
                                                 label="Search Console site URL"
@@ -140,31 +155,72 @@ export default function IntegrationsIndex({
                                                 hint="e.g. https://example.com/ or sc-domain:example.com"
                                                 error={errors.site_url}
                                             />
-                                        )}
+                                        ) : null}
+                                        {account.provider ===
+                                        'google_calendar' ? (
+                                            <div className="rounded-md border px-3 py-2 text-sm text-muted-foreground">
+                                                Status:{' '}
+                                                {account.is_active
+                                                    ? 'Activated'
+                                                    : 'Off'}
+                                                . Set GOOGLE_CALENDAR_ID and
+                                                GOOGLE_CALENDAR_ACCESS_TOKEN in
+                                                the environment, then activate.
+                                                New calendar activities and
+                                                marked lead dates push when
+                                                active.
+                                            </div>
+                                        ) : null}
                                         <div className="flex flex-wrap gap-2">
                                             <Button
                                                 type="submit"
                                                 variant="outline"
                                                 disabled={processing}
                                             >
-                                                Save
+                                                {account.provider ===
+                                                'google_calendar'
+                                                    ? account.is_active
+                                                        ? 'Deactivate'
+                                                        : 'Activate'
+                                                    : 'Save'}
                                             </Button>
                                         </div>
                                     </>
                                 )}
                             </Form>
 
-                            <Form
-                                action={`/integrations/${account.id}/sync`}
-                                method="post"
-                                className="mt-3"
-                            >
-                                {({ processing }) => (
-                                    <Button type="submit" disabled={processing}>
-                                        Pull latest report
-                                    </Button>
-                                )}
-                            </Form>
+                            {account.provider !== 'google_calendar' ? (
+                                <Form
+                                    action={`/integrations/${account.id}/sync`}
+                                    method="post"
+                                    className="mt-3"
+                                >
+                                    {({ processing }) => (
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            Pull latest report
+                                        </Button>
+                                    )}
+                                </Form>
+                            ) : (
+                                <Form
+                                    action={`/integrations/${account.id}/sync`}
+                                    method="post"
+                                    className="mt-3"
+                                >
+                                    {({ processing }) => (
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                            variant="outline"
+                                        >
+                                            Check Google Calendar credentials
+                                        </Button>
+                                    )}
+                                </Form>
+                            )}
 
                             {account.last_sync_error ? (
                                 <p className="mt-3 text-sm text-red-600">

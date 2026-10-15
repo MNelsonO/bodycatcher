@@ -62,8 +62,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('leads/{lead}', [LeadController::class, 'update'])->name('leads.update');
     Route::post('leads/{lead}/stage', [LeadController::class, 'stage'])->name('leads.stage');
     Route::post('leads/{lead}/notes', [LeadController::class, 'note'])->name('leads.notes.store');
+    Route::post('leads/{lead}/interactions', [LeadController::class, 'interaction'])->name('leads.interactions.store');
     Route::post('leads/{lead}/messages', [LeadController::class, 'message'])->name('leads.messages.store');
     Route::put('leads/{lead}/follow-up', [LeadController::class, 'followUp'])->name('leads.follow-up.update');
+    Route::put('leads/{lead}/conversation-schedule', [LeadController::class, 'scheduleConversation'])->name('leads.conversation-schedule.update');
     Route::post('leads/{lead}/mark-date', [LeadController::class, 'markDate'])->name('leads.mark-date');
     Route::post('leads/{lead}/whatsapp', [LeadMessagingController::class, 'send'])->name('leads.whatsapp.send');
     Route::post('leads/{lead}/messaging', [LeadMessagingController::class, 'update'])->name('leads.messaging.update');

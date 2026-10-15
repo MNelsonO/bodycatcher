@@ -61,7 +61,17 @@ A replaceable language model (OpenAI or Gemini via `LLM_PROVIDER`) reads one lea
 
 ## Calendar
 
-The Laundry calendar (`/calendar`) lets you pick days, filter the month, and assign blue/white activities. `external_calendar_id` is reserved for trading with your own Google Calendar later.
+The Laundry calendar (`/calendar`) lets you pick days, filter the month, and assign blue/white activities. Activate **Google Calendar** on `/integrations` (set `GOOGLE_CALENDAR_ID` and `GOOGLE_CALENDAR_ACCESS_TOKEN`). When activated, new desk activities and marked lead dates push to Google; `external_calendar_id` stores the remote event id.
+
+## Automated sales agent controls
+
+Each lead keeps its pipeline stage while you speak. On the lead page you can:
+
+- **Record touch** — phone call, meeting, visit, or note with date/time (backdating allowed) and optional duration/outcome. The live assistant and analysis read these.
+- **Schedule conversation** — set `next_conversation_at` so the agent knows when to talk again.
+- **Stop future conversations** — pauses automation and cancels pending follow-up tasks. **Allow conversations** turns the agent back on.
+
+Command centre stage buckets surface follow-up stages, almost-buying, meetings/demos, and touches recorded today.
 
 ## Desk colours
 
@@ -121,7 +131,7 @@ These are intentionally absent.
 
 - Template sending
 - Downloading WhatsApp media
-- Full Google Calendar two-way sync (calendar page stores `external_calendar_id` for later)
+- Full Google Calendar two-way sync (one-way push when activated; no Google → desk import yet)
 - Reply learning from edits (the original draft and the edited text are stored; nothing trains on them)
 - Analytics beyond the command-centre counts and the score on a lead
 - Production VPS hardening

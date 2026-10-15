@@ -41,6 +41,20 @@ class DisplayClock
     }
 
     /**
+     * Value for HTML datetime-local inputs in the display timezone.
+     */
+    public function formatDateTimeLocal(CarbonInterface|string|null $utc): ?string
+    {
+        if ($utc === null || $utc === '') {
+            return null;
+        }
+
+        $moment = $utc instanceof CarbonInterface ? $utc : Carbon::parse($utc);
+
+        return $moment->timezone($this->timezone())->format('Y-m-d\TH:i');
+    }
+
+    /**
      * @return array{0: CarbonInterface, 1: CarbonInterface}
      */
     public function todayUtcRange(): array

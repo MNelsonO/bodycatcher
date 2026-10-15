@@ -9,7 +9,9 @@ use App\Conversations\Message;
 use App\Conversations\MessageChannel;
 use App\Conversations\MessageDirection;
 use App\Expenses\Expense;
+use App\Leads\InteractionType;
 use App\Leads\Lead;
+use App\Leads\LeadInteraction;
 use App\SalesPipelines\StageKind;
 use App\Settings\DisplayClock;
 use Illuminate\Support\Carbon;
@@ -84,6 +86,21 @@ class CommandCentre
                 'in_flight' => $demoRequested + $demoScheduled,
                 'total' => $demoRequested + $demoScheduled + $demoCompleted,
             ],
+            'stage_buckets' => $this->stageBuckets(
+                $demoRequested,
+                $demoScheduled,
+                $demoCompleted,
+            ),
+            'interactions' => $this->interactionMetrics($start, $end),
+            'scheduled_conversations' => Lead::query()
+                ->whereNotNull('next_conversation_at')
+                ->where('conversations_stopped', false)
+                ->whereNull('closed_at')
+                ->count(),
+            'stopped_conversations' => Lead::query()
+                ->where('conversations_stopped', true)
+                ->whereNull('closed_at')
+                ->count(),
             'orders' => [
                 'bought_count' => Invoice::query()->where('status', InvoiceStatus::Paid->value)->count(),
                 'bought_revenue' => $paidRevenue,
@@ -121,6 +138,71 @@ class CommandCentre
         return Lead::query()
             ->whereHas('currentStage', fn ($q) => $q->where('name', $name))
             ->count();
+    }
+
+    /**
+     * @param  list<string>  $names
+     */
+    private function countByStageNames(array $names): int
+    {
+        return Lead::query()
+            ->whereHas('currentStage', fn ($q) => $q->whereIn('name', $names))
+            ->count();
+    }
+
+    /**
+     * Sales-agent view of the funnel: follow-up work, almost-buying, meetings.
+     *
+     * @return array{
+     *     follow_up: array{total: int, stages: list<string>},
+     *     almost_buying: array{total: int, stages: list<string>},
+     *     meetings: array{total: int, requested: int, scheduled: int, completed: int, stages: list<string>},
+     *     nurture: array{total: int, stages: list<string>}
+     * }
+     */
+    private function stageBuckets(int $demoRequested, int $demoScheduled, int $demoCompleted): array
+    {
+        $followUp = ['New Lead', 'Contacted', 'Qualified'];
+        $almostBuying = ['Interested', 'Proposal / Price Sent', 'Negotiation'];
+        $meetings = ['Demo Requested', 'Demo Scheduled', 'Demo Completed'];
+        $nurture = ['Nurture / Future Opportunity'];
+
+        return [
+            'follow_up' => [
+                'total' => $this->countByStageNames($followUp),
+                'stages' => $followUp,
+            ],
+            'almost_buying' => [
+                'total' => $this->countByStageNames($almostBuying),
+                'stages' => $almostBuying,
+            ],
+            'meetings' => [
+                'total' => $demoRequested + $demoScheduled + $demoCompleted,
+                'requested' => $demoRequested,
+                'scheduled' => $demoScheduled,
+                'completed' => $demoCompleted,
+                'stages' => $meetings,
+            ],
+            'nurture' => [
+                'total' => $this->countByStageNames($nurture),
+                'stages' => $nurture,
+            ],
+        ];
+    }
+
+    /**
+     * @return array{today: int, phone_calls_today: int, meetings_today: int, notes_today: int}
+     */
+    private function interactionMetrics(mixed $start, mixed $end): array
+    {
+        $base = fn () => LeadInteraction::query()->whereBetween('occurred_at', [$start, $end]);
+
+        return [
+            'today' => $base()->count(),
+            'phone_calls_today' => $base()->where('type', InteractionType::PhoneCall->value)->count(),
+            'meetings_today' => $base()->where('type', InteractionType::Meeting->value)->count(),
+            'notes_today' => $base()->where('type', InteractionType::Note->value)->count(),
+        ];
     }
 
     /**

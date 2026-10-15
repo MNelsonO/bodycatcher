@@ -87,7 +87,7 @@ class AnalyzeLead
     private function complete(LeadAnalysis $analysis): void
     {
         $lead = Lead::query()->findOrFail($analysis->lead_id);
-        $lead->load(['contact.notes', 'product', 'currentStage.outgoingTransitions.toStage', 'conversation.messages']);
+        $lead->load(['contact.notes', 'interactions', 'product', 'currentStage.outgoingTransitions.toStage', 'conversation.messages']);
         $articles = $this->knowledge->forLead($lead);
         $permitted = $this->permittedStages($lead);
         $raw = $this->client->complete(
@@ -211,12 +211,22 @@ PROMPT;
             ->implode("\n");
 
         $clientContext = $lead->contact->aiContextBlock();
+        $touches = $lead->interactions
+            ->sortByDesc('occurred_at')
+            ->take(10)
+            ->map(function ($row): string {
+                return $row->type->label().' @ '.($row->occurred_at?->toDateTimeString() ?? '?').': '.mb_substr(trim($row->body), 0, 500);
+            })
+            ->implode("\n");
 
         return implode("\n\n", array_values(array_filter([
             'Contact: '.$lead->contact->full_name,
             'Phone: '.$lead->contact->primary_phone,
             'Business: '.($lead->contact->business_name ?? 'unknown'),
             $clientContext !== '' ? $clientContext : null,
+            $touches !== '' ? "Desk touches:\n".$touches : null,
+            'Next conversation: '.($lead->next_conversation_at?->toDateTimeString() ?? 'none'),
+            'Conversations stopped: '.($lead->conversations_stopped ? 'yes' : 'no'),
             'Product: '.$lead->product->name,
             'Product notes: '.($lead->product->description ?? 'none'),
             'Current stage: '.$lead->currentStage->name,

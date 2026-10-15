@@ -28,6 +28,8 @@ class LeadMessagingRequest extends FormRequest
                 'release',
                 'attention',
                 'clear_attention',
+                'stop_conversations',
+                'allow_conversations',
             ])],
         ];
     }

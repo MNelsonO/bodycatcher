@@ -29,6 +29,7 @@ export default function CalendarIndex({
     activities,
     prev_month,
     next_month,
+    google_calendar,
 }: {
     month: string;
     month_label: string;
@@ -38,6 +39,14 @@ export default function CalendarIndex({
     activities: Activity[];
     prev_month: string;
     next_month: string;
+    google_calendar: {
+        activated: boolean;
+        configured: boolean;
+        label: string;
+        last_synced_at: string | null;
+        last_sync_error: string | null;
+        calendar_id_set: boolean;
+    };
 }) {
     return (
         <>
@@ -54,6 +63,29 @@ export default function CalendarIndex({
                         border-color: var(--laundry-blue);
                     }
                 `}</style>
+
+                <div className="rounded-lg border px-4 py-3 text-sm">
+                    <p className="font-medium text-primary">
+                        Google Calendar ·{' '}
+                        {google_calendar.activated ? 'Activated' : 'Off'}
+                        {google_calendar.configured
+                            ? ' · credentials set'
+                            : ' · needs GOOGLE_CALENDAR_* env'}
+                    </p>
+                    <p className="mt-1 text-muted-foreground">
+                        Activate on{' '}
+                        <Link href="/integrations" className="underline">
+                            Integrations
+                        </Link>
+                        . When on, new activities and marked lead dates push to
+                        Google. Local blue/white board always stays visible.
+                    </p>
+                    {google_calendar.last_sync_error ? (
+                        <p className="mt-1 text-destructive">
+                            {google_calendar.last_sync_error}
+                        </p>
+                    ) : null}
+                </div>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>

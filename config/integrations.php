@@ -17,4 +17,9 @@ return [
         'access_token' => env('GSC_ACCESS_TOKEN', ''),
     ],
 
+    'google_calendar' => [
+        'calendar_id' => env('GOOGLE_CALENDAR_ID', ''),
+        'access_token' => env('GOOGLE_CALENDAR_ACCESS_TOKEN', ''),
+    ],
+
 ];

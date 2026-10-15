@@ -7,6 +7,7 @@ use App\Conversations\MessageStatus;
 use App\Http\Requests\LeadMessagingRequest;
 use App\Http\Requests\WhatsAppSendRequest;
 use App\Leads\Actions\RecordActivity;
+use App\Leads\Actions\StopLeadConversations;
 use App\Leads\ActivityEvent;
 use App\Leads\Lead;
 use App\Models\User;
@@ -61,11 +62,35 @@ class LeadMessagingController extends Controller
         return redirect()->route('leads.show', $lead);
     }
 
-    public function update(LeadMessagingRequest $request, Lead $lead, RecordActivity $activity): RedirectResponse
-    {
+    public function update(
+        LeadMessagingRequest $request,
+        Lead $lead,
+        RecordActivity $activity,
+        StopLeadConversations $stopper,
+    ): RedirectResponse {
         /** @var User $actor */
         $actor = $request->user();
         $action = $request->string('action')->toString();
+
+        if ($action === 'stop_conversations') {
+            $stopper->stop($lead, $actor);
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => 'Future conversations stopped. Pending follow-ups were cancelled.',
+            ]);
+
+            return redirect()->route('leads.show', $lead);
+        }
+
+        if ($action === 'allow_conversations') {
+            $stopper->allow($lead, $actor);
+            Inertia::flash('toast', [
+                'type' => 'success',
+                'message' => 'Future conversations allowed again.',
+            ]);
+
+            return redirect()->route('leads.show', $lead);
+        }
 
         $label = match ($action) {
             'pause' => $this->flag($lead, 'automation_paused', true, 'Automation paused'),
