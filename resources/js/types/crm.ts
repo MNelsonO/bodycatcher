@@ -141,6 +141,17 @@ export type LeadDetail = {
             };
         };
     };
+    follow_ups: Array<{
+        id: number;
+        rule: string | null;
+        action: string;
+        body: string;
+        status: string;
+        cancel_on_reply: boolean;
+        due_label: string | null;
+        held_reason: string | null;
+        failure_reason: string | null;
+    }>;
     notes: Array<{
         id: number;
         body: string;

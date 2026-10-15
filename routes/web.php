@@ -4,6 +4,7 @@ use App\Http\Controllers\AiSettingsController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeskUserController;
+use App\Http\Controllers\FollowUpController;
 use App\Http\Controllers\LeadAnalysisController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadMessagingController;
@@ -55,6 +56,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('ai', [AiSettingsController::class, 'index'])->name('ai.settings');
     Route::post('ai/articles', [AiSettingsController::class, 'store'])->name('ai.articles.store');
     Route::put('ai/articles/{article}', [AiSettingsController::class, 'update'])->name('ai.articles.update');
+
+    Route::get('follow-ups', [FollowUpController::class, 'index'])->name('follow-ups.index');
+    Route::post('follow-ups', [FollowUpController::class, 'store'])->name('follow-ups.store');
+    Route::put('follow-ups/{rule}', [FollowUpController::class, 'update'])->name('follow-ups.update');
+    Route::post('follow-ups/tasks/{task}/cancel', [FollowUpController::class, 'cancel'])->name('follow-ups.cancel');
+    Route::post('follow-ups/tasks/{task}/done', [FollowUpController::class, 'complete'])->name('follow-ups.complete');
 
     Route::get('whatsapp', [WhatsAppSettingsController::class, 'index'])->name('whatsapp.settings');
     Route::put('whatsapp', [WhatsAppSettingsController::class, 'update'])->name('whatsapp.settings.update');

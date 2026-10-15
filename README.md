@@ -8,7 +8,7 @@ Nelson Mboya is the first operator. The seeded owner is created from `SEED_USER_
 
 - Login, logout, and password reset (the reset link is written to the log when `MAIL_MAILER=log`).
 - Products with a name, slug, description, active flag, and optional pricing notes. No prices are hardcoded and there is no checkout.
-- Pipelines, stages (active, won, lost, archived-nurture), reorder, archive, and permitted transitions. A stage can store a follow-up delay in hours. Nothing executes that delay yet.
+- Pipelines, stages (active, won, lost, archived-nurture), reorder, archive, and permitted transitions. A stage can store a follow-up delay in hours. A stage-delay rule uses that number.
 - Contacts with E.164 phones. Local Kenyan numbers default to +254. The same number updates the existing contact. The same name does not.
 - Manual merge keeps leads, notes, and message history on the surviving contact and writes a merge audit row.
 - Leads tied to a contact, product, and pipeline stage. One open lead per contact and product. A closed lead does not block a new one.
@@ -67,11 +67,24 @@ A replaceable language model reads one lead. It does not send WhatsApp and it do
 - If the model request fails, the conversation messages stay and the analysis is marked failed.
 - If the queue push fails, the row stays `queued`. `php artisan ai:retry` runs it.
 
+## Phase 4
+
+Follow-up rules schedule tasks. `php artisan follow-ups:run` creates them and sends the WhatsApp ones that are due. The scheduler calls that command every minute. Start it with `php artisan schedule:work`, or cron `php artisan schedule:run`. The Follow-ups page does not pretend the scheduler is already running.
+
+- An owner saves rules. A sales user can see them and can cancel or complete a task. The hours and the Nairobi time live on the rule or on the stage. They are not hardcoded in the runner.
+- No response: after the last outbound WhatsApp message, wait the rule's hours. A later outbound replaces the pending task. A WhatsApp reply on that lead cancels it before it sends.
+- Follow-up date: the lead's `next_follow_up_on` at the rule's Nairobi time. Changing the date cancels the previous pending task and schedules the new one.
+- Stage delay: the hours stored on the current stage, measured from the stage change. A reply cancels it. A stage with no delay is skipped.
+- WhatsApp tasks go through the existing automatic-send checks. Opt-out, a closed 24-hour window, and a missing token are refused once and stored. Pause, takeover, and personal attention hold the task so it can still send after they are cleared. The same task id is the idempotency key, so a second pass does not send it again.
+- Desk tasks stay pending until someone marks them done. They do not send.
+- Turning a rule off or closing the lead cancels its pending tasks.
+
+Message text may include `{contact}`, `{business}`, and `{action}`.
+
 ## Not built yet
 
 These are intentionally absent.
 
-- An automation engine that fires follow-ups (delay hours are stored only; automatic-send flags are checked, nothing schedules them)
 - Template sending
 - Downloading WhatsApp media
 - Google Calendar

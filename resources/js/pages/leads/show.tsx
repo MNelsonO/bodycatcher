@@ -2,6 +2,7 @@ import { Form, Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
 import { LeadAnalysisPanel } from '@/components/crm/lead-analysis';
+import { FollowUpTasks } from '@/components/crm/follow-up-tasks';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -227,9 +228,10 @@ export default function LeadShow({
                             {lead.stage.default_follow_up_delay_hours !==
                             null ? (
                                 <p className="mt-2 text-xs text-muted-foreground">
-                                    This stage stores a suggested delay of{' '}
+                                    This stage stores a delay of{' '}
                                     {lead.stage.default_follow_up_delay_hours}{' '}
-                                    hours. Nothing schedules it yet.
+                                    hours. A stage-delay rule on Follow-ups
+                                    uses that number, and a reply cancels it.
                                 </p>
                             ) : null}
                             {lead.outcome === 'lost' ? (
@@ -249,6 +251,8 @@ export default function LeadShow({
                     leadId={lead.id}
                     intelligence={lead.intelligence}
                 />
+
+                <FollowUpTasks leadId={lead.id} tasks={lead.follow_ups} />
 
                 <section className="rounded-lg border p-4">
                     <h2 className="text-sm font-medium">Conversation</h2>

@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     LayoutGrid,
+    ListTodo,
     MessageCircle,
     Package,
     Rows3,
@@ -33,6 +34,7 @@ export function AppSidebar() {
         { title: 'Contacts', href: '/contacts', icon: UserRound },
         { title: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
         { title: 'Intelligence', href: '/ai', icon: Sparkles },
+        { title: 'Follow-ups', href: '/follow-ups', icon: ListTodo },
     ];
 
     if (owner) {

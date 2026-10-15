@@ -7,6 +7,7 @@ use App\Ai\LeadAnalysis;
 use App\Ai\LlmConfiguration;
 use App\Conversations\Message;
 use App\Conversations\MessageAttachment;
+use App\FollowUps\FollowUpTask;
 use App\Settings\DisplayClock;
 use App\WhatsApp\DeskSetting;
 use App\WhatsApp\Services\ServiceWindow;
@@ -141,6 +142,7 @@ class LeadPageData
             ])->all() ?? [],
             'whatsapp' => $this->whatsapp($lead),
             'intelligence' => $this->intelligence($lead),
+            'follow_ups' => $this->followUps($lead),
             'notes' => $lead->notes->map(fn (LeadNote $note): array => [
                 'id' => $note->id,
                 'body' => $note->body,
@@ -198,6 +200,24 @@ class LeadPageData
             ActivityEvent::ExtractionApplied => 'Analysis fields applied',
             ActivityEvent::DraftEdited => 'Reply draft edited',
             ActivityEvent::DraftSent => 'Approved reply sent on WhatsApp',
+            ActivityEvent::FollowUpScheduled => 'Follow-up scheduled'
+                .(isset($properties['rule']) && is_string($properties['rule'])
+                    ? ': '.$properties['rule']
+                    : ''),
+            ActivityEvent::FollowUpCancelled => 'Follow-up cancelled'
+                .(isset($properties['reason']) && is_string($properties['reason'])
+                    ? ': '.$properties['reason']
+                    : ''),
+            ActivityEvent::FollowUpHeld => 'Follow-up held'
+                .(isset($properties['reason']) && is_string($properties['reason'])
+                    ? ': '.$properties['reason']
+                    : ''),
+            ActivityEvent::FollowUpSent => 'Follow-up sent on WhatsApp',
+            ActivityEvent::FollowUpRefused => 'Follow-up refused'
+                .(isset($properties['reason']) && is_string($properties['reason'])
+                    ? ': '.$properties['reason']
+                    : ''),
+            ActivityEvent::FollowUpCompleted => 'Follow-up marked done',
         };
     }
 
@@ -224,6 +244,37 @@ class LeadPageData
             'automatic_sends_paused' => DeskSetting::current()->automatic_sends_paused,
             'opted_out' => $lead->contact->consent_status->value === 'opted_out',
         ];
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function followUps(Lead $lead): array
+    {
+        $tasks = FollowUpTask::query()
+            ->with('rule:id,name')
+            ->where('lead_id', $lead->id)
+            ->orderByDesc('id')
+            ->limit(8)
+            ->get();
+
+        $rows = [];
+
+        foreach ($tasks as $task) {
+            $rows[] = [
+                'id' => $task->id,
+                'rule' => $task->rule?->name,
+                'action' => $task->action->value,
+                'body' => $task->body,
+                'status' => $task->status->value,
+                'cancel_on_reply' => $task->cancel_on_reply,
+                'due_label' => $this->clock->formatDateTime($task->due_at),
+                'held_reason' => $task->held_reason,
+                'failure_reason' => $task->failure_reason,
+            ];
+        }
+
+        return $rows;
     }
 
     /**

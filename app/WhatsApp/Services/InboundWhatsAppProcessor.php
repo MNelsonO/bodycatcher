@@ -10,6 +10,7 @@ use App\Conversations\MessageChannel;
 use App\Conversations\MessageDirection;
 use App\Conversations\MessageOrigin;
 use App\Conversations\MessageStatus;
+use App\FollowUps\Services\CancelFollowUpsOnReply;
 use App\Leads\Actions\RecordActivity;
 use App\Leads\ActivityEvent;
 use App\WhatsApp\OptOutKeywords;
@@ -23,6 +24,7 @@ class InboundWhatsAppProcessor
         private InboundConversationResolver $resolver,
         private ApplyMessageStatus $statuses,
         private RecordActivity $activity,
+        private CancelFollowUpsOnReply $cancellations,
     ) {}
 
     public function process(int $eventId): void
@@ -169,6 +171,8 @@ class InboundWhatsAppProcessor
             'channel' => MessageChannel::WhatsApp->value,
             'message_id' => $stored->id,
         ]);
+
+        $this->cancellations->handle($lead, $sentAt);
 
         if ($type === 'text' && OptOutKeywords::matches($parsed['body'])) {
             $contact = $lead->contact;

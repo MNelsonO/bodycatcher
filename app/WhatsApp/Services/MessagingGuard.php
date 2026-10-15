@@ -28,20 +28,10 @@ class MessagingGuard
         }
 
         if ($origin === MessageOrigin::Automatic) {
-            if (DeskSetting::current()->automatic_sends_paused) {
-                return 'Automatic sends are paused for the whole desk.';
-            }
+            $pause = $this->pauseReason($lead);
 
-            if ($lead->automation_paused) {
-                return 'Automatic sends are paused on this lead.';
-            }
-
-            if ($lead->taken_over) {
-                return 'This lead is taken over. Automatic sends are blocked.';
-            }
-
-            if ($lead->needs_personal_attention) {
-                return 'This lead needs personal attention. Automatic sends are blocked.';
+            if ($pause !== null) {
+                return $pause;
             }
         }
 
@@ -50,6 +40,30 @@ class MessagingGuard
 
         if (! is_string($token) || $token === '' || ! is_string($phoneNumberId) || $phoneNumberId === '') {
             return 'WhatsApp is not configured. The token or phone number id is missing, so nothing was sent.';
+        }
+
+        return null;
+    }
+
+    /**
+     * Pause, takeover, and personal attention hold an automatic send. They do not refuse it.
+     */
+    public function pauseReason(Lead $lead): ?string
+    {
+        if (DeskSetting::current()->automatic_sends_paused) {
+            return 'Automatic sends are paused for the whole desk.';
+        }
+
+        if ($lead->automation_paused) {
+            return 'Automatic sends are paused on this lead.';
+        }
+
+        if ($lead->taken_over) {
+            return 'This lead is taken over. Automatic sends are blocked.';
+        }
+
+        if ($lead->needs_personal_attention) {
+            return 'This lead needs personal attention. Automatic sends are blocked.';
         }
 
         return null;

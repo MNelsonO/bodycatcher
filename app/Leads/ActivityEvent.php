@@ -19,4 +19,10 @@ enum ActivityEvent: string
     case ExtractionApplied = 'extraction_applied';
     case DraftEdited = 'draft_edited';
     case DraftSent = 'draft_sent';
+    case FollowUpScheduled = 'follow_up_scheduled';
+    case FollowUpCancelled = 'follow_up_cancelled';
+    case FollowUpHeld = 'follow_up_held';
+    case FollowUpSent = 'follow_up_sent';
+    case FollowUpRefused = 'follow_up_refused';
+    case FollowUpCompleted = 'follow_up_completed';
 }
