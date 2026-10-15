@@ -12,6 +12,7 @@ import {
     Sparkles,
     UserRound,
     Users,
+    Landmark,
     Wallet,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -39,6 +40,7 @@ export function AppSidebar() {
         { title: 'Calendar', href: '/calendar', icon: CalendarDays },
         { title: 'Invoices', href: '/invoices', icon: FileText },
         { title: 'Expenses', href: '/expenses', icon: Wallet },
+        { title: 'Money', href: '/money', icon: Landmark },
         { title: 'Reports', href: '/reports', icon: ChartPie },
         { title: 'Integrations', href: '/integrations', icon: ChartColumn },
         { title: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },

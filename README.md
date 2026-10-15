@@ -79,6 +79,10 @@ Invoices (`/invoices`) support logo + address on the business profile, PDF downl
 
 `/reports` is the desk analytics board. Pick a date range (or 7d / 30d / 90d) to see leads per product, conversion per product, high-interest leads per product (Interested / Demo / Proposal / Negotiation or AI score ≥ 70), daily lead/won charts, and spend every day plus category totals.
 
+## Money
+
+`/money` tracks payment accounts (multiple banks, M-Pesa, cash), people you owe / who owe you, and recurring monthly inflows/outflows. Mark a recurring item paid to roll its next due date.
+
 ## WhatsApp knowledge pull
 
 On Intelligence, **Pull WhatsApp knowledge** syncs Meta WhatsApp Business profile fields (when Meta credentials exist) and mines frequent inbound questions from desk conversations into knowledge notes.

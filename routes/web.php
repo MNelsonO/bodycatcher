@@ -17,6 +17,7 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadMessagingController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\MoneyController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SharedInvoiceController;
 use App\Http\Controllers\TaxLedgerController;
@@ -81,6 +82,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
     Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
     Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+
+    Route::get('money', [MoneyController::class, 'index'])->name('money.index');
+    Route::post('money/accounts', [MoneyController::class, 'storeAccount'])->name('money.accounts.store');
+    Route::put('money/accounts/{account}', [MoneyController::class, 'updateAccount'])->name('money.accounts.update');
+    Route::delete('money/accounts/{account}', [MoneyController::class, 'destroyAccount'])->name('money.accounts.destroy');
+    Route::post('money/debts', [MoneyController::class, 'storeDebt'])->name('money.debts.store');
+    Route::put('money/debts/{debt}', [MoneyController::class, 'updateDebt'])->name('money.debts.update');
+    Route::post('money/debts/{debt}/settle', [MoneyController::class, 'settleDebt'])->name('money.debts.settle');
+    Route::delete('money/debts/{debt}', [MoneyController::class, 'destroyDebt'])->name('money.debts.destroy');
+    Route::post('money/recurrings', [MoneyController::class, 'storeRecurring'])->name('money.recurrings.store');
+    Route::put('money/recurrings/{recurring}', [MoneyController::class, 'updateRecurring'])->name('money.recurrings.update');
+    Route::post('money/recurrings/{recurring}/paid', [MoneyController::class, 'markRecurringPaid'])->name('money.recurrings.paid');
+    Route::delete('money/recurrings/{recurring}', [MoneyController::class, 'destroyRecurring'])->name('money.recurrings.destroy');
 
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
 
