@@ -158,6 +158,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('billing/subscriptions/{subscription}', [BillingSubscriptionController::class, 'update'])->name('billing.subscriptions.update');
     Route::delete('billing/subscriptions/{subscription}', [BillingSubscriptionController::class, 'destroy'])->name('billing.subscriptions.destroy');
     Route::post('billing/subscriptions/{subscription}/invoice', [BillingSubscriptionController::class, 'invoiceNow'])->name('billing.subscriptions.invoice');
+    Route::post('billing/subscriptions/{subscription}/payments', [BillingSubscriptionController::class, 'recordPayment'])->name('billing.subscriptions.payments.store');
 
     Route::get('billing/tax-log', [TaxLedgerController::class, 'index'])->name('billing.tax-log');
 });

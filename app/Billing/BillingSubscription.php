@@ -17,6 +17,8 @@ class BillingSubscription extends Model
         'tax_rate',
         'cadence',
         'next_due_on',
+        'last_paid_on',
+        'last_payment_method_id',
         'status',
         'alert_days_before',
         'notes',
@@ -29,8 +31,25 @@ class BillingSubscription extends Model
             'amount' => 'decimal:2',
             'tax_rate' => 'decimal:2',
             'next_due_on' => 'date',
+            'last_paid_on' => 'date',
             'alert_days_before' => 'integer',
         ];
+    }
+
+    /**
+     * @return BelongsTo<PaymentMethod, $this>
+     */
+    public function lastPaymentMethod(): BelongsTo
+    {
+        return $this->belongsTo(PaymentMethod::class, 'last_payment_method_id');
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<SubscriptionPayment, $this>
+     */
+    public function payments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SubscriptionPayment::class, 'billing_subscription_id')->orderByDesc('paid_on')->orderByDesc('id');
     }
 
     /**

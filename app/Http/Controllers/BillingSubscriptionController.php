@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Billing\Actions\RecordSubscriptionPayment;
 use App\Billing\BillingSubscription;
 use App\Billing\BusinessProfile;
+use App\Billing\PaymentMethod;
 use App\Billing\Services\BillingAlertService;
 use App\Billing\Services\InvoiceService;
 use App\Contacts\Contact;
 use App\Http\Requests\BillingSubscriptionRequest;
+use App\Http\Requests\SubscriptionPaymentRequest;
 use App\Models\User;
 use App\Settings\Product;
 use Illuminate\Http\RedirectResponse;
@@ -20,7 +23,7 @@ class BillingSubscriptionController extends Controller
     public function index(BillingAlertService $alerts): Response
     {
         $subs = BillingSubscription::query()
-            ->with(['contact:id,full_name,business_name', 'product:id,name'])
+            ->with(['contact:id,full_name,business_name', 'product:id,name', 'lastPaymentMethod:id,name', 'payments' => fn ($q) => $q->limit(3)])
             ->orderBy('next_due_on')
             ->get()
             ->map(fn (BillingSubscription $sub): array => [
@@ -35,6 +38,8 @@ class BillingSubscriptionController extends Controller
                 'tax_rate' => (float) $sub->tax_rate,
                 'cadence' => $sub->cadence,
                 'next_due_on' => $sub->next_due_on?->toDateString(),
+                'last_paid_on' => $sub->last_paid_on?->toDateString(),
+                'last_payment_method' => $sub->lastPaymentMethod?->name,
                 'status' => $sub->status,
                 'alert_days_before' => $sub->alert_days_before,
                 'notes' => $sub->notes,
@@ -45,6 +50,7 @@ class BillingSubscriptionController extends Controller
         return Inertia::render('billing/subscriptions/index', [
             'subscriptions' => $subs,
             'alerts' => $alerts->snapshot(),
+            'payment_methods' => PaymentMethod::query()->active()->get(['id', 'name']),
             'contacts' => Contact::query()
                 ->whereNull('merged_into_contact_id')
                 ->orderBy('full_name')
@@ -57,6 +63,7 @@ class BillingSubscriptionController extends Controller
             'defaults' => [
                 'tax_rate' => (float) BusinessProfile::current()->default_tax_rate,
                 'next_due_on' => now()->addMonth()->toDateString(),
+                'paid_on' => now()->toDateString(),
             ],
         ]);
     }
@@ -85,6 +92,25 @@ class BillingSubscriptionController extends Controller
         $subscription->delete();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Monthly customer removed.']);
+
+        return redirect()->route('billing.subscriptions.index');
+    }
+
+    public function recordPayment(
+        SubscriptionPaymentRequest $request,
+        BillingSubscription $subscription,
+        RecordSubscriptionPayment $action,
+    ): RedirectResponse {
+        abort_unless($subscription->status === 'active', 422, 'Only active subscriptions can record a payment.');
+
+        /** @var User $actor */
+        $actor = $request->user();
+        $payment = $action->handle($subscription, $request->validated(), $actor);
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Payment of '.$payment->amount.' recorded for '.$payment->paid_on?->toDateString().'. Next due advanced.',
+        ]);
 
         return redirect()->route('billing.subscriptions.index');
     }

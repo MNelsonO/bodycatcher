@@ -1,4 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
+import { SelectField, TextField } from '@/components/crm/fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,6 +24,8 @@ type Invoice = {
     notes: string | null;
     customer_address: string | null;
     share_token: string;
+    paid_on: string | null;
+    payment_method: string | null;
     contact: {
         id: number;
         full_name: string;
@@ -56,10 +59,14 @@ export default function InvoiceShow({
     invoice,
     business,
     share_url,
+    payment_methods,
+    defaults,
 }: {
     invoice: Invoice;
     business: Business;
     share_url: string;
+    payment_methods: Array<{ id: number; name: string }>;
+    defaults: { paid_on: string };
 }) {
     const copyShare = async () => {
         await navigator.clipboard.writeText(share_url);
@@ -82,6 +89,14 @@ export default function InvoiceShow({
                             <Badge variant="outline">
                                 Due {invoice.due_date}
                             </Badge>
+                            {invoice.paid_on ? (
+                                <Badge variant="outline">
+                                    Paid {invoice.paid_on}
+                                    {invoice.payment_method
+                                        ? ` · ${invoice.payment_method}`
+                                        : ''}
+                                </Badge>
+                            ) : null}
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -98,14 +113,7 @@ export default function InvoiceShow({
                         <Button variant="outline" type="button" onClick={copyShare}>
                             Copy share link
                         </Button>
-                        {invoice.status !== 'paid' ? (
-                            <Form
-                                action={`/invoices/${invoice.id}/mark-paid`}
-                                method="post"
-                            >
-                                <Button type="submit">Mark paid</Button>
-                            </Form>
-                        ) : (
+                        {invoice.status !== 'paid' ? null : (
                             <Form
                                 action={`/invoices/${invoice.id}/mark-unpaid`}
                                 method="post"
@@ -130,6 +138,41 @@ export default function InvoiceShow({
                         </Button>
                     </div>
                 </div>
+
+                {invoice.status !== 'paid' ? (
+                    <Form
+                        action={`/invoices/${invoice.id}/mark-paid`}
+                        method="post"
+                        className="grid max-w-2xl gap-3 rounded-lg border p-4 sm:grid-cols-[1fr_1fr_auto]"
+                    >
+                        {({ errors, processing }) => (
+                            <>
+                                <TextField
+                                    name="paid_on"
+                                    label="Paid on"
+                                    type="date"
+                                    defaultValue={defaults.paid_on}
+                                    error={errors.paid_on}
+                                />
+                                <SelectField
+                                    name="payment_method_id"
+                                    label="Payment method"
+                                    options={payment_methods.map((method) => ({
+                                        value: String(method.id),
+                                        label: method.name,
+                                    }))}
+                                    error={errors.payment_method_id}
+                                    hint="Manage methods under Settings → Payment methods."
+                                />
+                                <div className="flex items-end">
+                                    <Button type="submit" disabled={processing}>
+                                        Mark paid
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </Form>
+                ) : null}
 
                 <div className="grid gap-4 lg:grid-cols-2">
                     <section className="rounded-lg border p-4 text-sm">

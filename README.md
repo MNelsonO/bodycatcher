@@ -93,6 +93,10 @@ Invoices (`/invoices`) support logo + address on the business profile, PDF downl
 
 `/money` tracks payment accounts (multiple banks, M-Pesa, cash), people you owe / who owe you, and recurring monthly inflows/outflows. Mark a recurring item paid to roll its next due date.
 
+## Payment methods & subscription payouts
+
+Settings → **Payment methods** defines how clients pay (M-Pesa, bank transfer, cash, card, cheque, plus any custom method). On **Monthly customers** and on a contact with an active subscription, record a payout with **paid on** date and **method**. That advances the next due date, stores the last payment, and creates a paid invoice. Marking an invoice paid also asks for paid-on date and method.
+
 ## WhatsApp knowledge pull
 
 On Intelligence, **Pull WhatsApp knowledge** syncs Meta WhatsApp Business profile fields (when Meta credentials exist) and mines frequent inbound questions from desk conversations into knowledge notes.

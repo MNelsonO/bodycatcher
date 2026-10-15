@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Settings\PaymentMethodController;
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
 use Illuminate\Auth\Middleware\RequirePassword;
@@ -12,6 +13,11 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('settings/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('settings/profile', [ProfileController::class, 'update'])->name('profile.update');
+
+    Route::get('settings/payment-methods', [PaymentMethodController::class, 'edit'])->name('payment-methods.edit');
+    Route::post('settings/payment-methods', [PaymentMethodController::class, 'store'])->name('payment-methods.store');
+    Route::put('settings/payment-methods/{paymentMethod}', [PaymentMethodController::class, 'update'])->name('payment-methods.update');
+    Route::delete('settings/payment-methods/{paymentMethod}', [PaymentMethodController::class, 'destroy'])->name('payment-methods.destroy');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Billing\BusinessProfile;
 use App\Billing\Invoice;
 use App\Billing\InvoiceStatus;
+use App\Billing\PaymentMethod;
 use App\Billing\Services\BillingAlertService;
 use App\Billing\Services\InvoiceService;
 use App\Contacts\Contact;
@@ -79,13 +80,17 @@ class InvoiceController extends Controller
     public function show(Invoice $invoice): InertiaResponse
     {
         $invoice->refreshOpenStatus();
-        $invoice->load(['contact', 'items', 'creator']);
+        $invoice->load(['contact', 'items', 'creator', 'paymentMethod']);
         $profile = BusinessProfile::current();
 
         return Inertia::render('billing/invoices/show', [
             'invoice' => $this->payload($invoice),
             'business' => $this->businessPayload($profile),
             'share_url' => url('/share/invoices/'.$invoice->share_token),
+            'payment_methods' => PaymentMethod::query()->active()->get(['id', 'name']),
+            'defaults' => [
+                'paid_on' => now()->toDateString(),
+            ],
         ]);
     }
 
@@ -98,9 +103,16 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.show', $invoice);
     }
 
-    public function markPaid(Invoice $invoice, InvoiceService $service): RedirectResponse
+    public function markPaid(\App\Http\Requests\MarkInvoicePaidRequest $request, Invoice $invoice, InvoiceService $service): RedirectResponse
     {
-        $service->markPaid($invoice);
+        $paidOn = $request->input('paid_on');
+        $methodId = $request->input('payment_method_id');
+
+        $service->markPaid(
+            $invoice,
+            is_string($paidOn) && $paidOn !== '' ? $paidOn : null,
+            is_numeric($methodId) ? (int) $methodId : null,
+        );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Invoice marked paid. Tax logged.']);
 
@@ -158,6 +170,9 @@ class InvoiceController extends Controller
             'customer_address' => $invoice->customer_address,
             'share_token' => $invoice->share_token,
             'paid_at' => $invoice->paid_at?->toIso8601String(),
+            'paid_on' => $invoice->paid_at?->toDateString(),
+            'payment_method' => $invoice->paymentMethod?->name,
+            'payment_method_id' => $invoice->payment_method_id,
             'sent_at' => $invoice->sent_at?->toIso8601String(),
             'contact' => [
                 'id' => $invoice->contact->id,

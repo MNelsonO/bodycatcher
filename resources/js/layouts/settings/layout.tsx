@@ -26,6 +26,11 @@ const sidebarNavItems: NavItem[] = [
         href: editAppearance(),
         icon: null,
     },
+    {
+        title: 'Payment methods',
+        href: '/settings/payment-methods',
+        icon: null,
+    },
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {

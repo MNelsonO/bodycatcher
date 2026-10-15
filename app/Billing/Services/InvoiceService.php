@@ -78,11 +78,14 @@ class InvoiceService
         return $invoice;
     }
 
-    public function markPaid(Invoice $invoice): Invoice
+    public function markPaid(Invoice $invoice, ?string $paidOn = null, ?int $paymentMethodId = null): Invoice
     {
-        return DB::transaction(function () use ($invoice): Invoice {
+        return DB::transaction(function () use ($invoice, $paidOn, $paymentMethodId): Invoice {
             $invoice->status = InvoiceStatus::Paid;
-            $invoice->paid_at = now();
+            $invoice->paid_at = $paidOn !== null && $paidOn !== ''
+                ? \Illuminate\Support\Carbon::parse($paidOn)->endOfDay()
+                : now();
+            $invoice->payment_method_id = $paymentMethodId;
             $invoice->save();
 
             TaxLedgerEntry::query()->updateOrCreate(
@@ -101,6 +104,7 @@ class InvoiceService
                     'meta' => [
                         'invoice_number' => $invoice->number,
                         'currency' => $invoice->currency,
+                        'payment_method_id' => $paymentMethodId,
                     ],
                 ],
             );
@@ -114,6 +118,7 @@ class InvoiceService
         return DB::transaction(function () use ($invoice): Invoice {
             $invoice->status = InvoiceStatus::Unpaid;
             $invoice->paid_at = null;
+            $invoice->payment_method_id = null;
             $invoice->save();
             $invoice->refreshOpenStatus();
 

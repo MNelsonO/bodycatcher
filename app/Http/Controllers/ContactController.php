@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Billing\BillingSubscription;
+use App\Billing\PaymentMethod;
 use App\Contacts\Actions\AddContactNote;
 use App\Contacts\Actions\CreateOrUpdateContact;
 use App\Contacts\Actions\MergeContacts;
@@ -111,6 +113,13 @@ class ContactController extends Controller
             ->orderBy('full_name')
             ->get(['id', 'full_name', 'business_name', 'primary_phone']);
 
+        $subscriptions = BillingSubscription::query()
+            ->with(['product:id,name', 'lastPaymentMethod:id,name'])
+            ->where('contact_id', $contact->id)
+            ->where('status', 'active')
+            ->orderBy('next_due_on')
+            ->get();
+
         return Inertia::render('contacts/show', [
             'contact' => $this->summary($contact, $clock),
             'notes' => $contact->notes
@@ -129,6 +138,21 @@ class ContactController extends Controller
                 'stage_name' => $lead->currentStage->name,
                 'outcome' => $lead->outcome(),
             ])->all(),
+            'subscriptions' => $subscriptions->map(fn (BillingSubscription $sub): array => [
+                'id' => $sub->id,
+                'label' => $sub->label,
+                'product_name' => $sub->product?->name,
+                'amount' => (float) $sub->amount,
+                'next_due_on' => $sub->next_due_on?->toDateString(),
+                'last_paid_on' => $sub->last_paid_on?->toDateString(),
+                'last_payment_method' => $sub->lastPaymentMethod?->name,
+                'overdue' => $sub->isOverdue(),
+                'due_soon' => $sub->isDueSoon(),
+            ])->all(),
+            'payment_methods' => PaymentMethod::query()->active()->get(['id', 'name']),
+            'payment_defaults' => [
+                'paid_on' => now()->toDateString(),
+            ],
             'merge_candidates' => $others->map(fn (Contact $candidate): array => [
                 'id' => $candidate->id,
                 'label' => $candidate->full_name.' · '.$candidate->primary_phone.($candidate->business_name ? ' · '.$candidate->business_name : ''),

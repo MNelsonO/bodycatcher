@@ -12,6 +12,8 @@ type Subscription = {
     amount: number;
     tax_rate: number;
     next_due_on: string | null;
+    last_paid_on: string | null;
+    last_payment_method: string | null;
     status: string;
     alert_days_before: number;
     due_soon: boolean;
@@ -24,14 +26,16 @@ export default function SubscriptionsIndex({
     products,
     defaults,
     alerts,
+    payment_methods,
 }: {
     subscriptions: Subscription[];
     contacts: Array<{ id: number; full_name: string; business_name: string | null }>;
     products: Array<{ id: number; name: string }>;
-    defaults: { tax_rate: number; next_due_on: string };
+    defaults: { tax_rate: number; next_due_on: string; paid_on: string };
     alerts: {
         due_subscriptions: Array<{ id: number; label: string; contact_name: string; next_due_on: string | null; overdue: boolean }>;
     };
+    payment_methods: Array<{ id: number; name: string }>;
 }) {
     return (
         <>
@@ -43,13 +47,21 @@ export default function SubscriptionsIndex({
                             Monthly customers
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Track recurring payers, due dates, and raise
-                            invoices when payment is due.
+                            Follow up on active subscriptions: record when they
+                            paid and which method they used. Define methods in
+                            Settings.
                         </p>
                     </div>
-                    <Button variant="outline" asChild>
-                        <Link href="/invoices">Invoices</Link>
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" asChild>
+                            <Link href="/settings/payment-methods">
+                                Payment methods
+                            </Link>
+                        </Button>
+                        <Button variant="outline" asChild>
+                            <Link href="/invoices">Invoices</Link>
+                        </Button>
+                    </div>
                 </div>
 
                 {alerts.due_subscriptions.length > 0 ? (
@@ -217,37 +229,104 @@ export default function SubscriptionsIndex({
                                         % tax · next due {sub.next_due_on} ·
                                         alert {sub.alert_days_before}d
                                     </p>
+                                    {sub.last_paid_on ? (
+                                        <p className="text-sm text-muted-foreground">
+                                            Last paid {sub.last_paid_on}
+                                            {sub.last_payment_method
+                                                ? ` · ${sub.last_payment_method}`
+                                                : ''}
+                                        </p>
+                                    ) : null}
                                 </div>
-                                <div className="flex gap-2">
-                                    <Form
-                                        action={`/billing/subscriptions/${sub.id}/invoice`}
-                                        method="post"
-                                    >
-                                        {({ processing }) => (
-                                            <Button
-                                                type="submit"
-                                                size="sm"
-                                                disabled={processing}
-                                            >
-                                                Invoice now
-                                            </Button>
-                                        )}
-                                    </Form>
-                                    <Form
-                                        action={`/billing/subscriptions/${sub.id}`}
-                                        method="delete"
-                                    >
-                                        {({ processing }) => (
-                                            <Button
-                                                type="submit"
-                                                size="sm"
-                                                variant="ghost"
-                                                disabled={processing}
-                                            >
-                                                Remove
-                                            </Button>
-                                        )}
-                                    </Form>
+                                <div className="flex flex-col gap-2">
+                                    {sub.status === 'active' ? (
+                                        <Form
+                                            action={`/billing/subscriptions/${sub.id}/payments`}
+                                            method="post"
+                                            className="grid gap-2 rounded-md border p-3 sm:grid-cols-2 lg:grid-cols-4"
+                                        >
+                                            {({ errors, processing }) => (
+                                                <>
+                                                    <TextField
+                                                        name="paid_on"
+                                                        label="Paid on"
+                                                        type="date"
+                                                        required
+                                                        defaultValue={
+                                                            defaults.paid_on
+                                                        }
+                                                        error={errors.paid_on}
+                                                    />
+                                                    <SelectField
+                                                        name="payment_method_id"
+                                                        label="Method"
+                                                        required
+                                                        options={payment_methods.map(
+                                                            (method) => ({
+                                                                value: String(
+                                                                    method.id,
+                                                                ),
+                                                                label: method.name,
+                                                            }),
+                                                        )}
+                                                        error={
+                                                            errors.payment_method_id
+                                                        }
+                                                    />
+                                                    <TextField
+                                                        name="reference"
+                                                        label="Reference"
+                                                        error={errors.reference}
+                                                    />
+                                                    <div className="flex items-end">
+                                                        <Button
+                                                            type="submit"
+                                                            size="sm"
+                                                            disabled={
+                                                                processing ||
+                                                                payment_methods.length ===
+                                                                    0
+                                                            }
+                                                        >
+                                                            Record payment
+                                                        </Button>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </Form>
+                                    ) : null}
+                                    <div className="flex gap-2">
+                                        <Form
+                                            action={`/billing/subscriptions/${sub.id}/invoice`}
+                                            method="post"
+                                        >
+                                            {({ processing }) => (
+                                                <Button
+                                                    type="submit"
+                                                    size="sm"
+                                                    variant="outline"
+                                                    disabled={processing}
+                                                >
+                                                    Invoice now
+                                                </Button>
+                                            )}
+                                        </Form>
+                                        <Form
+                                            action={`/billing/subscriptions/${sub.id}`}
+                                            method="delete"
+                                        >
+                                            {({ processing }) => (
+                                                <Button
+                                                    type="submit"
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    disabled={processing}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
+                                        </Form>
+                                    </div>
                                 </div>
                             </li>
                         ))

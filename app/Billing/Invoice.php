@@ -26,6 +26,7 @@ class Invoice extends Model
         'customer_address',
         'share_token',
         'paid_at',
+        'payment_method_id',
         'sent_at',
     ];
 
@@ -41,6 +42,14 @@ class Invoice extends Model
             'paid_at' => 'datetime',
             'sent_at' => 'datetime',
         ];
+    }
+
+    /**
+     * @return BelongsTo<PaymentMethod, $this>
+     */
+    public function paymentMethod(): BelongsTo
+    {
+        return $this->belongsTo(PaymentMethod::class);
     }
 
     protected static function booted(): void

@@ -1,5 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { AreaField, SelectField } from '@/components/crm/fields';
+import { AreaField, SelectField, TextField } from '@/components/crm/fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { ContactSummary } from '@/types/crm';
@@ -8,6 +8,9 @@ export default function ContactShow({
     contact,
     notes,
     leads,
+    subscriptions = [],
+    payment_methods = [],
+    payment_defaults = { paid_on: '' },
     merge_candidates,
 }: {
     contact: ContactSummary;
@@ -23,6 +26,19 @@ export default function ContactShow({
         stage_name: string;
         outcome: string;
     }>;
+    subscriptions?: Array<{
+        id: number;
+        label: string;
+        product_name: string | null;
+        amount: number;
+        next_due_on: string | null;
+        last_paid_on: string | null;
+        last_payment_method: string | null;
+        overdue: boolean;
+        due_soon: boolean;
+    }>;
+    payment_methods?: Array<{ id: number; name: string }>;
+    payment_defaults?: { paid_on: string };
     merge_candidates: Array<{ id: number; label: string }>;
 }) {
     return (
@@ -160,6 +176,120 @@ export default function ContactShow({
                                             {lead.outcome}
                                         </Badge>
                                     </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
+
+                <section className="space-y-3">
+                    <div className="flex flex-wrap items-end justify-between gap-3">
+                        <div>
+                            <h2 className="text-sm font-medium">
+                                Active subscriptions
+                            </h2>
+                            <p className="text-sm text-muted-foreground">
+                                When following up, record the payout date and
+                                payment method. Methods are managed in Settings.
+                            </p>
+                        </div>
+                        <Button variant="outline" asChild>
+                            <Link href="/billing/subscriptions">
+                                All monthly customers
+                            </Link>
+                        </Button>
+                    </div>
+                    {subscriptions.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                            No active subscriptions for this client.
+                        </p>
+                    ) : (
+                        <ul className="space-y-3">
+                            {subscriptions.map((sub) => (
+                                <li
+                                    key={sub.id}
+                                    className="rounded-lg border p-4"
+                                >
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="font-medium">
+                                            {sub.label}
+                                        </span>
+                                        {sub.overdue ? (
+                                            <Badge variant="destructive">
+                                                Overdue
+                                            </Badge>
+                                        ) : sub.due_soon ? (
+                                            <Badge variant="outline">
+                                                Due soon
+                                            </Badge>
+                                        ) : null}
+                                    </div>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        {sub.product_name
+                                            ? `${sub.product_name} · `
+                                            : ''}
+                                        {sub.amount.toFixed(2)} · next due{' '}
+                                        {sub.next_due_on}
+                                        {sub.last_paid_on
+                                            ? ` · last paid ${sub.last_paid_on}`
+                                            : ''}
+                                        {sub.last_payment_method
+                                            ? ` · ${sub.last_payment_method}`
+                                            : ''}
+                                    </p>
+                                    <Form
+                                        action={`/billing/subscriptions/${sub.id}/payments`}
+                                        method="post"
+                                        className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4"
+                                    >
+                                        {({ errors, processing }) => (
+                                            <>
+                                                <TextField
+                                                    name="paid_on"
+                                                    label="Paid on"
+                                                    type="date"
+                                                    required
+                                                    defaultValue={
+                                                        payment_defaults.paid_on
+                                                    }
+                                                    error={errors.paid_on}
+                                                />
+                                                <SelectField
+                                                    name="payment_method_id"
+                                                    label="Payment method"
+                                                    required
+                                                    options={payment_methods.map(
+                                                        (method) => ({
+                                                            value: String(
+                                                                method.id,
+                                                            ),
+                                                            label: method.name,
+                                                        }),
+                                                    )}
+                                                    error={
+                                                        errors.payment_method_id
+                                                    }
+                                                />
+                                                <TextField
+                                                    name="reference"
+                                                    label="Reference"
+                                                    error={errors.reference}
+                                                />
+                                                <div className="flex items-end">
+                                                    <Button
+                                                        type="submit"
+                                                        disabled={
+                                                            processing ||
+                                                            payment_methods.length ===
+                                                                0
+                                                        }
+                                                    >
+                                                        Record payment
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </Form>
                                 </li>
                             ))}
                         </ul>
