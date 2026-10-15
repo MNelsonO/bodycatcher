@@ -1,15 +1,7 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
 import { AreaField, SelectField } from '@/components/crm/fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
 import type { ContactSummary } from '@/types/crm';
 
 export default function ContactShow({
@@ -96,18 +88,36 @@ export default function ContactShow({
                 </dl>
 
                 <section className="space-y-3">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <h2 className="text-sm font-medium">
-                                Client notes
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                Standing context the live AI reads so it knows
-                                this client&apos;s conversation area.
-                            </p>
-                        </div>
-                        <AddNoteDialog contactId={contact.id} />
+                    <div>
+                        <h2 className="text-sm font-medium">Client notes</h2>
+                        <p className="text-sm text-muted-foreground">
+                            Standing context the live AI reads so it knows this
+                            client&apos;s conversation area. Keep notes short —
+                            they feed the next WhatsApp reply and lead analysis.
+                        </p>
                     </div>
+                    <Form
+                        id="contact-note-form"
+                        action={`/contacts/${contact.id}/notes`}
+                        method="post"
+                        resetOnSuccess
+                        className="grid max-w-xl gap-3 rounded-lg border p-4"
+                    >
+                        {({ errors, processing }) => (
+                            <>
+                                <AreaField
+                                    name="body"
+                                    label="Add a note"
+                                    required
+                                    error={errors.body}
+                                    hint="e.g. Speaks Luganda, quoted in UGX, came from Kampala FB ads."
+                                />
+                                <Button type="submit" disabled={processing}>
+                                    Save note
+                                </Button>
+                            </>
+                        )}
+                    </Form>
                     {notes.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                             No client notes yet.
@@ -156,128 +166,54 @@ export default function ContactShow({
                     )}
                 </section>
 
-                <section className="max-w-xl space-y-2">
-                    <h2 className="text-sm font-medium">
-                        Merge into this contact
-                    </h2>
-                    <p className="text-sm text-muted-foreground">
-                        Leads, notes, and the conversation move here. Message
-                        history is kept. This does not run because two people
-                        share a name.
-                    </p>
+                <section className="max-w-xl space-y-3">
+                    <div>
+                        <h2 className="text-sm font-medium">
+                            Merge into this contact
+                        </h2>
+                        <p className="text-sm text-muted-foreground">
+                            Leads, notes, and the conversation move here.
+                            Message history is kept. This does not run because
+                            two people share a name.
+                        </p>
+                    </div>
                     {merge_candidates.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
                             There is no other contact to merge.
                         </p>
                     ) : (
-                        <MergeDialog
-                            contact={contact}
-                            merge_candidates={merge_candidates}
-                        />
+                        <Form
+                            id="contact-merge-form"
+                            action={`/contacts/${contact.id}/merge`}
+                            method="post"
+                            className="grid gap-3 rounded-lg border p-4"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <SelectField
+                                        name="merged_contact_id"
+                                        label="Contact to merge"
+                                        options={merge_candidates.map(
+                                            (candidate) => ({
+                                                value: String(candidate.id),
+                                                label: candidate.label,
+                                            }),
+                                        )}
+                                        error={errors.merged_contact_id}
+                                    />
+                                    <Button
+                                        type="submit"
+                                        disabled={processing}
+                                    >
+                                        Merge and keep history
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
                     )}
                 </section>
             </div>
         </>
-    );
-}
-
-function AddNoteDialog({ contactId }: { contactId: number }) {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <Button
-                type="button"
-                variant="outline"
-                className="shrink-0"
-                onClick={() => setOpen(true)}
-            >
-                Add note
-            </Button>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Add client note</DialogTitle>
-                    <DialogDescription>
-                        Keep it short. The assistant will use this on the next
-                        WhatsApp reply and on lead analysis.
-                    </DialogDescription>
-                </DialogHeader>
-                <Form
-                    action={`/contacts/${contactId}/notes`}
-                    method="post"
-                    className="grid gap-3"
-                    onSuccess={() => setOpen(false)}
-                >
-                    {({ errors, processing }) => (
-                        <>
-                            <AreaField
-                                name="body"
-                                label="Note"
-                                required
-                                error={errors.body}
-                                hint="e.g. Speaks Luganda, quoted in UGX, came from Kampala FB ads."
-                            />
-                            <Button type="submit" disabled={processing}>
-                                Save note
-                            </Button>
-                        </>
-                    )}
-                </Form>
-            </DialogContent>
-        </Dialog>
-    );
-}
-
-function MergeDialog({
-    contact,
-    merge_candidates,
-}: {
-    contact: ContactSummary;
-    merge_candidates: Array<{ id: number; label: string }>;
-}) {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <Dialog open={open} onOpenChange={setOpen}>
-            <Button
-                type="button"
-                variant="outline"
-                onClick={() => setOpen(true)}
-            >
-                Merge a contact
-            </Button>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Merge a contact</DialogTitle>
-                    <DialogDescription>
-                        {contact.full_name} stays. The other record is marked
-                        merged and is no longer a separate person.
-                    </DialogDescription>
-                </DialogHeader>
-                <Form
-                    action={`/contacts/${contact.id}/merge`}
-                    method="post"
-                    className="grid gap-3"
-                >
-                    {({ errors, processing }) => (
-                        <>
-                            <SelectField
-                                name="merged_contact_id"
-                                label="Contact to merge"
-                                options={merge_candidates.map((candidate) => ({
-                                    value: String(candidate.id),
-                                    label: candidate.label,
-                                }))}
-                                error={errors.merged_contact_id}
-                            />
-                            <Button type="submit" disabled={processing}>
-                                Merge and keep history
-                            </Button>
-                        </>
-                    )}
-                </Form>
-            </DialogContent>
-        </Dialog>
     );
 }
 
