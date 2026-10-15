@@ -224,15 +224,19 @@ class DeskReports
      */
     private function spendBlock(string $fromDate, string $toDate): array
     {
-        $total = (float) Expense::query()->whereBetween('spent_on', [$fromDate, $toDate])->sum('amount')
-            + (float) Expense::query()->whereBetween('spent_on', [$fromDate, $toDate])->sum('tax_amount');
+        $expenseRange = fn ($query) => $query
+            ->whereDate('spent_on', '>=', $fromDate)
+            ->whereDate('spent_on', '<=', $toDate);
+
+        $total = (float) Expense::query()->tap($expenseRange)->sum('amount')
+            + (float) Expense::query()->tap($expenseRange)->sum('tax_amount');
 
         $byCategory = Expense::query()
+            ->tap($expenseRange)
             ->select('category')
             ->selectRaw('coalesce(sum(amount), 0) as amount_sum')
             ->selectRaw('coalesce(sum(tax_amount), 0) as tax_sum')
             ->selectRaw('count(*) as rows')
-            ->whereBetween('spent_on', [$fromDate, $toDate])
             ->groupBy('category')
             ->orderByDesc('amount_sum')
             ->get()

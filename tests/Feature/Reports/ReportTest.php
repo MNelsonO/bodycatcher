@@ -40,7 +40,7 @@ it('shows the reports page with product and spend metrics for a date range', fun
             ->has('report.products')
             ->has('report.daily')
             ->has('report.summary.leads')
-            ->where('report.summary.spend', 2500)
+            ->where('report.summary.spend', 2500.0)
             ->where('report.products.0.product_name', $product->name)
         );
 });
