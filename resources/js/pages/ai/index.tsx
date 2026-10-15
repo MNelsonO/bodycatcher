@@ -21,6 +21,18 @@ type Article = {
     product_id: number | null;
     product_name: string | null;
     is_active: boolean;
+    source: string;
+    synced_at: string | null;
+};
+
+type WhatsAppSync = {
+    id: number;
+    status: string;
+    articles_created: number;
+    messages_scanned: number;
+    summary: string | null;
+    error: string | null;
+    completed_at: string | null;
 };
 
 type AutoReplyRule = {
@@ -46,6 +58,7 @@ export default function IntelligenceSettings({
     articles,
     stages,
     auto_reply_rules,
+    whatsapp_syncs = [],
 }: {
     variables: Variable[];
     configured: boolean;
@@ -55,6 +68,7 @@ export default function IntelligenceSettings({
     articles: Article[];
     stages: Array<{ id: number; name: string }>;
     auto_reply_rules: AutoReplyRule[];
+    whatsapp_syncs?: WhatsAppSync[];
 }) {
     const productOptions: Option[] = [
         { value: 'none', label: 'Any product' },
@@ -79,12 +93,60 @@ export default function IntelligenceSettings({
                     <p className="text-sm text-muted-foreground">
                         Provider:{' '}
                         <span className="font-mono text-xs">{provider}</span>.
-                        Use OpenAI or Gemini via LLM_PROVIDER. The live
-                        webhook assistant (WhatsApp settings) knows your
-                        products and keeps the conversation topic. Rules below
-                        only run when the live assistant is off.
+                        Pull knowledge from your WhatsApp Business / Meta agent
+                        inbox, keep product notes, and optionally run a live
+                        webhook assistant.
                     </p>
                 </div>
+
+                <section className="rounded-lg border p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                            <h2 className="text-sm font-medium">
+                                WhatsApp / Meta knowledge pull
+                            </h2>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                Syncs Meta WhatsApp Business profile fields and
+                                mines frequent inbound questions your Meta
+                                agent / desk already collected into knowledge
+                                notes the assistant can reuse.
+                            </p>
+                        </div>
+                        {can_manage ? (
+                            <Form action="/ai/whatsapp-sync" method="post">
+                                {({ processing }) => (
+                                    <Button type="submit" disabled={processing}>
+                                        Pull WhatsApp knowledge
+                                    </Button>
+                                )}
+                            </Form>
+                        ) : null}
+                    </div>
+                    <ul className="mt-4 divide-y text-sm">
+                        {whatsapp_syncs.length === 0 ? (
+                            <li className="py-2 text-muted-foreground">
+                                No sync runs yet.
+                            </li>
+                        ) : (
+                            whatsapp_syncs.map((run) => (
+                                <li key={run.id} className="py-2">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <Badge variant="outline">
+                                            {run.status}
+                                        </Badge>
+                                        <span>
+                                            {run.articles_created} notes ·{' '}
+                                            {run.messages_scanned} messages
+                                        </span>
+                                    </div>
+                                    <p className="mt-1 text-muted-foreground">
+                                        {run.summary ?? run.error ?? '—'}
+                                    </p>
+                                </li>
+                            ))
+                        )}
+                    </ul>
+                </section>
 
                 <section className="rounded-lg border p-4">
                     <h2 className="text-sm font-medium">
@@ -458,7 +520,10 @@ export default function IntelligenceSettings({
                                         <div className="flex flex-wrap items-center gap-2">
                                             <h3 className="font-medium">
                                                 {article.title}
-                                            </h3>
+                                                </h3>
+                                            <Badge variant="outline">
+                                                {article.source}
+                                            </Badge>
                                             <Badge variant="outline">
                                                 {article.is_active
                                                     ? 'Active'

@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property CarbonInterface|null $updated_at
  * @property-read Product|null $product
  */
-#[Fillable(['title', 'body', 'product_id', 'is_active'])]
+#[Fillable(['title', 'body', 'product_id', 'is_active', 'source', 'external_id', 'synced_at'])]
 class KnowledgeArticle extends Model
 {
     /**
@@ -28,6 +28,7 @@ class KnowledgeArticle extends Model
     {
         return [
             'is_active' => 'boolean',
+            'synced_at' => 'datetime',
         ];
     }
 

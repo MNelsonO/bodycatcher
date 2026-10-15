@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     CalendarDays,
+    ChartColumn,
     FileText,
     LayoutGrid,
     ListTodo,
@@ -10,6 +11,7 @@ import {
     Sparkles,
     UserRound,
     Users,
+    Wallet,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -35,6 +37,8 @@ export function AppSidebar() {
         { title: 'Contacts', href: '/contacts', icon: UserRound },
         { title: 'Calendar', href: '/calendar', icon: CalendarDays },
         { title: 'Invoices', href: '/invoices', icon: FileText },
+        { title: 'Expenses', href: '/expenses', icon: Wallet },
+        { title: 'Integrations', href: '/integrations', icon: ChartColumn },
         { title: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
         { title: 'Intelligence', href: '/ai', icon: Sparkles },
         { title: 'Follow-ups', href: '/follow-ups', icon: ListTodo },

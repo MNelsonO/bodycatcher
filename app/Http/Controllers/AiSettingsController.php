@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Ai\AutoReplyRule;
 use App\Ai\KnowledgeArticle;
 use App\Ai\LlmConfiguration;
+use App\Ai\Services\WhatsAppKnowledgeSync;
+use App\Ai\WhatsAppKnowledgeSyncRun;
 use App\Http\Requests\AutoReplyRuleRequest;
 use App\Http\Requests\KnowledgeArticleRequest;
 use App\Models\User;
@@ -43,6 +45,21 @@ class AiSettingsController extends Controller
                     'product_id' => $article->product_id,
                     'product_name' => $article->product?->name,
                     'is_active' => $article->is_active,
+                    'source' => $article->source ?? 'manual',
+                    'synced_at' => $article->synced_at?->toIso8601String(),
+                ]),
+            'whatsapp_syncs' => WhatsAppKnowledgeSyncRun::query()
+                ->orderByDesc('id')
+                ->limit(5)
+                ->get()
+                ->map(fn (WhatsAppKnowledgeSyncRun $run): array => [
+                    'id' => $run->id,
+                    'status' => $run->status,
+                    'articles_created' => $run->articles_created,
+                    'messages_scanned' => $run->messages_scanned,
+                    'summary' => $run->summary,
+                    'error' => $run->error,
+                    'completed_at' => $run->completed_at?->toIso8601String(),
                 ]),
             'stages' => PipelineStage::query()
                 ->with('pipeline:id,name')
@@ -102,6 +119,20 @@ class AiSettingsController extends Controller
         return redirect()->route('ai.settings');
     }
 
+    public function syncWhatsApp(Request $request, WhatsAppKnowledgeSync $sync): RedirectResponse
+    {
+        abort_unless($request->user()?->isOwner() === true, 403);
+
+        $run = $sync->run($request->user());
+
+        Inertia::flash('toast', [
+            'type' => $run->status === 'completed' ? 'success' : 'error',
+            'message' => $run->summary ?? $run->error ?? 'WhatsApp knowledge sync finished.',
+        ]);
+
+        return redirect()->route('ai.settings');
+    }
+
     public function store(KnowledgeArticleRequest $request): RedirectResponse
     {
         KnowledgeArticle::query()->create([
@@ -109,6 +140,7 @@ class AiSettingsController extends Controller
             'body' => $request->string('body')->toString(),
             'product_id' => $request->integer('product_id') ?: null,
             'is_active' => $request->boolean('is_active'),
+            'source' => 'manual',
         ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Knowledge article saved.']);

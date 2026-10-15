@@ -7,8 +7,10 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeskUserController;
+use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FlareSendWebhookController;
 use App\Http\Controllers\FollowUpController;
+use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\LeadAnalysisController;
 use App\Http\Controllers\LeadController;
@@ -73,6 +75,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('ai/auto-replies', [AiSettingsController::class, 'storeRule'])->name('ai.auto-replies.store');
     Route::put('ai/auto-replies/{rule}', [AiSettingsController::class, 'updateRule'])->name('ai.auto-replies.update');
     Route::delete('ai/auto-replies/{rule}', [AiSettingsController::class, 'destroyRule'])->name('ai.auto-replies.destroy');
+    Route::post('ai/whatsapp-sync', [AiSettingsController::class, 'syncWhatsApp'])->name('ai.whatsapp-sync');
+
+    Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
+    Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
+    Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+
+    Route::get('integrations', [IntegrationController::class, 'index'])->name('integrations.index');
+    Route::put('integrations/{account}', [IntegrationController::class, 'update'])->name('integrations.update');
+    Route::post('integrations/{account}/sync', [IntegrationController::class, 'sync'])->name('integrations.sync');
 
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
     Route::post('calendar', [CalendarController::class, 'store'])->name('calendar.store');

@@ -67,6 +67,18 @@ The Laundry calendar (`/calendar`) lets you pick days, filter the month, and ass
 
 Invoices (`/invoices`) support logo + address on the business profile, PDF download, a public share link, paid/unpaid/overdue status, monthly customers with due-date alerts, and a tax log (`/billing/tax-log`) that records tax when an invoice is marked paid.
 
+## Expenses
+
+`/expenses` logs spend by category with receipts and monthly stats. Expense tax writes into the same tax log under `system_name` (default `expenses`).
+
+## WhatsApp knowledge pull
+
+On Intelligence, **Pull WhatsApp knowledge** syncs Meta WhatsApp Business profile fields (when Meta credentials exist) and mines frequent inbound questions from desk conversations into knowledge notes.
+
+## Integrations
+
+`/integrations` connects Meta Business page insights and Google Search Console search analytics. Set `META_BUSINESS_TOKEN` / `META_PAGE_ID` and `GSC_SITE_URL` / `GSC_ACCESS_TOKEN`, then sync for advanced report tables.
+
 - `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` must all be set. The Intelligence page shows configured or missing for each name and never shows the values. If any one is missing, a read is stored as unavailable. No summary or score is invented.
 - `LLM_BASE_URL` is an OpenAI-compatible root such as `https://api.openai.com/v1`. The desk posts to `{base}/chat/completions`.
 - "Read the conversation" stores a `lead_analyses` row, then asks the model for JSON: summary, extracted lead fields, a score from 0 to 100 with reasons, a suggested stage, and a reply draft.
