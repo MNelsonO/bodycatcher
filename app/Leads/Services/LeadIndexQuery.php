@@ -46,6 +46,19 @@ class LeadIndexQuery
             $query->where('current_stage_id', (int) $stageId);
         }
 
+        $kind = $request->string('kind')->toString();
+
+        if ($kind !== '' && $kind !== 'all') {
+            $query->whereHas('currentStage', fn (Builder $stage) => $stage->where('kind', $kind));
+        }
+
+        $created = $request->string('created')->toString();
+
+        if ($created === 'today') {
+            [$start, $end] = $this->clock->todayUtcRange();
+            $query->whereBetween('created_at', [$start, $end]);
+        }
+
         $source = $request->string('source')->toString();
 
         if ($source !== '' && $source !== 'all') {

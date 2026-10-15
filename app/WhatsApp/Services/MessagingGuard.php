@@ -35,14 +35,22 @@ class MessagingGuard
             }
         }
 
-        $token = config('whatsapp.token');
-        $phoneNumberId = config('whatsapp.phone_number_id');
-
-        if (! is_string($token) || $token === '' || ! is_string($phoneNumberId) || $phoneNumberId === '') {
-            return 'WhatsApp is not configured. The token or phone number id is missing, so nothing was sent.';
+        if (! $this->driverConfigured()) {
+            return 'WhatsApp is not configured for the active messaging driver, so nothing was sent.';
         }
 
         return null;
+    }
+
+    public function driverConfigured(): bool
+    {
+        return match ((string) config('whatsapp.driver', 'meta')) {
+            'flaresend' => filled(config('whatsapp.flaresend.api_key')),
+            'twilio' => filled(config('whatsapp.twilio.account_sid'))
+                && filled(config('whatsapp.twilio.auth_token'))
+                && filled(config('whatsapp.twilio.from')),
+            default => filled(config('whatsapp.token')) && filled(config('whatsapp.phone_number_id')),
+        };
     }
 
     /**

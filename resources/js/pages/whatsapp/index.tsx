@@ -13,17 +13,25 @@ type ProductOption = {
     name: string;
 };
 
+type WebhookPaths = {
+    meta: string;
+    flaresend: string;
+    twilio: string;
+};
+
 export default function WhatsAppSettings({
+    driver,
     variables,
-    webhook_path,
+    webhook_paths,
     automatic_sends_paused,
     inbound_product_id,
     products,
     opt_out_keywords,
     can_manage,
 }: {
+    driver: string;
     variables: Variable[];
-    webhook_path: string;
+    webhook_paths: WebhookPaths;
     automatic_sends_paused: boolean;
     inbound_product_id: number | null;
     products: ProductOption[];
@@ -39,8 +47,13 @@ export default function WhatsAppSettings({
                         WhatsApp
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Official Cloud API only. This page shows whether each
-                        environment variable is set. It never shows the secret.
+                        Active driver is{' '}
+                        <span className="font-mono text-xs">{driver}</span>.
+                        Set <span className="font-mono text-xs">MESSAGING_DRIVER</span>{' '}
+                        to <span className="font-mono text-xs">flaresend</span>,{' '}
+                        <span className="font-mono text-xs">twilio</span>, or{' '}
+                        <span className="font-mono text-xs">meta</span>. Secrets
+                        stay in the environment and are never shown here.
                     </p>
                 </div>
 
@@ -69,31 +82,34 @@ export default function WhatsAppSettings({
                             </li>
                         ))}
                     </ul>
-                    {variables.some((variable) => !variable.configured) ? (
-                        <p className="mt-3 text-sm text-muted-foreground">
-                            Missing variables mean the desk cannot verify
-                            webhooks or send. Nothing here marks the account as
-                            connected.
-                        </p>
-                    ) : (
-                        <p className="mt-3 text-sm text-muted-foreground">
-                            All four variables are set. Delivery still depends
-                            on Meta accepting each message.
-                        </p>
-                    )}
                 </section>
 
                 <section className="rounded-lg border p-4 text-sm">
-                    <h2 className="font-medium">Webhook</h2>
+                    <h2 className="font-medium">Webhooks</h2>
                     <p className="mt-2 text-muted-foreground">
-                        In the Meta app, set the callback URL to this path on
-                        the public host, and subscribe to the messages field.
+                        Point FlareSend at the flaresend path for inbound
+                        messages. Twilio Messaging can use the twilio path.
+                        Meta Cloud API still uses the whatsapp path.
                     </p>
-                    <p className="mt-2 font-mono text-xs">{webhook_path}</p>
+                    <ul className="mt-3 space-y-2 font-mono text-xs">
+                        <li>FlareSend · {webhook_paths.flaresend}</li>
+                        <li>Twilio · {webhook_paths.twilio}</li>
+                        <li>Meta · {webhook_paths.meta}</li>
+                    </ul>
                     <p className="mt-3 text-muted-foreground">
-                        Verification uses WHATSAPP_VERIFY_TOKEN. Posts must
-                        carry X-Hub-Signature-256 signed with
-                        WHATSAPP_APP_SECRET.
+                        FlareSend may send{' '}
+                        <span className="font-mono text-xs">
+                            X-FlareSend-Secret
+                        </span>{' '}
+                        or a Bearer token matching{' '}
+                        <span className="font-mono text-xs">
+                            FLARESEND_WEBHOOK_SECRET
+                        </span>
+                        . Twilio signs with{' '}
+                        <span className="font-mono text-xs">
+                            X-Twilio-Signature
+                        </span>
+                        .
                     </p>
                 </section>
 
@@ -101,8 +117,7 @@ export default function WhatsAppSettings({
                     <h2 className="font-medium">Opt-out keywords</h2>
                     <p className="mt-2 text-muted-foreground">
                         An inbound text opts the contact out only when the
-                        whole message is one of these words. Nothing else is
-                        treated as an opt-out.
+                        whole message is one of these words.
                     </p>
                     <p className="mt-2 font-mono text-xs">
                         {opt_out_keywords.join(', ')}
@@ -113,8 +128,8 @@ export default function WhatsAppSettings({
                     <h2 className="text-sm font-medium">Desk controls</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
                         Pausing automatic sends does not block a message an
-                        operator types on a lead. Inbound leads use the product
-                        you pick, or the first active product if this is empty.
+                        operator types on a lead. Auto-reply rules on
+                        Intelligence still respect this pause.
                     </p>
                     {can_manage ? (
                         <Form

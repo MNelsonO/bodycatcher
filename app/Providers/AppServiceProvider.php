@@ -9,7 +9,9 @@ use App\Ai\LlmClient;
 use App\Ai\OpenAiCompatibleClient;
 use App\WhatsApp\CloudWhatsAppClient;
 use App\WhatsApp\FakeWhatsAppClient;
+use App\WhatsApp\FlareSendWhatsAppClient;
 use App\WhatsApp\LaravelWebhookDispatcher;
+use App\WhatsApp\TwilioWhatsAppClient;
 use App\WhatsApp\WebhookDispatcher;
 use App\WhatsApp\WhatsAppClient;
 use Carbon\CarbonImmutable;
@@ -32,7 +34,11 @@ class AppServiceProvider extends ServiceProvider
                 return $app->make(FakeWhatsAppClient::class);
             }
 
-            return $app->make(CloudWhatsAppClient::class);
+            return match ((string) config('whatsapp.driver', 'meta')) {
+                'flaresend' => $app->make(FlareSendWhatsAppClient::class),
+                'twilio' => $app->make(TwilioWhatsAppClient::class),
+                default => $app->make(CloudWhatsAppClient::class),
+            };
         });
         $this->app->bind(WebhookDispatcher::class, LaravelWebhookDispatcher::class);
         $this->app->singleton(FakeLlmClient::class);

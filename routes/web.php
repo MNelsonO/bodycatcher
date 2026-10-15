@@ -1,15 +1,18 @@
 <?php
 
 use App\Http\Controllers\AiSettingsController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeskUserController;
+use App\Http\Controllers\FlareSendWebhookController;
 use App\Http\Controllers\FollowUpController;
 use App\Http\Controllers\LeadAnalysisController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadMessagingController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\TwilioWebhookController;
 use App\Http\Controllers\WhatsAppSettingsController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +20,8 @@ use Inertia\Inertia;
 
 Route::get('webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('whatsapp.webhook.verify');
 Route::post('webhooks/whatsapp', [WhatsAppWebhookController::class, 'store'])->name('whatsapp.webhook.store');
+Route::post('webhooks/flaresend', [FlareSendWebhookController::class, 'store'])->name('flaresend.webhook.store');
+Route::post('webhooks/twilio', [TwilioWebhookController::class, 'store'])->name('twilio.webhook.store');
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -56,6 +61,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('ai', [AiSettingsController::class, 'index'])->name('ai.settings');
     Route::post('ai/articles', [AiSettingsController::class, 'store'])->name('ai.articles.store');
     Route::put('ai/articles/{article}', [AiSettingsController::class, 'update'])->name('ai.articles.update');
+    Route::post('ai/auto-replies', [AiSettingsController::class, 'storeRule'])->name('ai.auto-replies.store');
+    Route::put('ai/auto-replies/{rule}', [AiSettingsController::class, 'updateRule'])->name('ai.auto-replies.update');
+    Route::delete('ai/auto-replies/{rule}', [AiSettingsController::class, 'destroyRule'])->name('ai.auto-replies.destroy');
+
+    Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+    Route::post('calendar', [CalendarController::class, 'store'])->name('calendar.store');
+    Route::put('calendar/{activity}', [CalendarController::class, 'update'])->name('calendar.update');
+    Route::delete('calendar/{activity}', [CalendarController::class, 'destroy'])->name('calendar.destroy');
 
     Route::get('follow-ups', [FollowUpController::class, 'index'])->name('follow-ups.index');
     Route::post('follow-ups', [FollowUpController::class, 'store'])->name('follow-ups.store');

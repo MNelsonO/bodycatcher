@@ -19,10 +19,16 @@ class WhatsAppSettingsController extends Controller
 
         $settings = DeskSetting::current();
         $user = $request->user();
+        $driver = (string) config('whatsapp.driver', 'meta');
 
         return Inertia::render('whatsapp/index', [
-            'variables' => $this->variables(),
-            'webhook_path' => '/webhooks/whatsapp',
+            'driver' => $driver,
+            'variables' => $this->variables($driver),
+            'webhook_paths' => [
+                'meta' => '/webhooks/whatsapp',
+                'flaresend' => '/webhooks/flaresend',
+                'twilio' => '/webhooks/twilio',
+            ],
             'automatic_sends_paused' => $settings->automatic_sends_paused,
             'inbound_product_id' => $settings->inbound_product_id,
             'products' => Product::query()
@@ -51,14 +57,29 @@ class WhatsAppSettingsController extends Controller
     /**
      * @return list<array{key: string, configured: bool}>
      */
-    private function variables(): array
+    private function variables(string $driver): array
     {
-        $values = [
-            'WHATSAPP_TOKEN' => config('whatsapp.token'),
-            'WHATSAPP_PHONE_NUMBER_ID' => config('whatsapp.phone_number_id'),
-            'WHATSAPP_APP_SECRET' => config('whatsapp.app_secret'),
-            'WHATSAPP_VERIFY_TOKEN' => config('whatsapp.verify_token'),
-        ];
+        $values = match ($driver) {
+            'flaresend' => [
+                'MESSAGING_DRIVER' => $driver,
+                'FLARESEND_API_KEY' => config('whatsapp.flaresend.api_key'),
+                'FLARESEND_WEBHOOK_SECRET' => config('whatsapp.flaresend.webhook_secret'),
+                'FLARESEND_BASE_URL' => config('whatsapp.flaresend.base_url'),
+            ],
+            'twilio' => [
+                'MESSAGING_DRIVER' => $driver,
+                'TWILIO_ACCOUNT_SID' => config('whatsapp.twilio.account_sid'),
+                'TWILIO_AUTH_TOKEN' => config('whatsapp.twilio.auth_token'),
+                'TWILIO_WHATSAPP_FROM' => config('whatsapp.twilio.from'),
+            ],
+            default => [
+                'MESSAGING_DRIVER' => $driver,
+                'WHATSAPP_TOKEN' => config('whatsapp.token'),
+                'WHATSAPP_PHONE_NUMBER_ID' => config('whatsapp.phone_number_id'),
+                'WHATSAPP_APP_SECRET' => config('whatsapp.app_secret'),
+                'WHATSAPP_VERIFY_TOKEN' => config('whatsapp.verify_token'),
+            ],
+        };
 
         $rows = [];
 

@@ -10,12 +10,24 @@ import {
 import type { DashboardMetrics } from '@/types/crm';
 
 const cards = [
-    { key: 'total_leads', label: 'Total leads' },
-    { key: 'new_leads_today', label: 'New leads today' },
-    { key: 'follow_ups_due_today', label: 'Follow-ups due today' },
-    { key: 'overdue_follow_ups', label: 'Overdue follow-ups' },
-    { key: 'won_count', label: 'Won' },
-    { key: 'lost_count', label: 'Lost' },
+    { key: 'total_leads', label: 'Total leads', href: '/leads' },
+    {
+        key: 'new_leads_today',
+        label: 'New leads today',
+        href: '/leads?created=today',
+    },
+    {
+        key: 'follow_ups_due_today',
+        label: 'Follow-ups due today',
+        href: '/leads?follow_up=due_today',
+    },
+    {
+        key: 'overdue_follow_ups',
+        label: 'Overdue follow-ups',
+        href: '/leads?follow_up=overdue',
+    },
+    { key: 'won_count', label: 'Won', href: '/leads?kind=won' },
+    { key: 'lost_count', label: 'Lost', href: '/leads?kind=lost' },
 ] as const;
 
 export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
@@ -31,20 +43,29 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                     </h1>
                     <p className="text-sm text-muted-foreground">
                         Counts for {metrics.today}, {metrics.timezone}.
-                        Follow-up dates are the ones you set by hand.
+                        Follow-up dates are the ones you set by hand. Click a
+                        tile to open that lead list.
                     </p>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                     {cards.map((card) => (
-                        <Card key={card.key} className="shadow-none">
-                            <CardHeader className="pb-2">
-                                <CardDescription>{card.label}</CardDescription>
-                                <CardTitle className="text-3xl tabular-nums">
-                                    {metrics[card.key]}
-                                </CardTitle>
-                            </CardHeader>
-                        </Card>
+                        <Link
+                            key={card.key}
+                            href={card.href}
+                            className="rounded-xl outline-none ring-offset-background transition hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <Card className="h-full shadow-none">
+                                <CardHeader className="pb-2">
+                                    <CardDescription>
+                                        {card.label}
+                                    </CardDescription>
+                                    <CardTitle className="text-3xl tabular-nums">
+                                        {metrics[card.key]}
+                                    </CardTitle>
+                                </CardHeader>
+                            </Card>
+                        </Link>
                     ))}
                 </div>
 
@@ -54,7 +75,7 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                             <CardTitle>Leads by stage</CardTitle>
                             <CardDescription>
                                 Every open and closed lead, grouped by its
-                                current stage.
+                                current stage. Click a stage to filter.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -66,21 +87,23 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                             ) : (
                                 <ul className="divide-y">
                                     {metrics.leads_by_stage.map((row) => (
-                                        <li
-                                            key={row.stage_id}
-                                            className="flex items-center justify-between gap-3 py-2 text-sm"
-                                        >
-                                            <span>
-                                                <span className="font-medium">
-                                                    {row.stage_name}
+                                        <li key={row.stage_id}>
+                                            <Link
+                                                href={`/leads?stage_id=${row.stage_id}`}
+                                                className="flex items-center justify-between gap-3 py-2 text-sm hover:underline"
+                                            >
+                                                <span>
+                                                    <span className="font-medium">
+                                                        {row.stage_name}
+                                                    </span>
+                                                    <span className="block text-xs text-muted-foreground">
+                                                        {row.pipeline_name}
+                                                    </span>
                                                 </span>
-                                                <span className="block text-xs text-muted-foreground">
-                                                    {row.pipeline_name}
+                                                <span className="tabular-nums">
+                                                    {row.total}
                                                 </span>
-                                            </span>
-                                            <span className="tabular-nums">
-                                                {row.total}
-                                            </span>
+                                            </Link>
                                         </li>
                                     ))}
                                 </ul>

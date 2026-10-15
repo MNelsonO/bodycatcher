@@ -19,7 +19,9 @@ Nelson Mboya is the first operator. The seeded owner is created from `SEED_USER_
 
 ## Phase 2
 
-Official WhatsApp Business Cloud API. Text in and out. No WhatsApp Web, no browser automation, and no unofficial protocol.
+WhatsApp inbound and outbound through a selectable driver: Meta Cloud API (`MESSAGING_DRIVER=meta`), FlareSend (`flaresend`), or Twilio (`twilio`). Text in and out. No WhatsApp Web and no browser automation.
+
+Point FlareSend at `POST /webhooks/flaresend` and Twilio at `POST /webhooks/twilio`. Meta still uses `GET/POST /webhooks/whatsapp`.
 
 - `GET /webhooks/whatsapp` verifies the subscription with `WHATSAPP_VERIFY_TOKEN`.
 - `POST /webhooks/whatsapp` checks `X-Hub-Signature-256` against `WHATSAPP_APP_SECRET`. A bad signature is rejected and stored nowhere.
@@ -55,7 +57,11 @@ php artisan queue:work
 
 ## Phase 3
 
-A replaceable language model reads one lead. It does not send WhatsApp and it does not move a stage by itself.
+A replaceable language model reads one lead. It does not send WhatsApp and it does not move a stage by itself unless an owner saves a conditional auto-reply rule on Intelligence. No matching rule means silence — the model never replies at random.
+
+## Calendar
+
+The Laundry calendar (`/calendar`) lets you pick days, filter the month, and assign blue/white activities. `external_calendar_id` is reserved for trading with your own Google Calendar later.
 
 - `LLM_API_KEY`, `LLM_BASE_URL`, and `LLM_MODEL` must all be set. The Intelligence page shows configured or missing for each name and never shows the values. If any one is missing, a read is stored as unavailable. No summary or score is invented.
 - `LLM_BASE_URL` is an OpenAI-compatible root such as `https://api.openai.com/v1`. The desk posts to `{base}/chat/completions`.

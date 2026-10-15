@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    CalendarDays,
     LayoutGrid,
     ListTodo,
     MessageCircle,
@@ -21,7 +22,6 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
 export function AppSidebar() {
@@ -29,9 +29,10 @@ export function AppSidebar() {
     const owner = auth.user.role === 'owner';
 
     const mainNavItems: NavItem[] = [
-        { title: 'Command centre', href: dashboard(), icon: LayoutGrid },
+        { title: 'Command centre', href: '/dashboard', icon: LayoutGrid },
         { title: 'Leads', href: '/leads', icon: Rows3 },
         { title: 'Contacts', href: '/contacts', icon: UserRound },
+        { title: 'Calendar', href: '/calendar', icon: CalendarDays },
         { title: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
         { title: 'Intelligence', href: '/ai', icon: Sparkles },
         { title: 'Follow-ups', href: '/follow-ups', icon: ListTodo },
@@ -51,7 +52,7 @@ export function AppSidebar() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton size="lg" asChild>
-                            <Link href={dashboard()} prefetch>
+                            <Link href="/dashboard" prefetch>
                                 <AppLogo />
                             </Link>
                         </SidebarMenuButton>

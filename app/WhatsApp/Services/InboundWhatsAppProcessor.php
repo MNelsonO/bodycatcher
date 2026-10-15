@@ -2,6 +2,7 @@
 
 namespace App\WhatsApp\Services;
 
+use App\Ai\Jobs\RunConditionalAutoReply;
 use App\Contacts\ConsentStatus;
 use App\Conversations\Conversation;
 use App\Conversations\Message;
@@ -183,6 +184,8 @@ class InboundWhatsAppProcessor
             $this->activity->handle(ActivityEvent::ContactOptedOut, $lead, $contact, null, [
                 'keyword' => mb_strtolower(trim($parsed['body'])),
             ]);
+        } elseif ($type === 'text' && $parsed['body'] !== '') {
+            RunConditionalAutoReply::dispatch($lead->id, $parsed['body']);
         }
 
         $lead->touch();

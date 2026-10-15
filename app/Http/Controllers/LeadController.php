@@ -41,6 +41,8 @@ class LeadController extends Controller
                 'stage_id' => $request->string('stage_id')->toString(),
                 'source' => $request->string('source')->toString(),
                 'follow_up' => $request->string('follow_up')->toString(),
+                'kind' => $request->string('kind')->toString(),
+                'created' => $request->string('created')->toString(),
             ],
             'products' => Product::query()->orderBy('name')->get(['id', 'name']),
             'stages' => PipelineStage::query()->with('pipeline:id,name')->orderBy('position')->get()->map(fn (PipelineStage $stage): array => [

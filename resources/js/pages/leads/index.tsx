@@ -25,6 +25,8 @@ type Filters = {
     stage_id: string;
     source: string;
     follow_up: string;
+    kind: string;
+    created: string;
 };
 
 const followUpLabel: Record<string, string> = {
@@ -130,6 +132,30 @@ export default function LeadsIndex({
                                 label="Follow-up"
                                 options={followOptions}
                                 defaultValue={filters.follow_up || 'all'}
+                            />
+                            <SelectField
+                                name="kind"
+                                label="Outcome"
+                                options={[
+                                    { value: 'all', label: 'Any outcome' },
+                                    { value: 'won', label: 'Won' },
+                                    { value: 'lost', label: 'Lost' },
+                                    { value: 'active', label: 'Active' },
+                                    {
+                                        value: 'archived-nurture',
+                                        label: 'Archived nurture',
+                                    },
+                                ]}
+                                defaultValue={filters.kind || 'all'}
+                            />
+                            <SelectField
+                                name="created"
+                                label="Created"
+                                options={[
+                                    { value: 'all', label: 'Any day' },
+                                    { value: 'today', label: 'Today' },
+                                ]}
+                                defaultValue={filters.created || 'all'}
                             />
                             <div className="md:col-span-6">
                                 <Button type="submit" disabled={processing}>

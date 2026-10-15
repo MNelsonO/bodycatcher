@@ -23,18 +23,36 @@ type Article = {
     is_active: boolean;
 };
 
+type AutoReplyRule = {
+    id: number;
+    name: string;
+    is_active: boolean;
+    priority: number;
+    match_type: string;
+    match_value: string | null;
+    pipeline_stage_id: number | null;
+    stage_name: string | null;
+    reply_mode: string;
+    template_body: string | null;
+    require_open_window: boolean;
+};
+
 export default function IntelligenceSettings({
     variables,
     configured,
     can_manage,
     products,
     articles,
+    stages,
+    auto_reply_rules,
 }: {
     variables: Variable[];
     configured: boolean;
     can_manage: boolean;
     products: ProductOption[];
     articles: Article[];
+    stages: Array<{ id: number; name: string }>;
+    auto_reply_rules: AutoReplyRule[];
 }) {
     const productOptions: Option[] = [
         { value: 'none', label: 'Any product' },
@@ -59,10 +77,209 @@ export default function IntelligenceSettings({
                     <p className="text-sm text-muted-foreground">
                         The model reads a lead and proposes a summary, a score
                         with reasons, extracted fields, and a reply draft.
-                        This page shows whether each variable is set. It never
-                        shows the secret.
+                        Automatic WhatsApp replies only fire when an owner
+                        rule matches — never at random.
                     </p>
                 </div>
+
+                <section className="rounded-lg border p-4">
+                    <h2 className="text-sm font-medium">
+                        Conditional auto-replies
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Inbound WhatsApp is silent unless a rule matches.
+                        Template mode sends your wording. LLM mode only runs
+                        after a match when LLM_* is configured.
+                    </p>
+
+                    {can_manage ? (
+                        <Form
+                            action="/ai/auto-replies"
+                            method="post"
+                            resetOnSuccess
+                            className="mt-4 grid gap-3"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    <TextField
+                                        name="name"
+                                        label="Rule name"
+                                        required
+                                        error={errors.name}
+                                    />
+                                    <SelectField
+                                        name="match_type"
+                                        label="When message"
+                                        defaultValue="contains"
+                                        options={[
+                                            {
+                                                value: 'contains',
+                                                label: 'Contains text',
+                                            },
+                                            {
+                                                value: 'exact',
+                                                label: 'Exact text',
+                                            },
+                                            {
+                                                value: 'any',
+                                                label: 'Any inbound text',
+                                            },
+                                        ]}
+                                        error={errors.match_type}
+                                    />
+                                    <TextField
+                                        name="match_value"
+                                        label="Match text"
+                                        hint="Leave empty only for “any”."
+                                        error={errors.match_value}
+                                    />
+                                    <SelectField
+                                        name="pipeline_stage_id"
+                                        label="Only in stage"
+                                        defaultValue="none"
+                                        options={[
+                                            {
+                                                value: 'none',
+                                                label: 'Any stage',
+                                            },
+                                            ...stages.map((stage) => ({
+                                                value: String(stage.id),
+                                                label: stage.name,
+                                            })),
+                                        ]}
+                                        error={errors.pipeline_stage_id}
+                                    />
+                                    <SelectField
+                                        name="reply_mode"
+                                        label="Reply with"
+                                        defaultValue="template"
+                                        options={[
+                                            {
+                                                value: 'template',
+                                                label: 'Fixed template',
+                                            },
+                                            {
+                                                value: 'llm',
+                                                label: 'Live LLM under this rule',
+                                            },
+                                        ]}
+                                        error={errors.reply_mode}
+                                    />
+                                    <AreaField
+                                        name="template_body"
+                                        label="Template body"
+                                        hint="{contact}, {business}, {message}"
+                                        error={errors.template_body}
+                                    />
+                                    <TextField
+                                        name="priority"
+                                        label="Priority"
+                                        type="number"
+                                        defaultValue={100}
+                                        hint="Lower runs first."
+                                        error={errors.priority}
+                                    />
+                                    <SelectField
+                                        name="is_active"
+                                        label="Status"
+                                        defaultValue="1"
+                                        options={activeOptions}
+                                        error={errors.is_active}
+                                    />
+                                    <SelectField
+                                        name="require_open_window"
+                                        label="Require 24h window"
+                                        defaultValue="1"
+                                        options={[
+                                            {
+                                                value: '1',
+                                                label: 'Yes',
+                                            },
+                                            {
+                                                value: '0',
+                                                label: 'No',
+                                            },
+                                        ]}
+                                        error={errors.require_open_window}
+                                    />
+                                    <Button
+                                        type="submit"
+                                        disabled={processing}
+                                    >
+                                        Save auto-reply rule
+                                    </Button>
+                                </>
+                            )}
+                        </Form>
+                    ) : (
+                        <p className="mt-3 text-sm text-muted-foreground">
+                            Only the owner can add auto-reply rules.
+                        </p>
+                    )}
+
+                    <ul className="mt-4 divide-y text-sm">
+                        {auto_reply_rules.length === 0 ? (
+                            <li className="py-2 text-muted-foreground">
+                                No rules yet. Without a rule, the desk never
+                                auto-replies.
+                            </li>
+                        ) : (
+                            auto_reply_rules.map((rule) => (
+                                <li
+                                    key={rule.id}
+                                    className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between"
+                                >
+                                    <div>
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="font-medium">
+                                                {rule.name}
+                                            </span>
+                                            <Badge variant="outline">
+                                                {rule.is_active
+                                                    ? 'Active'
+                                                    : 'Off'}
+                                            </Badge>
+                                            <Badge variant="outline">
+                                                {rule.reply_mode}
+                                            </Badge>
+                                        </div>
+                                        <p className="mt-1 text-muted-foreground">
+                                            {rule.match_type}
+                                            {rule.match_value
+                                                ? `: ${rule.match_value}`
+                                                : ''}{' '}
+                                            · stage{' '}
+                                            {rule.stage_name ?? 'any'} ·
+                                            priority {rule.priority}
+                                        </p>
+                                        {rule.template_body ? (
+                                            <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">
+                                                {rule.template_body}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                    {can_manage ? (
+                                        <Form
+                                            action={`/ai/auto-replies/${rule.id}`}
+                                            method="delete"
+                                        >
+                                            {({ processing }) => (
+                                                <Button
+                                                    type="submit"
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    disabled={processing}
+                                                >
+                                                    Remove
+                                                </Button>
+                                            )}
+                                        </Form>
+                                    ) : null}
+                                </li>
+                            ))
+                        )}
+                    </ul>
+                </section>
 
                 <section className="rounded-lg border p-4">
                     <h2 className="text-sm font-medium">Configuration</h2>
