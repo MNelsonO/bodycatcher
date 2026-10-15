@@ -93,7 +93,7 @@ These are intentionally absent.
 
 - Template sending
 - Downloading WhatsApp media
-- Google Calendar
+- Full Google Calendar two-way sync (calendar page stores `external_calendar_id` for later)
 - Reply learning from edits (the original draft and the edited text are stored; nothing trains on them)
 - Analytics beyond the command-centre counts and the score on a lead
 - Production VPS hardening
