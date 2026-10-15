@@ -36,7 +36,10 @@ it('lets an owner add a payment method from settings', function () {
 it('records a subscription payment with paid date and method', function () {
     $user = User::factory()->create();
     $contact = Contact::factory()->create();
-    $method = PaymentMethod::query()->where('slug', 'mpesa')->firstOrFail();
+    $method = PaymentMethod::query()->firstOrCreate(
+        ['slug' => 'mpesa'],
+        ['name' => 'M-Pesa', 'is_active' => true, 'position' => 1],
+    );
 
     $sub = BillingSubscription::query()->create([
         'contact_id' => $contact->id,
@@ -50,6 +53,7 @@ it('records a subscription payment with paid date and method', function () {
     ]);
 
     $this->actingAs($user)
+        ->from(route('billing.subscriptions.index'))
         ->post(route('billing.subscriptions.payments.store', $sub), [
             'paid_on' => '2026-10-12',
             'payment_method_id' => $method->id,

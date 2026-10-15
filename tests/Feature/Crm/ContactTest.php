@@ -3,10 +3,13 @@
 use App\Contacts\Contact;
 use App\Contacts\ContactMerge;
 use App\Contacts\ContactNote;
+use App\Conversations\Actions\LogMessage;
 use App\Conversations\Conversation;
 use App\Conversations\Message;
 use App\Conversations\MessageDirection;
 use App\Leads\Lead;
+use App\Settings\Product;
+use Illuminate\Support\Carbon;
 
 function crmContactPayload(array $overrides = []): array
 {
@@ -167,6 +170,147 @@ it('filters contacts by country', function () {
             ->has('contacts.data', 1)
             ->where('contacts.data.0.full_name', 'Uganda Client')
             ->where('filters.country', 'UG'));
+});
+
+it('lists name, interested system, intent, and last spoke on the index', function () {
+    $user = crmSalesUser();
+    $desk = crmDesk();
+    $this->actingAs($user);
+
+    $contact = Contact::factory()->create([
+        'full_name' => 'Amina Wanjiku',
+        'primary_phone' => '+254722100201',
+    ]);
+
+    $lead = Lead::factory()->create([
+        'contact_id' => $contact->id,
+        'product_id' => $desk['product']->id,
+        'pipeline_id' => $desk['pipeline']->id,
+        'current_stage_id' => $desk['stage']->id,
+        'business_problem' => 'Saturday orders get lost in a counter book.',
+    ]);
+
+    app(LogMessage::class)->handle(
+        $lead,
+        MessageDirection::Inbound,
+        'Can we talk about the laundry system?',
+        null,
+        $user,
+    );
+
+    $this->get(route('contacts.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('contacts/index')
+            ->where('contacts.data.0.full_name', 'Amina Wanjiku')
+            ->where('contacts.data.0.interested_system', $desk['product']->name)
+            ->where('contacts.data.0.intent', 'Saturday orders get lost in a counter book.')
+            ->where('contacts.data.0.last_spoke_at', fn ($value) => is_string($value) && $value !== ''));
+});
+
+it('filters contacts by system and when we last spoke this month', function () {
+    $user = crmSalesUser();
+    $desk = crmDesk();
+    $this->actingAs($user);
+
+    $otherProduct = Product::factory()->create(['name' => 'Other Desk Tool', 'is_active' => true]);
+
+    $fresh = Contact::factory()->create([
+        'full_name' => 'Spoke This Month',
+        'primary_phone' => '+254711000011',
+    ]);
+    $stale = Contact::factory()->create([
+        'full_name' => 'Spoke Last Year',
+        'primary_phone' => '+254711000012',
+    ]);
+    $otherSystem = Contact::factory()->create([
+        'full_name' => 'Other System Buyer',
+        'primary_phone' => '+254711000013',
+    ]);
+
+    $freshLead = Lead::factory()->create([
+        'contact_id' => $fresh->id,
+        'product_id' => $desk['product']->id,
+        'pipeline_id' => $desk['pipeline']->id,
+        'current_stage_id' => $desk['stage']->id,
+    ]);
+    $staleLead = Lead::factory()->create([
+        'contact_id' => $stale->id,
+        'product_id' => $desk['product']->id,
+        'pipeline_id' => $desk['pipeline']->id,
+        'current_stage_id' => $desk['stage']->id,
+    ]);
+    $otherLead = Lead::factory()->create([
+        'contact_id' => $otherSystem->id,
+        'product_id' => $otherProduct->id,
+        'pipeline_id' => $desk['pipeline']->id,
+        'current_stage_id' => $desk['stage']->id,
+    ]);
+
+    app(LogMessage::class)->handle($freshLead, MessageDirection::Inbound, 'Hello this month', null, $user);
+    app(LogMessage::class)->handle($otherLead, MessageDirection::Inbound, 'Hello other system', null, $user);
+
+    $staleConversation = Conversation::query()->create([
+        'lead_id' => $staleLead->id,
+        'contact_id' => $stale->id,
+    ]);
+    Message::query()->create([
+        'conversation_id' => $staleConversation->id,
+        'direction' => MessageDirection::Inbound,
+        'body' => 'Old hello',
+        'sent_at' => Carbon::now()->subYear(),
+        'logged_by_user_id' => $user->id,
+    ]);
+
+    $this->get(route('contacts.index', [
+        'product_id' => $desk['product']->id,
+        'spoke' => 'this_month',
+    ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('contacts/index')
+            ->has('contacts.data', 1)
+            ->where('contacts.data.0.full_name', 'Spoke This Month')
+            ->where('filters.spoke', 'this_month')
+            ->where('filters.product_id', (string) $desk['product']->id));
+});
+
+it('filters contacts by scheduled talk next week', function () {
+    $user = crmSalesUser();
+    $desk = crmDesk();
+    $this->actingAs($user);
+
+    $nextWeek = Contact::factory()->create([
+        'full_name' => 'Next Week Call',
+        'primary_phone' => '+254711000021',
+    ]);
+    $later = Contact::factory()->create([
+        'full_name' => 'Next Month Call',
+        'primary_phone' => '+254711000022',
+    ]);
+
+    Lead::factory()->create([
+        'contact_id' => $nextWeek->id,
+        'product_id' => $desk['product']->id,
+        'pipeline_id' => $desk['pipeline']->id,
+        'current_stage_id' => $desk['stage']->id,
+        'next_conversation_at' => Carbon::now('Africa/Nairobi')->addWeek()->startOfWeek()->addDay()->utc(),
+    ]);
+    Lead::factory()->create([
+        'contact_id' => $later->id,
+        'product_id' => $desk['product']->id,
+        'pipeline_id' => $desk['pipeline']->id,
+        'current_stage_id' => $desk['stage']->id,
+        'next_conversation_at' => Carbon::now('Africa/Nairobi')->addWeeks(3)->utc(),
+    ]);
+
+    $this->get(route('contacts.index', ['scheduled' => 'next_week']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('contacts/index')
+            ->has('contacts.data', 1)
+            ->where('contacts.data.0.full_name', 'Next Week Call')
+            ->where('filters.scheduled', 'next_week'));
 });
 
 it('accepts international phone numbers without a Kenyan local form', function () {

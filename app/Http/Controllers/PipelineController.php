@@ -70,6 +70,7 @@ class PipelineController extends Controller
             'stages' => $pipeline->stages->map(fn (PipelineStage $stage): array => [
                 'id' => $stage->id,
                 'name' => $stage->name,
+                'purpose' => $stage->purpose,
                 'kind' => $stage->kind->value,
                 'position' => $stage->position,
                 'default_follow_up_delay_hours' => $stage->default_follow_up_delay_hours,
@@ -134,6 +135,7 @@ class PipelineController extends Controller
 
         $pipeline->stages()->create([
             'name' => $request->string('name')->toString(),
+            'purpose' => $request->input('purpose') ?: null,
             'kind' => $request->string('kind')->toString(),
             'position' => $position,
             'default_follow_up_delay_hours' => $request->input('default_follow_up_delay_hours'),
@@ -150,13 +152,14 @@ class PipelineController extends Controller
 
         $stage->update([
             'name' => $request->string('name')->toString(),
+            'purpose' => $request->input('purpose') ?: null,
             'kind' => $request->string('kind')->toString(),
             'default_follow_up_delay_hours' => $request->input('default_follow_up_delay_hours') === ''
                 ? null
                 : $request->input('default_follow_up_delay_hours'),
         ]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Stage renamed.']);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Stage saved.']);
 
         return redirect()->route('pipelines.show', $pipeline);
     }

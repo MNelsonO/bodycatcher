@@ -35,6 +35,10 @@ use Illuminate\Support\Carbon;
  * @property string|null $purchase_timeline_note
  * @property string|null $next_action
  * @property CarbonInterface|null $next_follow_up_on
+ * @property int $follow_up_rank
+ * @property string|null $follow_up_rank_reason
+ * @property string|null $follow_up_source
+ * @property CarbonInterface|null $chat_schedule_captured_at
  * @property CarbonInterface|null $next_conversation_at
  * @property CarbonInterface|null $marked_on
  * @property string|null $marked_label
@@ -65,6 +69,10 @@ use Illuminate\Support\Carbon;
     'purchase_timeline_note',
     'next_action',
     'next_follow_up_on',
+    'follow_up_rank',
+    'follow_up_rank_reason',
+    'follow_up_source',
+    'chat_schedule_captured_at',
     'next_conversation_at',
     'marked_on',
     'marked_label',
@@ -90,6 +98,8 @@ class Lead extends Model
             'branch_count' => 'integer',
             'decision_maker_status' => DecisionMakerStatus::class,
             'next_follow_up_on' => 'date',
+            'follow_up_rank' => 'integer',
+            'chat_schedule_captured_at' => 'datetime',
             'next_conversation_at' => 'datetime',
             'marked_on' => 'date',
             'closed_at' => 'datetime',

@@ -12,6 +12,7 @@ use App\Expenses\Expense;
 use App\Leads\InteractionType;
 use App\Leads\Lead;
 use App\Leads\LeadInteraction;
+use App\SalesPipelines\DefaultKemetStages;
 use App\SalesPipelines\StageKind;
 use App\Settings\DisplayClock;
 use Illuminate\Support\Carbon;
@@ -23,16 +24,29 @@ class CommandCentre
     public function __construct(
         private DisplayClock $clock,
         private FollowUpQuery $followUps,
+        private CommandCentreBoard $board,
     ) {}
 
     /**
+     * @param  array<string, mixed>  $filters
      * @return array<string, mixed>
      */
-    public function metrics(): array
+    public function metrics(array $filters = []): array
     {
         [$start, $end] = $this->clock->todayUtcRange();
         $today = $this->clock->today();
-        $days = $this->lastDays(7);
+        $board = $this->board->build($filters);
+        $chartDays = 7;
+        if (is_array($board['utc_bounds'])) {
+            $chartDays = max(
+                1,
+                min(
+                    30,
+                    (int) Carbon::parse((string) $board['range']['from'])->diffInDays(Carbon::parse((string) $board['range']['to'])) + 1,
+                ),
+            );
+        }
+        $days = $this->lastDays($chartDays);
 
         $byStage = Lead::query()
             ->join('pipeline_stages', 'pipeline_stages.id', '=', 'leads.current_stage_id')
@@ -51,9 +65,8 @@ class CommandCentre
             ])
             ->all();
 
-        $demoRequested = $this->countByStageName('Demo Requested');
-        $demoScheduled = $this->countByStageName('Demo Scheduled');
-        $demoCompleted = $this->countByStageName('Demo Completed');
+        $demoBooked = $this->countByStageName('Demo');
+        $demoEvaluating = $this->countByStageName('Evaluating');
 
         $paidRevenue = (float) Invoice::query()
             ->where('status', InvoiceStatus::Paid->value)
@@ -80,17 +93,12 @@ class CommandCentre
             'follow_up_rows' => $this->followUpRows($today),
             'whatsapp' => $this->whatsappMetrics($start, $end, $days),
             'demos' => [
-                'requested' => $demoRequested,
-                'scheduled' => $demoScheduled,
-                'completed' => $demoCompleted,
-                'in_flight' => $demoRequested + $demoScheduled,
-                'total' => $demoRequested + $demoScheduled + $demoCompleted,
+                'booked' => $demoBooked,
+                'evaluating' => $demoEvaluating,
+                'in_flight' => $demoBooked,
+                'total' => $demoBooked + $demoEvaluating,
             ],
-            'stage_buckets' => $this->stageBuckets(
-                $demoRequested,
-                $demoScheduled,
-                $demoCompleted,
-            ),
+            'stage_buckets' => $this->stageBuckets($demoBooked, $demoEvaluating),
             'interactions' => $this->interactionMetrics($start, $end),
             'scheduled_conversations' => Lead::query()
                 ->whereNotNull('next_conversation_at')
@@ -120,6 +128,14 @@ class CommandCentre
                 'whatsapp_7d' => $this->whatsappSeries($days),
                 'bought_7d' => $this->boughtSeries($days),
                 'funnel' => $byStage,
+                'days' => count($days),
+            ],
+            'board' => [
+                'filters' => $board['filters'],
+                'options' => $board['options'],
+                'range' => $board['range'],
+                'summary' => $board['summary'],
+                'leads' => $board['leads'],
             ],
             'today' => $today,
             'timezone' => $this->clock->timezone(),
@@ -156,16 +172,16 @@ class CommandCentre
      * @return array{
      *     follow_up: array{total: int, stages: list<string>},
      *     almost_buying: array{total: int, stages: list<string>},
-     *     meetings: array{total: int, requested: int, scheduled: int, completed: int, stages: list<string>},
+     *     meetings: array{total: int, booked: int, evaluating: int, stages: list<string>},
      *     nurture: array{total: int, stages: list<string>}
      * }
      */
-    private function stageBuckets(int $demoRequested, int $demoScheduled, int $demoCompleted): array
+    private function stageBuckets(int $demoBooked, int $demoEvaluating): array
     {
-        $followUp = ['New Lead', 'Contacted', 'Qualified'];
-        $almostBuying = ['Interested', 'Proposal / Price Sent', 'Negotiation'];
-        $meetings = ['Demo Requested', 'Demo Scheduled', 'Demo Completed'];
-        $nurture = ['Nurture / Future Opportunity'];
+        $followUp = DefaultKemetStages::followUpBucket();
+        $almostBuying = DefaultKemetStages::almostBuyingBucket();
+        $meetings = DefaultKemetStages::demoBucket();
+        $nurture = DefaultKemetStages::nurtureBucket();
 
         return [
             'follow_up' => [
@@ -177,10 +193,9 @@ class CommandCentre
                 'stages' => $almostBuying,
             ],
             'meetings' => [
-                'total' => $demoRequested + $demoScheduled + $demoCompleted,
-                'requested' => $demoRequested,
-                'scheduled' => $demoScheduled,
-                'completed' => $demoCompleted,
+                'total' => $demoBooked + $demoEvaluating,
+                'booked' => $demoBooked,
+                'evaluating' => $demoEvaluating,
                 'stages' => $meetings,
             ],
             'nurture' => [
@@ -350,17 +365,45 @@ class CommandCentre
     private function followUpRows(string $today): array
     {
         /** @var Collection<int, Lead> $leads */
+        $weekAhead = Carbon::parse($today, $this->clock->timezone())->addDays(7)->toDateString();
+
         $leads = Lead::query()
             ->with(['contact', 'currentStage', 'product'])
-            ->whereNotNull('next_follow_up_on')
-            ->whereDate('next_follow_up_on', '<=', $today)
+            ->where(function ($query) use ($today, $weekAhead): void {
+                $query->where(function ($due) use ($today): void {
+                    $due->whereNotNull('next_follow_up_on')
+                        ->whereDate('next_follow_up_on', '<=', $today);
+                })->orWhere(function ($chat) use ($weekAhead): void {
+                    $chat->where('follow_up_source', 'chat')
+                        ->whereNotNull('next_follow_up_on')
+                        ->whereDate('next_follow_up_on', '<=', $weekAhead);
+                })->orWhere(function ($talk): void {
+                    $talk->whereNotNull('next_conversation_at')
+                        ->where('conversations_stopped', false)
+                        ->where('next_conversation_at', '<=', now()->addDays(3));
+                });
+            })
+            ->orderByDesc('follow_up_rank')
             ->orderBy('next_follow_up_on')
-            ->limit(20)
+            ->limit(25)
             ->get();
 
         return $leads->map(function (Lead $lead) use ($today): array {
             $date = $lead->next_follow_up_on?->toDateString();
-            $status = $date === $today ? 'due_today' : 'overdue';
+            $status = match (true) {
+                $date !== null && $date < $today => 'overdue',
+                $date === $today => 'due_today',
+                $lead->follow_up_source === 'chat' => 'chat',
+                default => 'upcoming',
+            };
+
+            $reason = $lead->follow_up_rank_reason
+                ?: match ($status) {
+                    'due_today' => 'Due today',
+                    'overdue' => 'Overdue',
+                    'chat' => 'From chat',
+                    default => 'Upcoming',
+                };
 
             return [
                 'id' => $lead->id,
@@ -371,8 +414,11 @@ class CommandCentre
                 'next_action' => $lead->next_action,
                 'follow_up_on' => $date,
                 'follow_up_label' => $this->clock->formatDate($lead->next_follow_up_on),
+                'next_talk_label' => $this->clock->formatDateTime($lead->next_conversation_at),
                 'status' => $status,
-                'reason' => $status === 'due_today' ? 'Due today' : 'Overdue',
+                'reason' => $reason,
+                'rank' => (int) $lead->follow_up_rank,
+                'source' => $lead->follow_up_source,
             ];
         })->all();
     }

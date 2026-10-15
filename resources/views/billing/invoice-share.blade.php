@@ -84,7 +84,10 @@
         </div>
 
         @if ($invoice->notes)
-            <p style="margin-top:20px;"><strong>Notes</strong><br>{{ $invoice->notes }}</p>
+            <p style="margin-top:20px;"><strong>Notes</strong><br>{!! nl2br(e($invoice->notes)) !!}</p>
+        @endif
+        @if ($invoice->terms_and_conditions)
+            <p style="margin-top:12px;"><strong>Terms and conditions</strong><br>{!! nl2br(e($invoice->terms_and_conditions)) !!}</p>
         @endif
         @if ($business->bank_details)
             <p style="margin-top:12px;"><strong>Payment details</strong><br>{!! nl2br(e($business->bank_details)) !!}</p>

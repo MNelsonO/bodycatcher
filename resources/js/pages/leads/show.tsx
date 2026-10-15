@@ -100,6 +100,10 @@ export default function LeadShow({
                     </div>
                 </div>
 
+                {lead.escalation ? (
+                    <EscalationPanel leadId={lead.id} escalation={lead.escalation} />
+                ) : null}
+
                 <div className="grid gap-6 xl:grid-cols-3">
                     <section className="space-y-4 xl:col-span-2">
                         <div className="rounded-lg border p-4">
@@ -1033,8 +1037,8 @@ function LostDialog({
                 <DialogHeader>
                     <DialogTitle>Mark lost</DialogTitle>
                     <DialogDescription>
-                        A reason is required. Disqualified is a lost stage too,
-                        if the pipeline allows it from here.
+                        A reason is required. Use Lost for wrong fit, competitor
+                        wins, or opt-outs.
                     </DialogDescription>
                 </DialogHeader>
                 <Form
@@ -1075,6 +1079,121 @@ function LostDialog({
                 </Form>
             </DialogContent>
         </Dialog>
+    );
+}
+
+function EscalationPanel({
+    leadId,
+    escalation,
+}: {
+    leadId: number;
+    escalation: NonNullable<LeadDetail['escalation']>;
+}) {
+    return (
+        <section className="rounded-xl border border-destructive/40 bg-card p-4 shadow-[var(--shadow-card)] md:p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-destructive">
+                        AI paused — needs your input
+                    </p>
+                    <h2 className="mt-1 text-lg font-semibold tracking-tight">
+                        Correct it, teach the desk, then resume
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        Automation stopped on this lead. You were emailed
+                        {escalation.notified_at_label
+                            ? ` (${escalation.notified_at_label})`
+                            : ''}{' '}
+                        and a Google Calendar ping was queued when Calendar is
+                        connected.
+                    </p>
+                </div>
+                <Badge variant="destructive">{escalation.source}</Badge>
+            </div>
+            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                <div>
+                    <dt className="text-muted-foreground">Name</dt>
+                    <dd className="font-medium">
+                        {escalation.contact_name ?? '—'}
+                    </dd>
+                </div>
+                <div>
+                    <dt className="text-muted-foreground">Status</dt>
+                    <dd className="font-medium">
+                        {escalation.lead_status ?? '—'}
+                    </dd>
+                </div>
+                <div>
+                    <dt className="text-muted-foreground">
+                        System interested in
+                    </dt>
+                    <dd className="font-medium">
+                        {escalation.product_name ?? '—'}
+                    </dd>
+                </div>
+                <div>
+                    <dt className="text-muted-foreground">Current position</dt>
+                    <dd className="font-medium">
+                        {escalation.stage_name ?? '—'}
+                    </dd>
+                </div>
+            </dl>
+            <p className="mt-3 text-sm">
+                <span className="font-medium">Why: </span>
+                {escalation.reason}
+            </p>
+            {escalation.inbound_snippet ? (
+                <p className="mt-2 rounded-md bg-muted/50 p-3 text-sm">
+                    <span className="font-medium">Latest chat: </span>
+                    {escalation.inbound_snippet}
+                </p>
+            ) : null}
+            <Form
+                action={`/leads/${leadId}/escalations/${escalation.id}/resolve`}
+                method="post"
+                className="mt-4 grid gap-3 md:grid-cols-2"
+            >
+                {({ errors, processing }) => (
+                    <>
+                        <AreaField
+                            name="correction"
+                            label="Teach the desk (required)"
+                            required
+                            hint="How should it handle this person next time? Saved to memory + knowledge."
+                            error={errors.correction}
+                        />
+                        <AreaField
+                            name="send_reply"
+                            label="Optional WhatsApp reply now"
+                            defaultValue={escalation.suggested_reply ?? ''}
+                            hint="Edit the suggested reply and send it yourself. Leave blank to only teach."
+                            error={errors.send_reply}
+                        />
+                        <SelectField
+                            name="resume_automation"
+                            label="After saving"
+                            options={[
+                                {
+                                    value: '1',
+                                    label: 'Resume automation on this lead',
+                                },
+                                {
+                                    value: '0',
+                                    label: 'Keep automation paused',
+                                },
+                            ]}
+                            defaultValue="1"
+                            error={errors.resume_automation}
+                        />
+                        <div className="flex items-end">
+                            <Button type="submit" disabled={processing}>
+                                Save correction
+                            </Button>
+                        </div>
+                    </>
+                )}
+            </Form>
+        </section>
     );
 }
 

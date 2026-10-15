@@ -7,10 +7,14 @@ use App\Billing\InvoiceItem;
 use App\Billing\InvoiceStatus;
 use App\Billing\TaxLedgerEntry;
 use App\Models\User;
+use App\Settings\DisplayClock;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class InvoiceService
 {
+    public function __construct(private DisplayClock $clock) {}
+
     /**
      * @param  array<string, mixed>  $data
      * @param  list<array{description: string, quantity: float|int|string, unit_price: float|int|string, tax_rate?: float|int|string}>  $items
@@ -27,6 +31,7 @@ class InvoiceService
                 'due_date' => $data['due_date'],
                 'currency' => $data['currency'] ?? 'KES',
                 'notes' => $data['notes'] ?? null,
+                'terms_and_conditions' => $data['terms_and_conditions'] ?? null,
                 'customer_address' => $data['customer_address'] ?? null,
             ]);
 
@@ -54,6 +59,7 @@ class InvoiceService
                 'due_date' => $data['due_date'],
                 'currency' => $data['currency'] ?? $invoice->currency,
                 'notes' => $data['notes'] ?? null,
+                'terms_and_conditions' => $data['terms_and_conditions'] ?? null,
                 'customer_address' => $data['customer_address'] ?? null,
             ]);
             $invoice->save();
@@ -83,7 +89,7 @@ class InvoiceService
         return DB::transaction(function () use ($invoice, $paidOn, $paymentMethodId): Invoice {
             $invoice->status = InvoiceStatus::Paid;
             $invoice->paid_at = $paidOn !== null && $paidOn !== ''
-                ? \Illuminate\Support\Carbon::parse($paidOn)->endOfDay()
+                ? Carbon::parse($paidOn, $this->clock->timezone())->endOfDay()->utc()
                 : now();
             $invoice->payment_method_id = $paymentMethodId;
             $invoice->save();
@@ -100,7 +106,9 @@ class InvoiceService
                     'net_amount' => $invoice->subtotal,
                     'tax_amount' => $invoice->tax_total,
                     'gross_amount' => $invoice->total,
-                    'occurred_on' => $invoice->paid_at?->toDateString() ?? now()->toDateString(),
+                    'occurred_on' => $invoice->paid_at
+                        ? $invoice->paid_at->timezone($this->clock->timezone())->toDateString()
+                        : $this->clock->today(),
                     'meta' => [
                         'invoice_number' => $invoice->number,
                         'currency' => $invoice->currency,

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Ai\LlmConfiguration;
 use App\Billing\BusinessProfile;
 use App\Billing\Invoice;
+use App\Billing\InvoiceGeneration;
 use App\Billing\InvoiceStatus;
 use App\Billing\PaymentMethod;
 use App\Billing\Services\BillingAlertService;
@@ -48,9 +50,20 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function create(): InertiaResponse
+    public function create(Request $request, LlmConfiguration $llm): InertiaResponse
     {
         $profile = BusinessProfile::current();
+        $generationId = $request->integer('generation');
+
+        $selected = $generationId > 0
+            ? InvoiceGeneration::query()->find($generationId)
+            : null;
+
+        $history = InvoiceGeneration::query()
+            ->whereNull('invoice_id')
+            ->orderByDesc('id')
+            ->limit(12)
+            ->get();
 
         return Inertia::render('billing/invoices/create', [
             'contacts' => Contact::query()
@@ -62,7 +75,13 @@ class InvoiceController extends Controller
                 'due_date' => now()->addDays(14)->toDateString(),
                 'currency' => $profile->currency,
                 'tax_rate' => (float) $profile->default_tax_rate,
+                'terms_and_conditions' => $profile->default_terms,
+                'next_number' => Invoice::nextNumber(),
             ],
+            'business' => $this->businessPayload($profile),
+            'llm_ready' => $llm->ready(),
+            'selected_generation' => $selected !== null ? $this->generationPayload($selected) : null,
+            'generations' => $history->map(fn (InvoiceGeneration $row): array => $this->generationPayload($row))->all(),
         ]);
     }
 
@@ -77,11 +96,16 @@ class InvoiceController extends Controller
         return redirect()->route('invoices.show', $invoice);
     }
 
-    public function show(Invoice $invoice): InertiaResponse
+    public function show(Invoice $invoice, LlmConfiguration $llm): InertiaResponse
     {
         $invoice->refreshOpenStatus();
         $invoice->load(['contact', 'items', 'creator', 'paymentMethod']);
         $profile = BusinessProfile::current();
+        $generations = InvoiceGeneration::query()
+            ->where('invoice_id', $invoice->id)
+            ->orderByDesc('id')
+            ->limit(20)
+            ->get();
 
         return Inertia::render('billing/invoices/show', [
             'invoice' => $this->payload($invoice),
@@ -91,6 +115,8 @@ class InvoiceController extends Controller
             'defaults' => [
                 'paid_on' => now()->toDateString(),
             ],
+            'llm_ready' => $llm->ready(),
+            'generations' => $generations->map(fn (InvoiceGeneration $row): array => $this->generationPayload($row))->all(),
         ]);
     }
 
@@ -167,6 +193,7 @@ class InvoiceController extends Controller
             'tax_total' => (float) $invoice->tax_total,
             'total' => (float) $invoice->total,
             'notes' => $invoice->notes,
+            'terms_and_conditions' => $invoice->terms_and_conditions,
             'customer_address' => $invoice->customer_address,
             'share_token' => $invoice->share_token,
             'paid_at' => $invoice->paid_at?->toIso8601String(),
@@ -209,9 +236,28 @@ class InvoiceController extends Controller
             'email' => $profile->email,
             'tax_id' => $profile->tax_id,
             'bank_details' => $profile->bank_details,
+            'default_terms' => $profile->default_terms,
             'logo_url' => $profile->logoUrl(),
             'currency' => $profile->currency,
             'default_tax_rate' => (float) $profile->default_tax_rate,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function generationPayload(InvoiceGeneration $generation): array
+    {
+        return [
+            'id' => $generation->id,
+            'prompt' => $generation->prompt,
+            'status' => $generation->status->value,
+            'result' => $generation->result,
+            'error' => $generation->error,
+            'applied_at' => $generation->applied_at?->toIso8601String(),
+            'completed_at' => $generation->completed_at?->toIso8601String(),
+            'from_generation_id' => $generation->from_generation_id,
+            'created_at' => $generation->created_at?->toIso8601String(),
         ];
     }
 }

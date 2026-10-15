@@ -2,6 +2,12 @@
 
 return [
 
+    /*
+    | Env values are the fallback. Saved keys on /integrations overlay these
+    | at boot via IntegrationConfigResolver (encrypted in the database).
+    |
+    */
+
     'meta' => [
         'access_token' => env('META_BUSINESS_TOKEN', env('WHATSAPP_TOKEN', '')),
         'page_id' => env('META_PAGE_ID', ''),

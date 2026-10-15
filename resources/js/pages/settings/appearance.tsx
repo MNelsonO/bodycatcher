@@ -10,14 +10,18 @@ export default function Appearance() {
 
             <h1 className="sr-only">Appearance settings</h1>
 
-            <div className="space-y-6">
-                <Heading
-                    variant="small"
-                    title="Appearance settings"
-                    description="Update the appearance settings for your account"
-                />
-                <AppearanceTabs />
-            </div>
+            <section className="overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]">
+                <div className="border-b border-border bg-card px-6 py-5">
+                    <Heading
+                        variant="small"
+                        title="Appearance settings"
+                        description="Update the appearance settings for your account"
+                    />
+                </div>
+                <div className="bg-card px-6 py-6">
+                    <AppearanceTabs />
+                </div>
+            </section>
         </>
     );
 }

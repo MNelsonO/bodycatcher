@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property int|null $delay_hours
  * @property string|null $local_time
  * @property string $body
+ * @property bool $use_conversation_memory
  * @property int|null $product_id
  * @property bool $is_active
  * @property CarbonInterface|null $created_at
@@ -30,6 +31,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'delay_hours',
     'local_time',
     'body',
+    'use_conversation_memory',
     'product_id',
     'is_active',
 ])]
@@ -44,6 +46,7 @@ class AutomationRule extends Model
             'trigger' => FollowUpTrigger::class,
             'action' => FollowUpAction::class,
             'delay_hours' => 'integer',
+            'use_conversation_memory' => 'boolean',
             'is_active' => 'boolean',
         ];
     }

@@ -45,6 +45,7 @@ class FollowUpController extends Controller
                     'delay_hours' => $rule->delay_hours,
                     'local_time' => $rule->local_time,
                     'body' => $rule->body,
+                    'use_conversation_memory' => $rule->use_conversation_memory,
                     'product_id' => $rule->product_id,
                     'product_name' => $rule->product?->name,
                     'is_active' => $rule->is_active,
@@ -136,6 +137,7 @@ class FollowUpController extends Controller
             'delay_hours' => $request->input('delay_hours'),
             'local_time' => $request->input('local_time'),
             'body' => $request->string('body')->toString(),
+            'use_conversation_memory' => $request->boolean('use_conversation_memory', true),
             'product_id' => is_numeric($productId) ? (int) $productId : null,
             'is_active' => $request->boolean('is_active'),
         ];

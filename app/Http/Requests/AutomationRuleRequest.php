@@ -66,6 +66,7 @@ class AutomationRuleRequest extends FormRequest
                 Rule::requiredIf($trigger === FollowUpTrigger::FollowUpDue->value),
             ],
             'body' => ['required', 'string', 'max:4000'],
+            'use_conversation_memory' => ['sometimes', 'boolean'],
             'product_id' => ['nullable', 'integer', Rule::exists('products', 'id')],
             'is_active' => ['required', 'boolean'],
         ];

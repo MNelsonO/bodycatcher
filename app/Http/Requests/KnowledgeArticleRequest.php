@@ -36,6 +36,7 @@ class KnowledgeArticleRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:160'],
             'body' => ['required', 'string', 'max:8000'],
+            'category' => ['nullable', Rule::in(['fact', 'lesson', 'session'])],
             'product_id' => ['nullable', 'integer', Rule::exists('products', 'id')],
             'is_active' => ['required', 'boolean'],
         ];

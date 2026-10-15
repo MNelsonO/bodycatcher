@@ -78,7 +78,13 @@ class ApplyLeadExtraction
                 : $lead->next_follow_up_on?->toDateString();
 
             if ($action !== $lead->next_action || $date !== $lead->next_follow_up_on?->toDateString()) {
-                $this->followUps->handle($lead, is_string($action) ? $action : null, is_string($date) ? $date : null, $actor);
+                $this->followUps->handle(
+                    $lead,
+                    is_string($action) ? $action : null,
+                    is_string($date) ? $date : null,
+                    $actor,
+                    'analysis',
+                );
                 $applied = [...$applied, ...$followUp];
             }
         }

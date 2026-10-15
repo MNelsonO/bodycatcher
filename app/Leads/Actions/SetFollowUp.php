@@ -4,14 +4,18 @@ namespace App\Leads\Actions;
 
 use App\Leads\ActivityEvent;
 use App\Leads\Lead;
+use App\Leads\Services\FollowUpRanker;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 
 class SetFollowUp
 {
-    public function __construct(private RecordActivity $activity) {}
+    public function __construct(
+        private RecordActivity $activity,
+        private FollowUpRanker $ranker,
+    ) {}
 
-    public function handle(Lead $lead, ?string $nextAction, ?string $date, User $actor): Lead
+    public function handle(Lead $lead, ?string $nextAction, ?string $date, User $actor, string $source = 'manual'): Lead
     {
         $previous = $lead->next_follow_up_on?->toDateString();
         $nextAction = $this->clean($nextAction);
@@ -19,6 +23,9 @@ class SetFollowUp
 
         $lead->next_action = $nextAction;
         $lead->next_follow_up_on = $date === null ? null : Carbon::parse($date);
+
+        $lead->follow_up_source = $date === null ? null : $source;
+
         $lead->save();
 
         if ($previous !== $date) {
@@ -30,11 +37,12 @@ class SetFollowUp
                 [
                     'from' => $previous,
                     'to' => $date,
+                    'source' => $lead->follow_up_source,
                 ],
             );
         }
 
-        return $lead->refresh();
+        return $this->ranker->refresh($lead->fresh(['currentStage']) ?? $lead->refresh());
     }
 
     private function clean(?string $value): ?string

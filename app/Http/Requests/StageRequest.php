@@ -21,6 +21,10 @@ class StageRequest extends FormRequest
         if ($this->input('default_follow_up_delay_hours') === '') {
             $this->merge(['default_follow_up_delay_hours' => null]);
         }
+
+        if ($this->input('purpose') === '') {
+            $this->merge(['purpose' => null]);
+        }
     }
 
     /**
@@ -30,6 +34,7 @@ class StageRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'purpose' => ['nullable', 'string', 'max:255'],
             'kind' => ['required', Rule::enum(StageKind::class)],
             'default_follow_up_delay_hours' => ['nullable', 'integer', 'min:0', 'max:8760'],
         ];

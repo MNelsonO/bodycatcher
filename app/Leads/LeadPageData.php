@@ -5,6 +5,7 @@ namespace App\Leads;
 use App\Ai\KnowledgeArticle;
 use App\Ai\LeadAnalysis;
 use App\Ai\LlmConfiguration;
+use App\Ai\OperatorEscalation;
 use App\Conversations\Message;
 use App\Conversations\MessageAttachment;
 use App\FollowUps\FollowUpTask;
@@ -155,6 +156,7 @@ class LeadPageData
                 ])->all(),
             ])->all() ?? [],
             'whatsapp' => $this->whatsapp($lead),
+            'escalation' => $this->openEscalation($lead),
             'intelligence' => $this->intelligence($lead),
             'follow_ups' => $this->followUps($lead),
             'notes' => $lead->notes->map(fn (LeadNote $note): array => [
@@ -252,7 +254,49 @@ class LeadPageData
                     ? ': '.$properties['reason']
                     : ''),
             ActivityEvent::FollowUpCompleted => 'Follow-up marked done',
+            ActivityEvent::ChatFollowUpCaptured => 'Follow-up date captured from chat',
+            ActivityEvent::EscalatedToOperator => 'AI paused — needs your input'
+                .(isset($properties['reason']) && is_string($properties['reason'])
+                    ? ': '.$properties['reason']
+                    : ''),
+            ActivityEvent::OperatorCorrectionApplied => 'Operator correction saved'
+                .(! empty($properties['resumed']) ? ' · automation resumed' : ''),
+            ActivityEvent::KnowledgeGapAnswered => 'Unfamiliar question answered'
+                .(isset($properties['category']) && is_string($properties['category'])
+                    ? ' · '.$properties['category']
+                    : ''),
         };
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function openEscalation(Lead $lead): ?array
+    {
+        $row = OperatorEscalation::query()
+            ->where('lead_id', $lead->id)
+            ->where('status', 'open')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($row === null) {
+            return null;
+        }
+
+        $lead->loadMissing(['contact', 'product', 'currentStage']);
+
+        return [
+            'id' => $row->id,
+            'reason' => $row->reason,
+            'inbound_snippet' => $row->inbound_snippet,
+            'suggested_reply' => $row->suggested_reply,
+            'source' => $row->source,
+            'notified_at_label' => $this->clock->formatDateTime($row->notified_at),
+            'contact_name' => $lead->contact->full_name,
+            'lead_status' => $lead->outcome(),
+            'product_name' => $lead->product->name,
+            'stage_name' => $lead->currentStage->name,
+        ];
     }
 
     /**

@@ -68,7 +68,7 @@ it('creates a contact, lead, conversation, and message from inbound text', funct
         ->and(Conversation::query()->count())->toBe(1)
         ->and(Message::query()->count())->toBe(1)
         ->and($lead->source)->toBe('whatsapp')
-        ->and($lead->currentStage->name)->toBe('New Lead')
+        ->and($lead->currentStage->name)->toBe('New')
         ->and($lead->closed_at)->toBeNull()
         ->and(Message::query()->first()?->body)->toBe('Hello from Westlands')
         ->and(Message::query()->first()?->direction->value)->toBe('inbound');

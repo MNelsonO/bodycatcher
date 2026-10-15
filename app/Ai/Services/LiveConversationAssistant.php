@@ -30,6 +30,9 @@ class LiveConversationAssistant
         private MessagingGuard $guard,
         private LlmClient $llm,
         private LlmConfiguration $llmConfig,
+        private EscalateToOperator $escalate,
+        private ReplyGroundingGate $grounding,
+        private LeadConversationMemory $memory,
     ) {}
 
     public function enabled(): bool
@@ -65,6 +68,20 @@ class LiveConversationAssistant
         if ($conversation->focused_product_id === null) {
             $conversation->focused_product_id = $lead->product_id;
             $conversation->save();
+        }
+
+        $grounding = $this->grounding->evaluate($lead->fresh(['conversation.messages', 'product', 'contact', 'currentStage', 'interactions']) ?? $lead, $body);
+
+        if (! $grounding['ok']) {
+            $this->escalate->handle(
+                $lead,
+                $grounding['reason'],
+                'live_assistant',
+                $body,
+                null,
+            );
+
+            return;
         }
 
         $products = Product::query()
@@ -104,74 +121,69 @@ class LiveConversationAssistant
             return implode("\n", $bits);
         })->implode("\n");
 
+        $lessons = $grounding['lessons']
+            ->map(function ($article): string {
+                $kind = (string) ($article->category ?? 'fact');
+
+                return '- ['.$kind.'] '.$article->title.': '.mb_substr(trim($article->body), 0, 600);
+            })
+            ->implode("\n");
+        $lessonsBlock = $lessons !== ''
+            ? $lessons
+            : 'No solid lesson matched — only greet / acknowledge; escalate if they ask for facts.';
+
+        $memoryPack = $this->memory->build($lead);
         $provider = (string) config('ai.provider', 'openai');
         $topic = (string) ($conversation->topic ?? 'General sales inquiry');
         $topicSummary = (string) ($conversation->topic_summary ?? 'No topic locked yet.');
+        $memorySummary = $memoryPack['memory_summary'];
         $productName = $lead->product->name;
         $contactName = $lead->contact->full_name;
         $stageName = $lead->currentStage->name;
-        $marked = $lead->marked_on
-            ? 'Marked date: '.$lead->marked_on->toDateString().($lead->marked_label ? ' ('.$lead->marked_label.')' : '')
-            : 'No marked date yet.';
-        $followUp = $lead->next_follow_up_on
-            ? 'Follow-up date: '.$lead->next_follow_up_on->toDateString()
-            : 'No follow-up date set.';
-        $clientContext = $lead->contact->aiContextBlock();
-        $clientContextBlock = $clientContext !== ''
-            ? "\nClient market context:\n{$clientContext}\n"
-            : "\n";
-        $touchLines = $lead->interactions
-            ->sortByDesc('occurred_at')
-            ->take(8)
-            ->map(function ($row): string {
-                $when = $row->occurred_at?->toDateTimeString() ?? 'unknown time';
-
-                return '- '.$row->type->label().' @ '.$when.': '.mb_substr(trim($row->body), 0, 400);
-            })
-            ->implode("\n");
-        $touchesBlock = $touchLines !== ''
-            ? "Recent desk touches (calls/meetings/notes):\n{$touchLines}\n"
-            : '';
-        $scheduleLine = $lead->next_conversation_at
-            ? 'Next scheduled conversation: '.$lead->next_conversation_at->toDateTimeString()
-            : 'No conversation scheduled.';
-        $stoppedLine = $lead->conversations_stopped
-            ? 'Future automated conversations are STOPPED on this lead.'
-            : 'Automated conversations are allowed.';
 
         $system = <<<PROMPT
-You are the live WhatsApp sales assistant for Kemet Tech.
-Provider in use: {$provider}.
-Stay on the conversation topic. Do not invent prices, discounts, or contracts.
-Only discuss products from the catalog. If the customer asks about something else, steer back to the catalog and the current topic.
-Respect the client's country and conversation area. Use desk notes and recorded touches as standing context.
-Keep this lead on its current sales stage unless an operator moves it.
-Reply in short plain WhatsApp text. No markdown. No bullet walls.
+You are a Kemet Tech sales person texting on WhatsApp — not a bot script.
+Provider: {$provider}.
+Write like a real human: warm, clear, short, natural Kenyan business WhatsApp English. No markdown, no bullet walls, no "As an AI".
+Only reply when you understand THIS conversation from the history and solid lessons below.
+Do not invent prices, discounts, contracts, dates, or features.
+If history is thin, lessons are vague, or you are unsure — ESCALATE. Never bluff.
+Use only catalog + solid lessons + memory. Prefer [lesson]/[fact]/[session] notes over guesses.
+Stay on topic. Keep the lead on its current stage.
 
-Current lead product: {$productName}
 Contact: {$contactName}
+Product: {$productName}
 Stage: {$stageName}
-{$marked}
-{$followUp}
-{$scheduleLine}
-{$stoppedLine}
-{$clientContextBlock}{$touchesBlock}Running topic: {$topic}
+Topic: {$topic}
 Topic notes: {$topicSummary}
+Memory: {$memorySummary}
+
+Solid lessons (RAG — trust these):
+{$lessonsBlock}
 
 Product catalog:
 {$catalog}
+
+{$memoryPack['touches']}
 PROMPT;
 
         $user = <<<PROMPT
-Conversation so far:
+Conversation history (must make sense before you reply):
 {$history}
 
 Latest customer message:
 {$body}
 
-1) Write the WhatsApp reply only after a line that starts with REPLY:
-2) Then update the topic on a line TOPIC:
-3) Then a one-sentence topic summary on a line TOPIC_SUMMARY:
+If you understand and have solid grounding:
+1) REPLY: <human WhatsApp text, 1–4 short sentences>
+2) TOPIC: <short topic>
+3) TOPIC_SUMMARY: <one sentence>
+4) MEMORY: <how to deal with this person next time>
+
+If anything is unclear, thin, or not covered by solid lessons:
+1) ESCALATE: <why>
+2) SUGGESTED_REPLY: <optional draft for the human — not sent>
+3) MEMORY: <optional>
 PROMPT;
 
         try {
@@ -186,6 +198,25 @@ PROMPT;
         }
 
         $parsed = $this->parse($raw);
+
+        if ($parsed['memory'] !== '') {
+            $conversation->memory_summary = mb_substr($parsed['memory'], 0, 500);
+            $conversation->topic_updated_at = now();
+            $conversation->save();
+        }
+
+        if ($parsed['escalate'] !== '') {
+            $this->escalate->handle(
+                $lead,
+                $parsed['escalate'],
+                'live_assistant',
+                $body,
+                $parsed['suggested'] !== '' ? $parsed['suggested'] : null,
+            );
+
+            return;
+        }
+
         $reply = $parsed['reply'];
 
         if ($reply === '') {
@@ -226,35 +257,60 @@ PROMPT;
     }
 
     /**
-     * @return array{reply: string, topic: string, topic_summary: string}
+     * @return array{reply: string, topic: string, topic_summary: string, memory: string, escalate: string, suggested: string}
      */
     private function parse(string $raw): array
     {
         $reply = '';
         $topic = '';
         $summary = '';
+        $memory = '';
+        $escalate = '';
+        $suggested = '';
         $mode = null;
 
         foreach (preg_split("/\r\n|\n|\r/", trim($raw)) ?: [] as $line) {
             $trimmed = trim($line);
+            $upper = mb_strtoupper($trimmed);
 
-            if (str_starts_with(mb_strtoupper($trimmed), 'REPLY:')) {
+            if (str_starts_with($upper, 'ESCALATE:')) {
+                $mode = 'escalate';
+                $escalate = trim(substr($trimmed, 9));
+
+                continue;
+            }
+
+            if (str_starts_with($upper, 'SUGGESTED_REPLY:')) {
+                $mode = 'suggested';
+                $suggested = trim(substr($trimmed, 16));
+
+                continue;
+            }
+
+            if (str_starts_with($upper, 'REPLY:')) {
                 $mode = 'reply';
                 $reply = trim(substr($trimmed, 6));
 
                 continue;
             }
 
-            if (str_starts_with(mb_strtoupper($trimmed), 'TOPIC_SUMMARY:')) {
+            if (str_starts_with($upper, 'TOPIC_SUMMARY:')) {
                 $mode = 'summary';
                 $summary = trim(substr($trimmed, 14));
 
                 continue;
             }
 
-            if (str_starts_with(mb_strtoupper($trimmed), 'TOPIC:')) {
+            if (str_starts_with($upper, 'TOPIC:')) {
                 $mode = 'topic';
                 $topic = trim(substr($trimmed, 6));
+
+                continue;
+            }
+
+            if (str_starts_with($upper, 'MEMORY:')) {
+                $mode = 'memory';
+                $memory = trim(substr($trimmed, 7));
 
                 continue;
             }
@@ -265,10 +321,16 @@ PROMPT;
                 $topic = trim($topic.' '.$trimmed);
             } elseif ($mode === 'summary') {
                 $summary = trim($summary.' '.$trimmed);
+            } elseif ($mode === 'memory') {
+                $memory = trim($memory.' '.$trimmed);
+            } elseif ($mode === 'escalate') {
+                $escalate = trim($escalate.' '.$trimmed);
+            } elseif ($mode === 'suggested') {
+                $suggested = trim($suggested."\n".$trimmed);
             }
         }
 
-        if ($reply === '' && $topic === '' && $summary === '') {
+        if ($reply === '' && $topic === '' && $summary === '' && $memory === '' && $escalate === '') {
             $reply = trim($raw);
         }
 
@@ -276,6 +338,9 @@ PROMPT;
             'reply' => trim($reply),
             'topic' => trim($topic),
             'topic_summary' => trim($summary),
+            'memory' => trim($memory),
+            'escalate' => trim($escalate),
+            'suggested' => trim($suggested),
         ];
     }
 }

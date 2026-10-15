@@ -34,6 +34,7 @@ class InvoiceRequest extends FormRequest
             'due_date' => ['required', 'date', 'after_or_equal:issue_date'],
             'currency' => ['nullable', 'string', 'size:3'],
             'notes' => ['nullable', 'string', 'max:4000'],
+            'terms_and_conditions' => ['nullable', 'string', 'max:8000'],
             'customer_address' => ['nullable', 'string', 'max:500'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.description' => ['required', 'string', 'max:255'],

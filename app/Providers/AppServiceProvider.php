@@ -8,6 +8,7 @@ use App\Ai\LaravelAnalysisDispatcher;
 use App\Ai\LlmClient;
 use App\Ai\OpenAiCompatibleClient;
 use App\Billing\BusinessProfile;
+use App\Integrations\Services\IntegrationConfigResolver;
 use App\WhatsApp\CloudWhatsAppClient;
 use App\WhatsApp\FakeWhatsAppClient;
 use App\WhatsApp\FlareSendWhatsAppClient;
@@ -62,6 +63,16 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureAuthMail();
+        $this->overlayIntegrationCredentials();
+    }
+
+    protected function overlayIntegrationCredentials(): void
+    {
+        try {
+            $this->app->make(IntegrationConfigResolver::class)->applyToConfig();
+        } catch (\Throwable) {
+            // Migrations / early boot may not have tables yet.
+        }
     }
 
     /**

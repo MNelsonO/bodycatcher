@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property int $id
  * @property int $pipeline_id
  * @property string $name
+ * @property string|null $purpose
  * @property StageKind $kind
  * @property int $position
  * @property int|null $default_follow_up_delay_hours
@@ -22,7 +23,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['pipeline_id', 'name', 'kind', 'position', 'default_follow_up_delay_hours', 'archived_at'])]
+#[Fillable(['pipeline_id', 'name', 'purpose', 'kind', 'position', 'default_follow_up_delay_hours', 'archived_at'])]
 #[UseFactory(PipelineStageFactory::class)]
 class PipelineStage extends Model
 {

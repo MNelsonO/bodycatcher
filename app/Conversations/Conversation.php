@@ -16,12 +16,13 @@ use Illuminate\Support\Carbon;
  * @property int $contact_id
  * @property string|null $topic
  * @property string|null $topic_summary
+ * @property string|null $memory_summary
  * @property int|null $focused_product_id
  * @property Carbon|null $topic_updated_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['lead_id', 'contact_id', 'topic', 'topic_summary', 'focused_product_id', 'topic_updated_at'])]
+#[Fillable(['lead_id', 'contact_id', 'topic', 'topic_summary', 'memory_summary', 'focused_product_id', 'topic_updated_at'])]
 class Conversation extends Model
 {
     /**

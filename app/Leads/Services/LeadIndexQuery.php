@@ -25,13 +25,18 @@ class LeadIndexQuery
         $search = trim($request->string('q')->toString());
 
         $query = Lead::query()
-            ->with(['contact.phones', 'product', 'currentStage', 'pipeline'])
-            ->orderByDesc('updated_at');
+            ->with(['contact.phones', 'product', 'currentStage', 'pipeline']);
 
         $followUp = $request->string('follow_up')->toString();
 
         if ($followUp !== '' && $followUp !== 'all') {
             $this->followUps->apply($query, $followUp);
+        }
+
+        if ($followUp === 'ranked' || $followUp === 'chat') {
+            $query->orderByDesc('follow_up_rank')->orderBy('next_follow_up_on');
+        } else {
+            $query->orderByDesc('updated_at');
         }
 
         $productId = $request->string('product_id')->toString();
@@ -112,6 +117,9 @@ class LeadIndexQuery
             'next_follow_up_on' => $lead->next_follow_up_on?->toDateString(),
             'next_follow_up_label' => $this->clock->formatDate($lead->next_follow_up_on),
             'follow_up_state' => $this->state($lead),
+            'follow_up_rank' => (int) $lead->follow_up_rank,
+            'follow_up_rank_reason' => $lead->follow_up_rank_reason,
+            'follow_up_source' => $lead->follow_up_source,
         ];
     }
 

@@ -23,6 +23,7 @@ class Invoice extends Model
         'tax_total',
         'total',
         'notes',
+        'terms_and_conditions',
         'customer_address',
         'share_token',
         'paid_at',
@@ -83,6 +84,14 @@ class Invoice extends Model
     public function items(): HasMany
     {
         return $this->hasMany(InvoiceItem::class)->orderBy('position')->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<InvoiceGeneration, $this>
+     */
+    public function generations(): HasMany
+    {
+        return $this->hasMany(InvoiceGeneration::class)->orderByDesc('id');
     }
 
     public static function nextNumber(): string

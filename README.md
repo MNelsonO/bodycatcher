@@ -26,7 +26,7 @@ Point FlareSend at `POST /webhooks/flaresend` and Twilio at `POST /webhooks/twil
 - `GET /webhooks/whatsapp` verifies the subscription with `WHATSAPP_VERIFY_TOKEN`.
 - `POST /webhooks/whatsapp` checks `X-Hub-Signature-256` against `WHATSAPP_APP_SECRET`. A bad signature is rejected and stored nowhere.
 - A valid body is saved in `webhook_events` with a unique hash before anything else. The same delivery does not create a second contact, lead, or message. Processing runs on the queue. If the queue push fails, the row stays and `php artisan whatsapp:retry` can run it. The message row is written by that job. No model is called.
-- An unknown `wa_id` becomes a contact (E.164, Kenya +254) and one open lead on the default pipeline at New Lead, source `whatsapp`.
+- An unknown `wa_id` becomes a contact (E.164, Kenya +254) and one open lead on the default pipeline at New, source `whatsapp`.
 - A known contact with an open lead gets the message on the most recently updated open lead. A known contact with only closed leads gets a new lead. Won and lost leads are not reopened.
 - Attachment metadata (id, mime type, caption) is stored. Media files are not downloaded.
 - The whole inbound text `stop` or `unsubscribe` (any case) sets the contact to opted out. No other wording does.
@@ -87,7 +87,7 @@ Invoices (`/invoices`) support logo + address on the business profile, PDF downl
 
 ## Reports
 
-`/reports` is the desk analytics board. Pick a date range (or 7d / 30d / 90d) to see leads per product, conversion per product, high-interest leads per product (Interested / Demo / Proposal / Negotiation or AI score ≥ 70), daily lead/won charts, and spend every day plus category totals.
+`/reports` is the desk analytics board. Pick a date range (or 7d / 30d / 90d) to see leads per product, conversion per product, high-interest leads per product (Demo / Evaluating / Proposal / Closing or AI score ≥ 70), daily lead/won charts, and spend every day plus category totals.
 
 ## Money
 

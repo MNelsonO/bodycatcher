@@ -122,7 +122,7 @@ class DemoDataSeeder extends Seeder
             'business_problem' => 'Asked about crew routing, then said he does not want sales calls.',
             'decision_maker_status' => DecisionMakerStatus::Unknown->value,
         ], $actor);
-        $this->moveTo($brianLead, 'Disqualified', $actor, 'Contact opted out of sales messages.');
+        $this->moveTo($brianLead, 'Lost', $actor, 'Contact opted out of sales messages.');
         $notes->handle($brianLead->refresh(), 'Sample record. Do not call. Consent is opted out.', $actor);
 
         $catherine = $contacts->handle([
@@ -185,7 +185,7 @@ class DemoDataSeeder extends Seeder
             'purchase_timeline_note' => 'Can look at a demo after the Nyali hotel contract starts.',
             'budget_note' => 'No budget discussed.',
         ], $actor);
-        $davidRoutes = $this->moveTo($davidRoutes, 'Demo Requested', $actor, null);
+        $davidRoutes = $this->moveTo($davidRoutes, 'Demo', $actor, null);
         $followUps->handle($davidRoutes, 'Confirm who from Nyali will join the demo', $upcoming, $actor);
         $messages->handle($davidRoutes, MessageDirection::Outbound, 'David, confirming we can walk through Kemet Route Desk with your Nyali supervisors. Tell me a morning that works.', null, $actor);
 
@@ -213,7 +213,7 @@ class DemoDataSeeder extends Seeder
             'purchase_timeline_note' => 'Board meets on the first Tuesday of next month.',
             'budget_note' => 'She asked for a per-branch figure. None has been written down yet.',
         ], $actor);
-        $estherLead = $this->moveTo($estherLead, 'Proposal / Price Sent', $actor, null);
+        $estherLead = $this->moveTo($estherLead, 'Proposal', $actor, null);
         $notes->handle($estherLead, 'Sample record. Proposal was discussed verbally. The price field stays empty until Nelson writes the real figure.', $actor);
         $messages->handle($estherLead, MessageDirection::Inbound, 'Please send the branch breakdown before our Tuesday meeting. I still need to see it in writing.', null, $actor);
 
@@ -239,7 +239,7 @@ class DemoDataSeeder extends Seeder
             'branch_count' => 1,
             'decision_maker_status' => DecisionMakerStatus::Yes->value,
         ], $actor);
-        $this->moveTo($graceLead, 'Contacted', $actor, null);
+        $this->moveTo($graceLead, 'Reached', $actor, null);
         $notes->handle($graceLead->refresh(), 'Sample record. Do not merge with Amina Wanjiku. Same business name, different phone, different town.', $actor);
 
         $this->command->info('Sample Kenyan prospects loaded. They are demo data, not live customers.');

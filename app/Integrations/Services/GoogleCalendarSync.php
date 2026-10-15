@@ -4,6 +4,7 @@ namespace App\Integrations\Services;
 
 use App\Calendar\CalendarActivity;
 use App\Integrations\IntegrationAccount;
+use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -100,6 +101,96 @@ class GoogleCalendarSync
             ];
         } catch (Throwable $exception) {
             Log::warning('Google Calendar push failed.', ['error' => $exception->getMessage()]);
+            $this->recordError($exception->getMessage());
+
+            return [
+                'ok' => false,
+                'external_id' => null,
+                'message' => 'Could not reach Google Calendar.',
+            ];
+        }
+    }
+
+    /**
+     * Timed calendar ping (popup + email reminders) for operator escalations.
+     *
+     * @return array{ok: bool, external_id: string|null, message: string}
+     */
+    public function pushTimed(CalendarActivity $activity, CarbonInterface $startsAt, CarbonInterface $endsAt): array
+    {
+        if (! $this->activated()) {
+            return [
+                'ok' => false,
+                'external_id' => null,
+                'message' => 'Google Calendar is not activated on Integrations.',
+            ];
+        }
+
+        if (! $this->configured()) {
+            return [
+                'ok' => false,
+                'external_id' => null,
+                'message' => 'Set GOOGLE_CALENDAR_ACCESS_TOKEN and GOOGLE_CALENDAR_ID to push events.',
+            ];
+        }
+
+        $calendarId = rawurlencode((string) config('integrations.google_calendar.calendar_id'));
+        $token = (string) config('integrations.google_calendar.access_token');
+        $timezone = config('app.display_timezone') ?: 'Africa/Nairobi';
+
+        $payload = [
+            'summary' => $activity->title,
+            'description' => $activity->notes ?? '',
+            'start' => [
+                'dateTime' => $startsAt->copy()->timezone($timezone)->toIso8601String(),
+                'timeZone' => $timezone,
+            ],
+            'end' => [
+                'dateTime' => $endsAt->copy()->timezone($timezone)->toIso8601String(),
+                'timeZone' => $timezone,
+            ],
+            'reminders' => [
+                'useDefault' => false,
+                'overrides' => [
+                    ['method' => 'popup', 'minutes' => 0],
+                    ['method' => 'email', 'minutes' => 0],
+                ],
+            ],
+        ];
+
+        try {
+            $response = Http::withToken($token)
+                ->acceptJson()
+                ->timeout(20)
+                ->post("https://www.googleapis.com/calendar/v3/calendars/{$calendarId}/events", $payload);
+
+            if (! $response->successful()) {
+                $message = 'Google Calendar rejected the timed event (HTTP '.$response->status().').';
+                $this->recordError($message);
+
+                return ['ok' => false, 'external_id' => null, 'message' => $message];
+            }
+
+            $externalId = (string) ($response->json('id') ?? '');
+            if ($externalId !== '') {
+                $activity->external_calendar_id = $externalId;
+                $activity->save();
+            }
+
+            $account = $this->account();
+            if ($account !== null) {
+                $account->last_synced_at = now();
+                $account->last_sync_error = null;
+                $account->save();
+            }
+
+            return [
+                'ok' => true,
+                'external_id' => $externalId !== '' ? $externalId : null,
+                'message' => 'Timed reminder pushed to Google Calendar.',
+            ];
+        } catch (Throwable $exception) {
+            Log::warning('Google Calendar timed push failed.', ['error' => $exception->getMessage()]);
             $this->recordError($exception->getMessage());
 
             return [

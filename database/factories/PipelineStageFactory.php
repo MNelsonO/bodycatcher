@@ -21,7 +21,8 @@ class PipelineStageFactory extends Factory
     {
         return [
             'pipeline_id' => Pipeline::factory(),
-            'name' => 'New Lead',
+            'name' => 'New',
+            'purpose' => 'Just arrived. Make first contact today.',
             'kind' => StageKind::Active,
             'position' => 1,
             'default_follow_up_delay_hours' => 24,

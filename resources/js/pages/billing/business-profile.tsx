@@ -13,6 +13,7 @@ type Profile = {
     email: string | null;
     tax_id: string | null;
     bank_details: string | null;
+    default_terms: string | null;
     default_tax_rate: number;
     currency: string;
     logo_url: string | null;
@@ -123,6 +124,13 @@ export default function BusinessProfilePage({ profile }: { profile: Profile }) {
                                 label="Bank / payment details"
                                 defaultValue={profile.bank_details}
                                 error={errors.bank_details}
+                            />
+                            <AreaField
+                                name="default_terms"
+                                label="Default terms and conditions"
+                                defaultValue={profile.default_terms}
+                                error={errors.default_terms}
+                                hint="Copied onto new invoices. You can edit per invoice."
                             />
                             <div className="grid gap-2">
                                 <label className="text-sm font-medium">

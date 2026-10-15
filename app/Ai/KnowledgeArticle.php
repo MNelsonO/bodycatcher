@@ -12,13 +12,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property string $title
  * @property string $body
+ * @property string $category
  * @property int|null $product_id
  * @property bool $is_active
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read Product|null $product
  */
-#[Fillable(['title', 'body', 'product_id', 'is_active', 'source', 'external_id', 'synced_at'])]
+#[Fillable(['title', 'body', 'category', 'product_id', 'is_active', 'source', 'external_id', 'synced_at'])]
 class KnowledgeArticle extends Model
 {
     /**

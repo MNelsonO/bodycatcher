@@ -12,9 +12,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property bool $automatic_sends_paused
  * @property int|null $inbound_product_id
  * @property bool $live_assistant_enabled
+ * @property string|null $messaging_driver
  * @property-read Product|null $inboundProduct
  */
-#[Fillable(['automatic_sends_paused', 'inbound_product_id', 'live_assistant_enabled'])]
+#[Fillable(['automatic_sends_paused', 'inbound_product_id', 'live_assistant_enabled', 'messaging_driver'])]
 class DeskSetting extends Model
 {
     protected $table = 'desk_settings';

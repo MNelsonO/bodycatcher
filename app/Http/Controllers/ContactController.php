@@ -9,22 +9,29 @@ use App\Contacts\Actions\CreateOrUpdateContact;
 use App\Contacts\Actions\MergeContacts;
 use App\Contacts\ConsentStatus;
 use App\Contacts\Contact;
+use App\Contacts\ContactListQuery;
 use App\Contacts\CountryCatalog;
 use App\Contacts\PreferredChannel;
 use App\Http\Requests\ContactNoteRequest;
 use App\Http\Requests\ContactRequest;
 use App\Http\Requests\MergeContactRequest;
+use App\Leads\Lead;
 use App\Models\User;
 use App\Settings\DisplayClock;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class ContactController extends Controller
 {
-    public function index(Request $request, DisplayClock $clock, CountryCatalog $countries): Response
-    {
+    public function index(
+        Request $request,
+        DisplayClock $clock,
+        CountryCatalog $countries,
+        ContactListQuery $list,
+    ): Response {
         $this->authorize('viewAny', Contact::class);
 
         $search = trim($request->string('q')->toString());
@@ -37,38 +44,42 @@ class ContactController extends Controller
             $country = '';
         }
 
-        $contacts = Contact::query()
-            ->whereNull('merged_into_contact_id')
-            ->with('phones')
-            ->when($search !== '', function ($query) use ($search): void {
-                $needle = '%'.mb_strtolower($search).'%';
-                $digits = preg_replace('/\D+/', '', $search) ?? '';
-                $query->where(function ($inner) use ($needle, $digits): void {
-                    $inner->whereRaw('lower(full_name) like ?', [$needle])
-                        ->orWhereRaw('lower(coalesce(business_name, \'\')) like ?', [$needle])
-                        ->orWhereRaw('lower(coalesce(country, \'\')) like ?', [$needle])
-                        ->orWhereRaw('lower(coalesce(conversation_area, \'\')) like ?', [$needle])
-                        ->orWhereHas('phones', function ($phones) use ($needle, $digits): void {
-                            $phones->whereRaw('lower(phone) like ?', [$needle]);
-                            if ($digits !== '') {
-                                $phones->orWhere('phone', 'like', '%'.$digits.'%');
-                            }
-                        });
-                });
-            })
-            ->when($country !== '', fn ($query) => $query->where('country_code', $country))
-            ->orderBy('full_name')
-            ->paginate(20)
-            ->withQueryString()
-            ->through(fn (Contact $contact): array => $this->summary($contact, $clock));
+        $productRaw = trim($request->string('product_id')->toString());
+        $productId = ($productRaw === '' || $productRaw === '__all__') ? '' : $productRaw;
+
+        $spokeRaw = trim($request->string('spoke')->toString());
+        $spoke = ($spokeRaw === '' || $spokeRaw === '__all__') ? '' : $spokeRaw;
+        if ($spoke !== '' && $clock->periodUtcRange($spoke) === null) {
+            $spoke = '';
+        }
+
+        $scheduledRaw = trim($request->string('scheduled')->toString());
+        $scheduled = ($scheduledRaw === '' || $scheduledRaw === '__all__') ? '' : $scheduledRaw;
+        if ($scheduled !== '' && $clock->periodUtcRange($scheduled) === null) {
+            $scheduled = '';
+        }
+
+        $contacts = $list->paginate([
+            'q' => $search,
+            'country' => $country,
+            'product_id' => $productId,
+            'spoke' => $spoke,
+            'scheduled' => $scheduled,
+        ])->through(fn (Contact $contact): array => $this->summary($contact, $clock));
 
         return Inertia::render('contacts/index', [
             'contacts' => $contacts,
             'filters' => [
                 'q' => $search,
                 'country' => $country,
+                'product_id' => $productId,
+                'spoke' => $spoke,
+                'scheduled' => $scheduled,
             ],
             'country_options' => $countries->options(),
+            'product_options' => $list->productOptions(),
+            'spoke_options' => $list->spokeOptions(),
+            'scheduled_options' => $list->scheduledOptions(),
         ]);
     }
 
@@ -229,6 +240,30 @@ class ContactController extends Controller
      */
     private function summary(Contact $contact, DisplayClock $clock): array
     {
+        /** @var Lead|null $openLead */
+        $openLead = $contact->relationLoaded('leads')
+            ? $contact->leads->first()
+            : null;
+
+        $lastSpoke = $contact->getAttribute('last_spoke_at');
+        $nextTalk = $contact->getAttribute('next_talk_at');
+
+        $interestedSystems = $contact->relationLoaded('leads')
+            ? $contact->leads
+                ->map(fn (Lead $lead): ?string => $lead->product?->name)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all()
+            : [];
+
+        $intent = null;
+        if ($openLead !== null) {
+            $intent = filled($openLead->business_problem)
+                ? $openLead->business_problem
+                : $openLead->currentStage?->name;
+        }
+
         return [
             'id' => $contact->id,
             'full_name' => $contact->full_name,
@@ -248,6 +283,17 @@ class ContactController extends Controller
             'opted_out_at_label' => $clock->formatDateTime($contact->opted_out_at),
             'lead_source' => $contact->lead_source,
             'created_at_label' => $clock->formatDateTime($contact->created_at),
+            'interested_system' => $interestedSystems[0] ?? null,
+            'interested_systems' => $interestedSystems,
+            'intent' => $intent,
+            'stage_name' => $openLead?->currentStage?->name,
+            'open_lead_id' => $openLead?->id,
+            'last_spoke_at' => $lastSpoke
+                ? $clock->formatDateTime(Carbon::parse($lastSpoke))
+                : null,
+            'next_talk_at' => $nextTalk
+                ? $clock->formatDateTime(Carbon::parse($nextTalk))
+                : null,
         ];
     }
 

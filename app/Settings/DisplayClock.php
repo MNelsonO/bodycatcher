@@ -64,4 +64,42 @@ class DisplayClock
 
         return [$start, $end];
     }
+
+    /**
+     * Named desk periods in display timezone, returned as UTC bounds.
+     *
+     * @return array{0: CarbonInterface, 1: CarbonInterface}|null
+     */
+    public function periodUtcRange(string $period): ?array
+    {
+        $now = $this->now();
+
+        return match ($period) {
+            'today' => [
+                $now->copy()->startOfDay()->utc(),
+                $now->copy()->endOfDay()->utc(),
+            ],
+            'this_week' => [
+                $now->copy()->startOfWeek()->utc(),
+                $now->copy()->endOfWeek()->utc(),
+            ],
+            'next_week' => [
+                $now->copy()->addWeek()->startOfWeek()->utc(),
+                $now->copy()->addWeek()->endOfWeek()->utc(),
+            ],
+            'this_month' => [
+                $now->copy()->startOfMonth()->utc(),
+                $now->copy()->endOfMonth()->utc(),
+            ],
+            'last_7_days' => [
+                $now->copy()->subDays(6)->startOfDay()->utc(),
+                $now->copy()->endOfDay()->utc(),
+            ],
+            'last_30_days' => [
+                $now->copy()->subDays(29)->startOfDay()->utc(),
+                $now->copy()->endOfDay()->utc(),
+            ],
+            default => null,
+        };
+    }
 }

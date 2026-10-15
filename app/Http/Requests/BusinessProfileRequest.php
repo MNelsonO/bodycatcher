@@ -27,6 +27,7 @@ class BusinessProfileRequest extends FormRequest
             'email' => ['nullable', 'email', 'max:160'],
             'tax_id' => ['nullable', 'string', 'max:80'],
             'bank_details' => ['nullable', 'string', 'max:2000'],
+            'default_terms' => ['nullable', 'string', 'max:8000'],
             'default_tax_rate' => ['required', 'numeric', 'min:0', 'max:100'],
             'currency' => ['required', 'string', 'size:3'],
             'logo' => ['nullable', 'image', 'max:2048'],

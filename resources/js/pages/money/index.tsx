@@ -48,6 +48,12 @@ type Recurring = {
     is_due_soon: boolean;
 };
 
+const surface =
+    'overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]';
+
+const control =
+    'h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
+
 function money(currency: string, amount: number): string {
     return `${currency} ${amount.toLocaleString(undefined, {
         maximumFractionDigits: 0,
@@ -81,18 +87,19 @@ export default function MoneyIndex({
     return (
         <>
             <Head title="Money" />
-            <div className="flex flex-col gap-6 p-4 md:p-6">
-                <div>
-                    <h1 className="text-xl font-semibold tracking-tight text-primary">
+            <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-6 p-4 md:gap-8 md:p-8">
+                {/* Page header */}
+                <div className="border-b border-border pb-5">
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                         Money
                     </h1>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
                         Track banks, who you owe, who owes you, and monthly
                         recurring cash moves.
                     </p>
                 </div>
 
-                <section className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+                <section className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
                     <Stat
                         label="In accounts"
                         value={money(summary.currency, summary.cash)}
@@ -138,14 +145,14 @@ export default function MoneyIndex({
                                 cash.
                             </p>
                         ) : (
-                            <ul className="divide-y divide-primary/10">
+                            <ul className="divide-y divide-border">
                                 {accounts.map((account) => (
                                     <li
                                         key={account.id}
-                                        className="flex flex-wrap items-center justify-between gap-3 py-3"
+                                        className="flex flex-wrap items-center justify-between gap-3 py-4 first:pt-0 last:pb-0"
                                     >
                                         <div>
-                                            <p className="font-semibold text-primary">
+                                            <p className="font-semibold text-foreground">
                                                 {account.name}
                                             </p>
                                             <p className="text-xs text-muted-foreground">
@@ -193,7 +200,7 @@ export default function MoneyIndex({
                         <Form
                             action="/money/accounts"
                             method="post"
-                            className="grid gap-3"
+                            className="grid gap-4"
                             resetOnSuccess
                         >
                             {({ processing, errors }) => (
@@ -211,14 +218,14 @@ export default function MoneyIndex({
                                         placeholder="Equity Bank"
                                         error={errors.institution}
                                     />
-                                    <label className="grid gap-1 text-sm">
-                                        <span className="text-muted-foreground">
+                                    <label className="grid gap-1.5 text-sm">
+                                        <span className="font-medium text-foreground">
                                             Type
                                         </span>
                                         <select
                                             name="account_type"
                                             defaultValue="bank"
-                                            className="h-9 rounded-md border bg-background px-3"
+                                            className={control}
                                         >
                                             <option value="bank">Bank</option>
                                             <option value="mobile">
@@ -295,11 +302,11 @@ export default function MoneyIndex({
                                 No recurring items yet.
                             </p>
                         ) : (
-                            <ul className="divide-y divide-primary/10">
+                            <ul className="divide-y divide-border">
                                 {recurrings.map((item) => (
                                     <li
                                         key={item.id}
-                                        className="flex flex-wrap items-start justify-between gap-3 py-3"
+                                        className="flex flex-wrap items-start justify-between gap-3 py-4 first:pt-0 last:pb-0"
                                     >
                                         <div>
                                             <p className="font-semibold">
@@ -387,7 +394,7 @@ export default function MoneyIndex({
                         <Form
                             action="/money/recurrings"
                             method="post"
-                            className="grid gap-3"
+                            className="grid gap-4"
                             resetOnSuccess
                         >
                             {({ processing, errors }) => (
@@ -405,14 +412,14 @@ export default function MoneyIndex({
                                         placeholder="Optional"
                                         error={errors.party_name}
                                     />
-                                    <label className="grid gap-1 text-sm">
-                                        <span className="text-muted-foreground">
+                                    <label className="grid gap-1.5 text-sm">
+                                        <span className="font-medium text-foreground">
                                             Direction
                                         </span>
                                         <select
                                             name="direction"
                                             defaultValue="outflow"
-                                            className="h-9 rounded-md border bg-background px-3"
+                                            className={control}
                                         >
                                             <option value="outflow">
                                                 I pay (outflow)
@@ -439,14 +446,14 @@ export default function MoneyIndex({
                                             error={errors.currency}
                                         />
                                     </div>
-                                    <label className="grid gap-1 text-sm">
-                                        <span className="text-muted-foreground">
+                                    <label className="grid gap-1.5 text-sm">
+                                        <span className="font-medium text-foreground">
                                             Cadence
                                         </span>
                                         <select
                                             name="cadence"
                                             defaultValue="monthly"
-                                            className="h-9 rounded-md border bg-background px-3"
+                                            className={control}
                                         >
                                             <option value="monthly">
                                                 Monthly
@@ -520,13 +527,13 @@ function DebtColumn({
             accent={tone}
         >
             {debts.length === 0 ? (
-                <p className="mb-4 text-sm text-muted-foreground">{empty}</p>
+                <p className="mb-5 text-sm text-muted-foreground">{empty}</p>
             ) : (
-                <ul className="mb-4 divide-y divide-primary/10">
+                <ul className="mb-5 divide-y divide-border">
                     {debts.map((debt) => (
                         <li
                             key={debt.id}
-                            className="flex flex-wrap items-start justify-between gap-3 py-3"
+                            className="flex flex-wrap items-start justify-between gap-3 py-4 first:pt-0"
                         >
                             <div>
                                 <p className="font-semibold">{debt.title}</p>
@@ -580,7 +587,7 @@ function DebtColumn({
             <Form
                 action="/money/debts"
                 method="post"
-                className="grid gap-3 border-t border-primary/10 pt-4"
+                className="grid gap-4 rounded-lg border border-border bg-muted p-4"
                 resetOnSuccess
             >
                 {({ processing, errors }) => (
@@ -659,17 +666,19 @@ function Panel({
               : 'bg-primary';
 
     return (
-        <div
-            className={`overflow-hidden bg-laundry-white shadow-[0_0_0_2px_var(--laundry-blue)] ${className}`}
-        >
+        <div className={`${surface} ${className}`}>
             <div className={`h-1.5 w-full ${bar}`} />
-            <div className="border-b border-primary/10 px-4 py-3">
-                <h2 className="font-semibold text-primary">{title}</h2>
+            <div className="border-b border-border bg-card px-5 py-4">
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                    {title}
+                </h2>
                 {subtitle ? (
-                    <p className="text-xs text-muted-foreground">{subtitle}</p>
+                    <p className="mt-1 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
+                        {subtitle}
+                    </p>
                 ) : null}
             </div>
-            <div className="px-4 py-4">{children}</div>
+            <div className="bg-card px-5 py-5">{children}</div>
         </div>
     );
 }
@@ -693,11 +702,9 @@ function Stat({
                 : 'bg-lead text-lead-foreground';
 
     return (
-        <div className={`px-4 py-5 ${fill}`}>
-            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase opacity-80">
-                {label}
-            </p>
-            <p className="mt-1 text-xl font-semibold tabular-nums md:text-2xl">
+        <div className={`rounded-xl px-4 py-5 shadow-[var(--shadow-card)] ${fill}`}>
+            <p className="text-sm font-medium opacity-90">{label}</p>
+            <p className="mt-1.5 text-xl font-semibold tracking-tight tabular-nums md:text-2xl">
                 {value}
             </p>
         </div>
@@ -715,15 +722,13 @@ function Field({
     error?: string;
 } & InputHTMLAttributes<HTMLInputElement>) {
     return (
-        <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">{label}</span>
-            <input
-                name={name}
-                className="h-9 rounded-md border bg-background px-3"
-                {...props}
-            />
+        <label className="grid gap-1.5 text-sm">
+            <span className="font-medium text-foreground">{label}</span>
+            <input name={name} className={control} {...props} />
             {error ? (
-                <span className="text-xs text-destructive">{error}</span>
+                <span className="text-xs font-medium text-destructive">
+                    {error}
+                </span>
             ) : null}
         </label>
     );
@@ -731,12 +736,12 @@ function Field({
 
 function AccountSelect({ accounts }: { accounts: Account[] }) {
     return (
-        <label className="grid gap-1 text-sm">
-            <span className="text-muted-foreground">Linked account</span>
+        <label className="grid gap-1.5 text-sm">
+            <span className="font-medium text-foreground">Linked account</span>
             <select
                 name="money_account_id"
                 defaultValue=""
-                className="h-9 rounded-md border bg-background px-3"
+                className={control}
             >
                 <option value="">None</option>
                 {accounts.map((account) => (

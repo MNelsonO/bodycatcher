@@ -29,6 +29,13 @@ export type ContactSummary = {
     opted_out_at_label: string | null;
     lead_source: string | null;
     created_at_label: string | null;
+    interested_system?: string | null;
+    interested_systems?: string[];
+    intent?: string | null;
+    stage_name?: string | null;
+    open_lead_id?: number | null;
+    last_spoke_at?: string | null;
+    next_talk_at?: string | null;
 };
 
 export type ContactFormOptions = {
@@ -131,6 +138,18 @@ export type LeadDetail = {
         automatic_sends_paused: boolean;
         opted_out: boolean;
     };
+    escalation: null | {
+        id: number;
+        reason: string;
+        inbound_snippet: string | null;
+        suggested_reply: string | null;
+        source: string;
+        notified_at_label: string | null;
+        contact_name?: string;
+        lead_status?: string;
+        product_name?: string;
+        stage_name?: string;
+    };
     interactions: Array<{
         id: number;
         type: string;
@@ -200,8 +219,11 @@ export type FollowUpRow = {
     next_action: string | null;
     follow_up_on: string | null;
     follow_up_label: string | null;
+    next_talk_label?: string | null;
     status: string;
     reason: string;
+    rank?: number;
+    source?: string | null;
 };
 
 export type ChartDay = {
@@ -281,12 +303,64 @@ export type DashboardMetrics = {
         leads_7d: ChartDay[];
         whatsapp_7d: ChartDay[];
         bought_7d: ChartDay[];
+        days?: number;
         funnel: Array<{
             stage_id: number;
             stage_name: string;
             pipeline_name: string;
             kind: string;
             total: number;
+        }>;
+    };
+    board: {
+        filters: {
+            kind: string;
+            stage_id: string;
+            product_id: string;
+            hot: boolean;
+            follow_up: string;
+            timeline: string;
+            from: string;
+            to: string;
+            q: string;
+        };
+        options: {
+            kinds: Array<{ value: string; label: string }>;
+            stages: Array<{ value: string; label: string }>;
+            products: Array<{ value: string; label: string }>;
+            follow_ups: Array<{ value: string; label: string }>;
+            timelines: Array<{ value: string; label: string }>;
+        };
+        range: {
+            from: string | null;
+            to: string | null;
+            label: string;
+        };
+        summary: {
+            matched: number;
+            open: number;
+            hot: number;
+            won: number;
+            lost: number;
+        };
+        leads: Array<{
+            id: number;
+            contact_name: string;
+            business_name: string | null;
+            product_name: string;
+            stage_name: string;
+            stage_kind: string;
+            source: string | null;
+            intent: string | null;
+            next_action: string | null;
+            follow_up_label: string | null;
+            next_talk_label: string | null;
+            follow_up_rank?: number;
+            follow_up_rank_reason?: string | null;
+            follow_up_source?: string | null;
+            ai_score: number | null;
+            hot: boolean;
+            updated_label: string | null;
         }>;
     };
     today: string;

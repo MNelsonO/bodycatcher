@@ -29,6 +29,7 @@ class BusinessProfileController extends Controller
                 'email' => $profile->email,
                 'tax_id' => $profile->tax_id,
                 'bank_details' => $profile->bank_details,
+                'default_terms' => $profile->default_terms,
                 'default_tax_rate' => (float) $profile->default_tax_rate,
                 'currency' => $profile->currency,
                 'logo_url' => $profile->logoUrl(),

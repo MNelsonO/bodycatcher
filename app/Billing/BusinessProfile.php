@@ -19,6 +19,7 @@ class BusinessProfile extends Model
         'tax_id',
         'logo_path',
         'bank_details',
+        'default_terms',
         'default_tax_rate',
         'currency',
     ];

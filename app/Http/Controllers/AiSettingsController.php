@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Ai\AutoReplyRule;
 use App\Ai\KnowledgeArticle;
+use App\Ai\KnowledgeGap;
 use App\Ai\LlmConfiguration;
+use App\Ai\Services\AnswerKnowledgeGap;
 use App\Ai\Services\WhatsAppKnowledgeSync;
 use App\Ai\WhatsAppKnowledgeSyncRun;
+use App\Http\Requests\AnswerKnowledgeGapRequest;
 use App\Http\Requests\AutoReplyRuleRequest;
 use App\Http\Requests\KnowledgeArticleRequest;
 use App\Models\User;
@@ -42,11 +45,28 @@ class AiSettingsController extends Controller
                     'id' => $article->id,
                     'title' => $article->title,
                     'body' => $article->body,
+                    'category' => $article->category ?? 'fact',
                     'product_id' => $article->product_id,
                     'product_name' => $article->product?->name,
                     'is_active' => $article->is_active,
                     'source' => $article->source ?? 'manual',
                     'synced_at' => $article->synced_at?->toIso8601String(),
+                ]),
+            'knowledge_gaps' => KnowledgeGap::query()
+                ->where('status', 'open')
+                ->orderByDesc('id')
+                ->limit(40)
+                ->get()
+                ->map(fn (KnowledgeGap $gap): array => [
+                    'id' => $gap->id,
+                    'question' => $gap->question,
+                    'context_snippet' => $gap->context_snippet,
+                    'source' => $gap->source,
+                    'contact_name' => $gap->contact_name,
+                    'product_name' => $gap->product_name,
+                    'stage_name' => $gap->stage_name,
+                    'lead_status' => $gap->lead_status,
+                    'lead_id' => $gap->lead_id,
                 ]),
             'whatsapp_syncs' => WhatsAppKnowledgeSyncRun::query()
                 ->orderByDesc('id')
@@ -138,6 +158,7 @@ class AiSettingsController extends Controller
         KnowledgeArticle::query()->create([
             'title' => $request->string('title')->toString(),
             'body' => $request->string('body')->toString(),
+            'category' => $request->input('category') ?: 'fact',
             'product_id' => $request->integer('product_id') ?: null,
             'is_active' => $request->boolean('is_active'),
             'source' => 'manual',
@@ -153,12 +174,37 @@ class AiSettingsController extends Controller
         $article->fill([
             'title' => $request->string('title')->toString(),
             'body' => $request->string('body')->toString(),
+            'category' => $request->input('category') ?: ($article->category ?? 'fact'),
             'product_id' => $request->integer('product_id') ?: null,
             'is_active' => $request->boolean('is_active'),
         ]);
         $article->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Knowledge article updated.']);
+
+        return redirect()->route('ai.settings');
+    }
+
+    public function answerGap(
+        AnswerKnowledgeGapRequest $request,
+        KnowledgeGap $gap,
+        AnswerKnowledgeGap $answers,
+    ): RedirectResponse {
+        /** @var \App\Models\User $actor */
+        $actor = $request->user();
+
+        $answers->handle(
+            $gap,
+            $actor,
+            $request->string('answer')->toString(),
+            $request->string('category')->toString(),
+            $request->input('title'),
+        );
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => 'Lesson saved. The desk will reuse it on similar chats.',
+        ]);
 
         return redirect()->route('ai.settings');
     }

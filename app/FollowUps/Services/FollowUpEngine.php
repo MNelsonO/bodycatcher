@@ -35,6 +35,7 @@ class FollowUpEngine
         private SendWhatsAppMessage $sender,
         private CancelFollowUpsOnReply $cancellations,
         private RecordActivity $activity,
+        private ComposeContextualFollowUp $composer,
     ) {}
 
     public function run(): void
@@ -236,7 +237,7 @@ class FollowUpEngine
 
     private function execute(FollowUpTask $task, ?User $actor): void
     {
-        $task->load('lead.contact', 'lead.conversation');
+        $task->load('lead.contact', 'lead.conversation', 'rule');
         $lead = $task->lead;
 
         if ($lead->closed_at !== null) {
@@ -269,9 +270,17 @@ class FollowUpEngine
         $task->save();
 
         try {
+            $body = $this->composer->compose($task, $lead, $task->body);
+
+            if ($body === null) {
+                $this->hold($task, $lead->fresh() ?? $lead, 'Waiting for operator input after AI escalation.');
+
+                return;
+            }
+
             $result = $this->sender->send(
                 $lead,
-                $this->render($task->body, $lead),
+                $body,
                 $actor,
                 MessageOrigin::Automatic,
                 'follow-up-task-'.$task->id,
@@ -335,15 +344,6 @@ class FollowUpEngine
                 'reason' => $reason,
             ]);
         });
-    }
-
-    private function render(string $body, Lead $lead): string
-    {
-        return strtr($body, [
-            '{contact}' => $lead->contact->full_name,
-            '{business}' => $lead->contact->business_name ?? 'your business',
-            '{action}' => $lead->next_action ?? 'the next step',
-        ]);
     }
 
     private function validationMessage(ValidationException $exception): string

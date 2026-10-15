@@ -73,7 +73,7 @@ function crmDesk(): array
     $pipeline = Pipeline::factory()->create(['name' => 'Kemet Tech sales', 'is_default' => true]);
     $stage = PipelineStage::factory()->create([
         'pipeline_id' => $pipeline->id,
-        'name' => 'New Lead',
+        'name' => 'New',
         'kind' => StageKind::Active,
         'position' => 1,
     ]);

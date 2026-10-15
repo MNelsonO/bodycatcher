@@ -9,9 +9,11 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeskUserController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FlareSendWebhookController;
+use App\Http\Controllers\OperatorEscalationController;
 use App\Http\Controllers\FollowUpController;
 use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\InvoiceGenerationController;
 use App\Http\Controllers\LeadAnalysisController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadMessagingController;
@@ -69,6 +71,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('leads/{lead}/mark-date', [LeadController::class, 'markDate'])->name('leads.mark-date');
     Route::post('leads/{lead}/whatsapp', [LeadMessagingController::class, 'send'])->name('leads.whatsapp.send');
     Route::post('leads/{lead}/messaging', [LeadMessagingController::class, 'update'])->name('leads.messaging.update');
+    Route::post('leads/{lead}/escalations/{escalation}/resolve', [OperatorEscalationController::class, 'resolve'])
+        ->name('leads.escalations.resolve');
     Route::post('leads/{lead}/analyses', [LeadAnalysisController::class, 'store'])->name('leads.analyses.store');
     Route::post('leads/{lead}/analyses/{analysis}/apply', [LeadAnalysisController::class, 'apply'])->name('leads.analyses.apply');
     Route::post('leads/{lead}/analyses/{analysis}/stage', [LeadAnalysisController::class, 'stage'])->name('leads.analyses.stage');
@@ -77,6 +81,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('ai', [AiSettingsController::class, 'index'])->name('ai.settings');
     Route::post('ai/articles', [AiSettingsController::class, 'store'])->name('ai.articles.store');
     Route::put('ai/articles/{article}', [AiSettingsController::class, 'update'])->name('ai.articles.update');
+    Route::post('ai/gaps/{gap}/answer', [AiSettingsController::class, 'answerGap'])->name('ai.gaps.answer');
     Route::post('ai/auto-replies', [AiSettingsController::class, 'storeRule'])->name('ai.auto-replies.store');
     Route::put('ai/auto-replies/{rule}', [AiSettingsController::class, 'updateRule'])->name('ai.auto-replies.update');
     Route::delete('ai/auto-replies/{rule}', [AiSettingsController::class, 'destroyRule'])->name('ai.auto-replies.destroy');
@@ -104,6 +109,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('integrations', [IntegrationController::class, 'index'])->name('integrations.index');
     Route::put('integrations/{account}', [IntegrationController::class, 'update'])->name('integrations.update');
     Route::post('integrations/{account}/sync', [IntegrationController::class, 'sync'])->name('integrations.sync');
+    Route::post('integrations/{account}/help', [IntegrationController::class, 'requestHelp'])->name('integrations.help');
 
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
     Route::post('calendar', [CalendarController::class, 'store'])->name('calendar.store');
@@ -142,6 +148,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('invoices', [InvoiceController::class, 'index'])->name('invoices.index');
     Route::get('invoices/create', [InvoiceController::class, 'create'])->name('invoices.create');
+    Route::post('invoices/generate', [InvoiceGenerationController::class, 'storeDraft'])->name('invoices.generate');
+    Route::post('invoices/generations/{generation}/create', [InvoiceGenerationController::class, 'linkAndApply'])->name('invoices.generations.create');
     Route::post('invoices', [InvoiceController::class, 'store'])->name('invoices.store');
     Route::get('invoices/{invoice}', [InvoiceController::class, 'show'])->name('invoices.show');
     Route::put('invoices/{invoice}', [InvoiceController::class, 'update'])->name('invoices.update');
@@ -149,6 +157,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('invoices/{invoice}/mark-paid', [InvoiceController::class, 'markPaid'])->name('invoices.mark-paid');
     Route::post('invoices/{invoice}/mark-unpaid', [InvoiceController::class, 'markUnpaid'])->name('invoices.mark-unpaid');
     Route::post('invoices/{invoice}/mark-sent', [InvoiceController::class, 'markSent'])->name('invoices.mark-sent');
+    Route::post('invoices/{invoice}/generations', [InvoiceGenerationController::class, 'store'])->name('invoices.generations.store');
+    Route::post('invoices/{invoice}/generations/{generation}/apply', [InvoiceGenerationController::class, 'apply'])->name('invoices.generations.apply');
 
     Route::get('billing/profile', [BusinessProfileController::class, 'edit'])->name('billing.profile.edit');
     Route::post('billing/profile', [BusinessProfileController::class, 'update'])->name('billing.profile.update');

@@ -38,4 +38,10 @@ return [
 
     'live_history_limit' => (int) env('LLM_LIVE_HISTORY_LIMIT', 12),
 
+    /*
+    | Auto follow-ups read this many prior WhatsApp messages per lead, plus
+    | knowledge RAG and the rolling memory_summary on the conversation.
+    */
+    'follow_up_history_limit' => (int) env('LLM_FOLLOW_UP_HISTORY_LIMIT', 40),
+
 ];

@@ -23,6 +23,10 @@ enum ActivityEvent: string
     case DraftEdited = 'draft_edited';
     case DraftSent = 'draft_sent';
     case FollowUpScheduled = 'follow_up_scheduled';
+    case ChatFollowUpCaptured = 'chat_follow_up_captured';
+    case EscalatedToOperator = 'escalated_to_operator';
+    case OperatorCorrectionApplied = 'operator_correction_applied';
+    case KnowledgeGapAnswered = 'knowledge_gap_answered';
     case FollowUpCancelled = 'follow_up_cancelled';
     case FollowUpHeld = 'follow_up_held';
     case FollowUpSent = 'follow_up_sent';

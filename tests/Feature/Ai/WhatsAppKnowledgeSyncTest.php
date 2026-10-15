@@ -37,5 +37,6 @@ it('mines frequent inbound WhatsApp questions into knowledge notes', function ()
         ->post('/ai/whatsapp-sync')
         ->assertRedirect();
 
-    expect(KnowledgeArticle::query()->where('source', 'whatsapp_inbox')->count())->toBeGreaterThan(0);
+    expect(KnowledgeArticle::query()->where('source', 'whatsapp_inbox')->count())->toBeGreaterThan(0)
+        ->and(\App\Ai\KnowledgeGap::query()->where('source', 'sync')->where('status', 'open')->count())->toBeGreaterThan(0);
 });

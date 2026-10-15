@@ -3,6 +3,7 @@
 namespace App\Ai\Services;
 
 use App\Ai\KnowledgeArticle;
+use App\Ai\KnowledgeGap;
 use App\Ai\WhatsAppKnowledgeSyncRun as SyncRun;
 use App\Conversations\Message;
 use App\Conversations\MessageDirection;
@@ -67,12 +68,18 @@ class WhatsAppKnowledgeSync
             .'/'
             .$phoneNumberId;
 
-        $response = Http::withToken($token)
-            ->acceptJson()
-            ->timeout(20)
-            ->get($url, [
-                'fields' => 'display_phone_number,verified_name,quality_rating,code_verification_status,platform_type',
-            ]);
+        try {
+            $response = Http::withToken($token)
+                ->acceptJson()
+                ->timeout(20)
+                ->get($url, [
+                    'fields' => 'display_phone_number,verified_name,quality_rating,code_verification_status,platform_type',
+                ]);
+        } catch (Throwable $exception) {
+            Log::warning('WhatsApp profile pull skipped.', ['error' => $exception->getMessage()]);
+
+            return 0;
+        }
 
         if ($response->failed()) {
             return 0;
@@ -146,12 +153,35 @@ class WhatsAppKnowledgeSync
                 ['source' => 'whatsapp_inbox', 'external_id' => $externalId],
                 [
                     'title' => 'Customer ask · '.Str::limit($text, 60, '…'),
-                    'body' => "Frequent WhatsApp inbound (seen {$hits} times):\n\n{$text}\n\nDraft a grounded reply using product notes. Do not invent prices.",
+                    'body' => "Frequent WhatsApp inbound (seen {$hits} times):\n\n{$text}\n\nNeeds an operator fact/lesson. Do not invent prices.",
+                    'category' => 'lesson',
                     'product_id' => null,
                     'is_active' => true,
                     'synced_at' => now(),
                 ],
             );
+
+            $openGap = KnowledgeGap::query()
+                ->where('status', 'open')
+                ->whereRaw('lower(question) = ?', [$text])
+                ->exists();
+
+            if (! $openGap) {
+                KnowledgeGap::query()->create([
+                    'lead_id' => null,
+                    'contact_id' => null,
+                    'product_id' => null,
+                    'status' => 'open',
+                    'source' => 'sync',
+                    'question' => Str::limit($text, 500, ''),
+                    'context_snippet' => "Seen {$hits} times in downloaded chats.",
+                    'contact_name' => null,
+                    'product_name' => null,
+                    'stage_name' => null,
+                    'lead_status' => null,
+                ]);
+            }
+
             $created++;
         }
 

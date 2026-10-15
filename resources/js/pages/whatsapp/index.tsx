@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import type { ReactNode } from 'react';
 import { SelectField } from '@/components/crm/fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,38 @@ type WebhookPaths = {
     flaresend: string;
     twilio: string;
 };
+
+const surface =
+    'overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]';
+
+const code =
+    'rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground';
+
+function Panel({
+    title,
+    description,
+    children,
+}: {
+    title: string;
+    description?: ReactNode;
+    children: ReactNode;
+}) {
+    return (
+        <section className={surface}>
+            <div className="border-b border-border bg-card px-5 py-4">
+                <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                    {title}
+                </h2>
+                {description ? (
+                    <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+                        {description}
+                    </p>
+                ) : null}
+            </div>
+            <div className="bg-card px-5 py-5 text-sm">{children}</div>
+        </section>
+    );
+}
 
 export default function WhatsAppSettings({
     driver,
@@ -47,33 +80,31 @@ export default function WhatsAppSettings({
     return (
         <>
             <Head title="WhatsApp" />
-            <div className="flex flex-col gap-6 p-4 md:p-6">
-                <div>
-                    <h1 className="text-xl font-semibold tracking-tight">
+            <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:gap-8 md:p-8">
+                {/* Page header */}
+                <div className="border-b border-border pb-5">
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                         WhatsApp
                     </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Active driver is{' '}
-                        <span className="font-mono text-xs">{driver}</span>.
-                        Set <span className="font-mono text-xs">MESSAGING_DRIVER</span>{' '}
-                        to <span className="font-mono text-xs">flaresend</span>,{' '}
-                        <span className="font-mono text-xs">twilio</span>, or{' '}
-                        <span className="font-mono text-xs">meta</span>. Secrets
-                        stay in the environment and are never shown here.
+                    <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+                        Active driver is <span className={code}>{driver}</span>.
+                        Paste FlareSend / Meta keys and switch the driver on{' '}
+                        <a href="/integrations" className="underline">
+                            Integrations
+                        </a>{' '}
+                        — no .env edit needed. Secrets are encrypted and never
+                        shown here.
                     </p>
                 </div>
 
-                <section className="rounded-lg border p-4">
-                    <h2 className="text-sm font-medium">Configuration</h2>
-                    <ul className="mt-3 divide-y text-sm">
+                <Panel title="Configuration">
+                    <ul className="divide-y divide-border">
                         {variables.map((variable) => (
                             <li
                                 key={variable.key}
-                                className="flex items-center justify-between gap-3 py-2"
+                                className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
                             >
-                                <span className="font-mono text-xs">
-                                    {variable.key}
-                                </span>
+                                <span className={code}>{variable.key}</span>
                                 <Badge
                                     variant={
                                         variable.configured
@@ -88,76 +119,86 @@ export default function WhatsAppSettings({
                             </li>
                         ))}
                     </ul>
-                </section>
+                </Panel>
 
-                <section className="rounded-lg border p-4 text-sm">
-                    <h2 className="font-medium">Webhooks</h2>
-                    <p className="mt-2 text-muted-foreground">
-                        Point FlareSend at the flaresend path for inbound
-                        messages. Twilio Messaging can use the twilio path.
-                        Meta Cloud API still uses the whatsapp path.
-                    </p>
-                    <ul className="mt-3 space-y-2 font-mono text-xs">
-                        <li>FlareSend · {webhook_paths.flaresend}</li>
-                        <li>Twilio · {webhook_paths.twilio}</li>
-                        <li>Meta · {webhook_paths.meta}</li>
+                <Panel
+                    title="Webhooks"
+                    description="Point FlareSend at the flaresend path for inbound messages. Twilio Messaging can use the twilio path. Meta Cloud API still uses the whatsapp path."
+                >
+                    <ul className="space-y-2">
+                        <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="w-20 font-medium">FlareSend</span>
+                            <span className={code}>
+                                {webhook_paths.flaresend}
+                            </span>
+                        </li>
+                        <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="w-20 font-medium">Twilio</span>
+                            <span className={code}>{webhook_paths.twilio}</span>
+                        </li>
+                        <li className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="w-20 font-medium">Meta</span>
+                            <span className={code}>{webhook_paths.meta}</span>
+                        </li>
                     </ul>
-                    <p className="mt-3 text-muted-foreground">
+                    <p className="mt-4 max-w-[70ch] leading-relaxed text-muted-foreground">
                         FlareSend may send{' '}
-                        <span className="font-mono text-xs">
-                            X-FlareSend-Secret
-                        </span>{' '}
-                        or a Bearer token matching{' '}
-                        <span className="font-mono text-xs">
-                            FLARESEND_WEBHOOK_SECRET
-                        </span>
-                        . Twilio signs with{' '}
-                        <span className="font-mono text-xs">
-                            X-Twilio-Signature
-                        </span>
-                        .
+                        <span className={code}>X-FlareSend-Secret</span> or a
+                        Bearer token matching{' '}
+                        <span className={code}>FLARESEND_WEBHOOK_SECRET</span>.
+                        Twilio signs with{' '}
+                        <span className={code}>X-Twilio-Signature</span>.
                     </p>
-                </section>
+                </Panel>
 
-                <section className="rounded-lg border p-4 text-sm">
-                    <h2 className="font-medium">Opt-out keywords</h2>
-                    <p className="mt-2 text-muted-foreground">
-                        An inbound text opts the contact out only when the
-                        whole message is one of these words.
+                <Panel
+                    title="Opt-out keywords"
+                    description="An inbound text opts the contact out only when the whole message is one of these words."
+                >
+                    <p className="flex flex-wrap gap-2">
+                        {opt_out_keywords.map((keyword) => (
+                            <span key={keyword} className={code}>
+                                {keyword}
+                            </span>
+                        ))}
                     </p>
-                    <p className="mt-2 font-mono text-xs">
-                        {opt_out_keywords.join(', ')}
-                    </p>
-                </section>
+                </Panel>
 
-                <section className="rounded-lg border p-4">
-                    <h2 className="text-sm font-medium">
-                        Live AI assistant
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        When on, inbound webhook messages are answered by{' '}
-                        <span className="font-mono text-xs">{llm_provider}</span>{' '}
-                        with your product catalog and the running conversation
-                        topic. LLM must be configured (
-                        {llm_ready ? 'ready' : 'missing keys'}).
+                <Panel
+                    title="Live AI assistant"
+                    description={
+                        <>
+                            When on, inbound webhook messages are answered by{' '}
+                            <span className={code}>{llm_provider}</span> with
+                            your product catalog and the running conversation
+                            topic.
+                        </>
+                    }
+                >
+                    <div className="flex flex-wrap items-center gap-3">
+                        <span className="font-medium">LLM status</span>
+                        <Badge variant={llm_ready ? 'default' : 'outline'}>
+                            {llm_ready ? 'Ready' : 'Missing keys'}
+                        </Badge>
+                    </div>
+                    <p className="mt-3 max-w-[70ch] leading-relaxed text-muted-foreground">
+                        Set <span className={code}>LLM_PROVIDER</span> to openai
+                        or gemini, plus <span className={code}>LLM_API_KEY</span>
+                        , <span className={code}>LLM_BASE_URL</span>, and{' '}
+                        <span className={code}>LLM_MODEL</span> in{' '}
+                        <span className={code}>.env</span>.
                     </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                        Set LLM_PROVIDER to openai or gemini, plus LLM_API_KEY,
-                        LLM_BASE_URL, and LLM_MODEL in .env.
-                    </p>
-                </section>
+                </Panel>
 
-                <section className="rounded-lg border p-4">
-                    <h2 className="text-sm font-medium">Desk controls</h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Pausing automatic sends blocks the live assistant and
-                        rule-based replies. Manual operator sends still work.
-                    </p>
+                <Panel
+                    title="Desk controls"
+                    description="Pausing automatic sends blocks the live assistant and rule-based replies. Manual operator sends still work."
+                >
                     {can_manage ? (
                         <Form
                             action="/whatsapp"
                             method="put"
-                            className="mt-4 grid max-w-md gap-3"
+                            className="grid max-w-md gap-4"
                         >
                             {({ errors, processing }) => (
                                 <>
@@ -217,14 +258,19 @@ export default function WhatsAppSettings({
                                         ]}
                                         error={errors.inbound_product_id}
                                     />
-                                    <Button type="submit" disabled={processing}>
-                                        Save WhatsApp settings
-                                    </Button>
+                                    <div>
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            Save WhatsApp settings
+                                        </Button>
+                                    </div>
                                 </>
                             )}
                         </Form>
                     ) : (
-                        <p className="mt-3 text-sm text-muted-foreground">
+                        <p className="leading-relaxed text-muted-foreground">
                             Automatic sends are{' '}
                             {automatic_sends_paused
                                 ? 'paused for the whole desk'
@@ -234,7 +280,7 @@ export default function WhatsAppSettings({
                             owner can change that.
                         </p>
                     )}
-                </section>
+                </Panel>
             </div>
         </>
     );

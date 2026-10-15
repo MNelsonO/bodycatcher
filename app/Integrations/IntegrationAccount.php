@@ -12,6 +12,7 @@ class IntegrationAccount extends Model
         'label',
         'is_active',
         'settings',
+        'credentials',
         'last_synced_at',
         'last_sync_error',
     ];
@@ -21,6 +22,7 @@ class IntegrationAccount extends Model
         return [
             'is_active' => 'boolean',
             'settings' => 'array',
+            'credentials' => 'encrypted:array',
             'last_synced_at' => 'datetime',
         ];
     }

@@ -14,6 +14,8 @@ use App\Conversations\MessageStatus;
 use App\FollowUps\Services\CancelFollowUpsOnReply;
 use App\Leads\Actions\RecordActivity;
 use App\Leads\ActivityEvent;
+use App\Ai\Jobs\RaiseUnfamiliarQuestionJob;
+use App\Leads\Jobs\CaptureChatFollowUpJob;
 use App\WhatsApp\OptOutKeywords;
 use App\WhatsApp\WebhookEvent;
 use Illuminate\Support\Carbon;
@@ -185,6 +187,8 @@ class InboundWhatsAppProcessor
                 'keyword' => mb_strtolower(trim($parsed['body'])),
             ]);
         } elseif ($type === 'text' && $parsed['body'] !== '') {
+            CaptureChatFollowUpJob::dispatch($lead->id, $parsed['body']);
+            RaiseUnfamiliarQuestionJob::dispatch($lead->id, $parsed['body']);
             RunConditionalAutoReply::dispatch($lead->id, $parsed['body']);
         }
 

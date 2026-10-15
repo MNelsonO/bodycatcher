@@ -17,6 +17,7 @@ type Rule = {
     delay_hours: number | null;
     local_time: string | null;
     body: string;
+    use_conversation_memory: boolean;
     product_id: number | null;
     product_name: string | null;
     is_active: boolean;
@@ -200,6 +201,9 @@ function RuleSummary({ rule }: { rule: Rule }) {
                 {rule.delay_hours !== null ? ` · ${rule.delay_hours}h` : ''}
                 {rule.local_time ? ` · ${rule.local_time} Nairobi` : ''}
                 {rule.product_name ? ` · ${rule.product_name}` : ''}
+                {rule.use_conversation_memory
+                    ? ' · chat memory on'
+                    : ' · template only'}
             </p>
             <p className="whitespace-pre-wrap">{rule.body}</p>
         </div>
@@ -266,6 +270,29 @@ function RuleForm({
                         required
                         defaultValue={rule?.body}
                         error={errors.body}
+                        hint="Used as fallback. With chat memory on, WhatsApp follow-ups are written from this person's history + knowledge."
+                    />
+                    <SelectField
+                        name="use_conversation_memory"
+                        label="Chat memory / RAG"
+                        options={[
+                            {
+                                value: '1',
+                                label: 'On — read prior chats and reply in context',
+                            },
+                            {
+                                value: '0',
+                                label: 'Off — send the template only',
+                            },
+                        ]}
+                        defaultValue={
+                            rule
+                                ? rule.use_conversation_memory
+                                    ? '1'
+                                    : '0'
+                                : '1'
+                        }
+                        error={errors.use_conversation_memory}
                     />
                     <SelectField
                         name="product_id"

@@ -26,6 +26,12 @@ type ProductRow = {
     leads_lost: number;
 };
 
+const surface =
+    'overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]';
+
+const chip =
+    'rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
+
 export default function ProductsIndex({
     products,
 }: {
@@ -34,13 +40,14 @@ export default function ProductsIndex({
     return (
         <>
             <Head title="Products" />
-            <div className="flex flex-col gap-4 p-4 md:p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:gap-8 md:p-8">
+                {/* Page header */}
+                <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight">
+                        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
                             Products
                         </h1>
-                        <p className="text-sm text-muted-foreground">
+                        <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
                             The desk knows each product and tracks leads under
                             it. Pricing notes are whatever you type — no
                             checkout prices.
@@ -55,98 +62,117 @@ export default function ProductsIndex({
                         trigger="Add product"
                     />
                 </div>
+
                 {products.length === 0 ? (
-                    <div className="rounded-lg border border-dashed p-8 text-sm text-muted-foreground">
+                    <div className="rounded-xl border border-dashed border-input bg-card px-6 py-12 text-center text-sm text-muted-foreground">
                         No products yet. Add Kemet Laundry OS or whatever you
                         actually sell.
                     </div>
                 ) : (
-                    <ul className="divide-y rounded-lg border">
-                        {products.map((product) => (
-                            <li
-                                key={product.id}
-                                className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-start sm:justify-between"
-                            >
-                                <div>
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-medium">
-                                            {product.name}
-                                        </span>
-                                        <Badge variant="outline">
-                                            {product.archived
-                                                ? 'Archived'
-                                                : product.is_active
-                                                  ? 'Active'
-                                                  : 'Inactive'}
-                                        </Badge>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                        {product.slug}
-                                    </p>
-                                    {product.description ? (
-                                        <p className="mt-2 text-sm">
-                                            {product.description}
-                                        </p>
-                                    ) : null}
-                                    {product.pricing_notes ? (
-                                        <p className="mt-1 text-sm text-muted-foreground">
-                                            Pricing notes:{' '}
-                                            {product.pricing_notes}
-                                        </p>
-                                    ) : null}
-                                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                                        <Link
-                                            href={`/leads?product_id=${product.id}`}
-                                            className="rounded-full border px-2 py-1 hover:underline"
-                                        >
-                                            {product.leads_total} leads
-                                        </Link>
-                                        <Link
-                                            href={`/leads?product_id=${product.id}&kind=active`}
-                                            className="rounded-full border px-2 py-1 hover:underline"
-                                        >
-                                            {product.leads_open} open
-                                        </Link>
-                                        <Link
-                                            href={`/leads?product_id=${product.id}&kind=won`}
-                                            className="rounded-full border px-2 py-1 hover:underline"
-                                        >
-                                            {product.leads_won} won
-                                        </Link>
-                                        <Link
-                                            href={`/leads?product_id=${product.id}&kind=lost`}
-                                            className="rounded-full border px-2 py-1 hover:underline"
-                                        >
-                                            {product.leads_lost} lost
-                                        </Link>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <ProductDialog
-                                        title="Edit product"
-                                        description="Update the catalogue entry."
-                                        action={`/products/${product.id}`}
-                                        method="put"
-                                        product={product}
-                                        trigger="Edit"
-                                    />
-                                    {product.archived ? null : (
-                                        <Form
-                                            action={`/products/${product.id}`}
-                                            method="delete"
-                                        >
-                                            <Button
-                                                type="submit"
-                                                variant="outline"
+                    <section className={surface}>
+                        <div className="flex items-center justify-between border-b border-border bg-secondary px-5 py-3">
+                            <h2 className="text-sm font-semibold text-secondary-foreground">
+                                Catalogue
+                            </h2>
+                            <span className="text-sm tabular-nums text-secondary-foreground">
+                                {products.length}{' '}
+                                {products.length === 1 ? 'product' : 'products'}
+                            </span>
+                        </div>
+                        <ul className="divide-y divide-border">
+                            {products.map((product) => (
+                                <li
+                                    key={product.id}
+                                    className="flex flex-col gap-4 bg-card px-5 py-5 sm:flex-row sm:items-start sm:justify-between"
+                                >
+                                    <div className="min-w-0">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-base font-semibold text-foreground">
+                                                {product.name}
+                                            </span>
+                                            <Badge
+                                                variant={
+                                                    product.archived ||
+                                                    !product.is_active
+                                                        ? 'outline'
+                                                        : 'default'
+                                                }
                                             >
-                                                Archive
-                                            </Button>
-                                        </Form>
-                                    )}
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
+                                                {product.archived
+                                                    ? 'Archived'
+                                                    : product.is_active
+                                                      ? 'Active'
+                                                      : 'Inactive'}
+                                            </Badge>
+                                        </div>
+                                        <p className="mt-0.5 font-mono text-xs text-muted-foreground">
+                                            {product.slug}
+                                        </p>
+                                        {product.description ? (
+                                            <p className="mt-3 max-w-[65ch] text-sm leading-relaxed text-foreground">
+                                                {product.description}
+                                            </p>
+                                        ) : null}
+                                        {product.pricing_notes ? (
+                                            <p className="mt-1.5 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+                                                Pricing notes:{' '}
+                                                {product.pricing_notes}
+                                            </p>
+                                        ) : null}
+                                        <div className="mt-4 flex flex-wrap gap-2">
+                                            <Link
+                                                href={`/leads?product_id=${product.id}`}
+                                                className={chip}
+                                            >
+                                                {product.leads_total} leads
+                                            </Link>
+                                            <Link
+                                                href={`/leads?product_id=${product.id}&kind=active`}
+                                                className={chip}
+                                            >
+                                                {product.leads_open} open
+                                            </Link>
+                                            <Link
+                                                href={`/leads?product_id=${product.id}&kind=won`}
+                                                className={chip}
+                                            >
+                                                {product.leads_won} won
+                                            </Link>
+                                            <Link
+                                                href={`/leads?product_id=${product.id}&kind=lost`}
+                                                className={chip}
+                                            >
+                                                {product.leads_lost} lost
+                                            </Link>
+                                        </div>
+                                    </div>
+                                    <div className="flex shrink-0 gap-2">
+                                        <ProductDialog
+                                            title="Edit product"
+                                            description="Update the catalogue entry."
+                                            action={`/products/${product.id}`}
+                                            method="put"
+                                            product={product}
+                                            trigger="Edit"
+                                        />
+                                        {product.archived ? null : (
+                                            <Form
+                                                action={`/products/${product.id}`}
+                                                method="delete"
+                                            >
+                                                <Button
+                                                    type="submit"
+                                                    variant="outline"
+                                                >
+                                                    Archive
+                                                </Button>
+                                            </Form>
+                                        )}
+                                    </div>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
                 )}
             </div>
         </>
@@ -173,19 +199,26 @@ function ProductDialog({
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant={product ? 'outline' : 'default'}>
+                <Button
+                    variant={product ? 'outline' : 'default'}
+                    size={product ? 'default' : 'lg'}
+                >
                     {trigger}
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="border border-border bg-card shadow-[var(--shadow-pop)]">
                 <DialogHeader>
-                    <DialogTitle>{title}</DialogTitle>
-                    <DialogDescription>{description}</DialogDescription>
+                    <DialogTitle className="text-xl font-semibold tracking-tight">
+                        {title}
+                    </DialogTitle>
+                    <DialogDescription className="leading-relaxed">
+                        {description}
+                    </DialogDescription>
                 </DialogHeader>
                 <Form
                     action={action}
                     method={method}
-                    className="grid gap-3"
+                    className="grid gap-4"
                     onSuccess={() => setOpen(false)}
                 >
                     {({ errors, processing }) => (
@@ -233,7 +266,11 @@ function ProductDialog({
                                 }
                                 error={errors.is_active}
                             />
-                            <Button type="submit" disabled={processing}>
+                            <Button
+                                type="submit"
+                                size="lg"
+                                disabled={processing}
+                            >
                                 Save product
                             </Button>
                         </>

@@ -3,10 +3,10 @@
 return [
 
     /*
-    | Credentials stay in the environment. The desk never copies them into
-    | a database column and never renders the values.
+    | Prefer credentials saved on /integrations (encrypted). Env values remain
+    | the fallback. Secrets are never rendered back to the browser.
     |
-    | driver: meta | flaresend | twilio
+    | driver: meta | flaresend | twilio (desk can override via DeskSetting)
     |
     */
     'driver' => env('MESSAGING_DRIVER', 'meta'),
@@ -36,7 +36,7 @@ return [
     | this name when it is still active. Otherwise the first active stage.
     |
     */
-    'inbound_stage_name' => 'New Lead',
+    'inbound_stage_name' => 'New',
     'inbound_source' => 'whatsapp',
 
     'service_window_hours' => 24,

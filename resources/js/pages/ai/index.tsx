@@ -18,11 +18,24 @@ type Article = {
     id: number;
     title: string;
     body: string;
+    category?: string;
     product_id: number | null;
     product_name: string | null;
     is_active: boolean;
     source: string;
     synced_at: string | null;
+};
+
+type KnowledgeGap = {
+    id: number;
+    question: string;
+    context_snippet: string | null;
+    source: string;
+    contact_name: string | null;
+    product_name: string | null;
+    stage_name: string | null;
+    lead_status: string | null;
+    lead_id: number | null;
 };
 
 type WhatsAppSync = {
@@ -59,6 +72,7 @@ export default function IntelligenceSettings({
     stages,
     auto_reply_rules,
     whatsapp_syncs = [],
+    knowledge_gaps = [],
 }: {
     variables: Variable[];
     configured: boolean;
@@ -69,6 +83,7 @@ export default function IntelligenceSettings({
     stages: Array<{ id: number; name: string }>;
     auto_reply_rules: AutoReplyRule[];
     whatsapp_syncs?: WhatsAppSync[];
+    knowledge_gaps?: KnowledgeGap[];
 }) {
     const productOptions: Option[] = [
         { value: 'none', label: 'Any product' },
@@ -80,6 +95,11 @@ export default function IntelligenceSettings({
     const activeOptions: Option[] = [
         { value: '1', label: 'Active' },
         { value: '0', label: 'Inactive' },
+    ];
+    const categoryOptions: Option[] = [
+        { value: 'fact', label: 'Fact' },
+        { value: 'lesson', label: 'Lesson' },
+        { value: 'session', label: 'Physical session' },
     ];
 
     return (
@@ -94,10 +114,106 @@ export default function IntelligenceSettings({
                         Provider:{' '}
                         <span className="font-mono text-xs">{provider}</span>.
                         Pull knowledge from your WhatsApp Business / Meta agent
-                        inbox, keep product notes, and optionally run a live
-                        webhook assistant.
+                        inbox, raise unfamiliar questions, feed facts/lessons,
+                        and optionally run a live webhook assistant.
                     </p>
                 </div>
+
+                <section className="grid gap-4">
+                    <div>
+                        <h2 className="text-sm font-medium">
+                            Unfamiliar questions
+                        </h2>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Raised from live chats and downloaded inbox sync
+                            when the desk has no grounding. Feed a fact,
+                            lesson, or physical-session answer so it learns.
+                        </p>
+                    </div>
+                    {knowledge_gaps.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                            No open unfamiliar questions.
+                        </p>
+                    ) : (
+                        knowledge_gaps.map((gap) => (
+                            <article
+                                key={gap.id}
+                                className="rounded-lg border p-4"
+                            >
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Badge variant="outline">{gap.source}</Badge>
+                                    {gap.product_name ? (
+                                        <Badge variant="laundry">
+                                            {gap.product_name}
+                                        </Badge>
+                                    ) : null}
+                                    {gap.stage_name ? (
+                                        <Badge variant="outline">
+                                            {gap.stage_name}
+                                        </Badge>
+                                    ) : null}
+                                    {gap.lead_status ? (
+                                        <Badge variant="lead">
+                                            {gap.lead_status}
+                                        </Badge>
+                                    ) : null}
+                                </div>
+                                <p className="mt-2 font-medium">
+                                    {gap.contact_name
+                                        ? `${gap.contact_name}: `
+                                        : ''}
+                                    {gap.question}
+                                </p>
+                                {gap.context_snippet &&
+                                gap.context_snippet !== gap.question ? (
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        {gap.context_snippet}
+                                    </p>
+                                ) : null}
+                                {can_manage ? (
+                                    <Form
+                                        action={`/ai/gaps/${gap.id}/answer`}
+                                        method="post"
+                                        className="mt-3 grid gap-3 md:grid-cols-2"
+                                    >
+                                        {({ errors, processing }) => (
+                                            <>
+                                                <AreaField
+                                                    name="answer"
+                                                    label="Your fact / answer"
+                                                    required
+                                                    error={errors.answer}
+                                                />
+                                                <div className="grid gap-3">
+                                                    <SelectField
+                                                        name="category"
+                                                        label="Save as"
+                                                        options={
+                                                            categoryOptions
+                                                        }
+                                                        defaultValue="fact"
+                                                        error={errors.category}
+                                                    />
+                                                    <TextField
+                                                        name="title"
+                                                        label="Optional title"
+                                                        error={errors.title}
+                                                    />
+                                                    <Button
+                                                        type="submit"
+                                                        disabled={processing}
+                                                    >
+                                                        Save lesson
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </Form>
+                                ) : null}
+                            </article>
+                        ))
+                    )}
+                </section>
 
                 <section className="rounded-lg border p-4">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -415,6 +531,13 @@ export default function IntelligenceSettings({
                                         label="Note"
                                         required
                                         error={errors.body}
+                                    />
+                                    <SelectField
+                                        name="category"
+                                        label="Type"
+                                        options={categoryOptions}
+                                        defaultValue="fact"
+                                        error={errors.category}
                                     />
                                     <SelectField
                                         name="product_id"
