@@ -74,6 +74,11 @@ class LeadPageData
             'next_action' => $lead->next_action,
             'next_follow_up_on' => $lead->next_follow_up_on?->toDateString(),
             'next_follow_up_label' => $this->clock->formatDate($lead->next_follow_up_on),
+            'marked_on' => $lead->marked_on?->toDateString(),
+            'marked_on_label' => $this->clock->formatDate($lead->marked_on),
+            'marked_label' => $lead->marked_label,
+            'conversation_topic' => $lead->conversation?->topic,
+            'conversation_topic_summary' => $lead->conversation?->topic_summary,
             'lost_reason' => $lead->lost_reason,
             'created_at_label' => $this->clock->formatDateTime($lead->created_at),
             'contact' => [

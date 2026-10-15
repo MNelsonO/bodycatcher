@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Ai\LlmConfiguration;
 use App\Http\Requests\WhatsAppSettingsRequest;
 use App\Models\User;
 use App\Settings\Product;
@@ -13,7 +14,7 @@ use Inertia\Response;
 
 class WhatsAppSettingsController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, LlmConfiguration $llm): Response
     {
         $this->authorize('view', DeskSetting::class);
 
@@ -30,6 +31,9 @@ class WhatsAppSettingsController extends Controller
                 'twilio' => '/webhooks/twilio',
             ],
             'automatic_sends_paused' => $settings->automatic_sends_paused,
+            'live_assistant_enabled' => $settings->live_assistant_enabled,
+            'llm_ready' => $llm->ready(),
+            'llm_provider' => $llm->provider(),
             'inbound_product_id' => $settings->inbound_product_id,
             'products' => Product::query()
                 ->where('is_active', true)
@@ -45,6 +49,7 @@ class WhatsAppSettingsController extends Controller
     {
         $settings = DeskSetting::current();
         $settings->automatic_sends_paused = $request->boolean('automatic_sends_paused');
+        $settings->live_assistant_enabled = $request->boolean('live_assistant_enabled');
         $productId = $request->input('inbound_product_id');
         $settings->inbound_product_id = is_numeric($productId) ? (int) $productId : null;
         $settings->save();

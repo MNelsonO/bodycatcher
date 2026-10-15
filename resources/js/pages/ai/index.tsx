@@ -40,6 +40,7 @@ type AutoReplyRule = {
 export default function IntelligenceSettings({
     variables,
     configured,
+    provider,
     can_manage,
     products,
     articles,
@@ -48,6 +49,7 @@ export default function IntelligenceSettings({
 }: {
     variables: Variable[];
     configured: boolean;
+    provider: string;
     can_manage: boolean;
     products: ProductOption[];
     articles: Article[];
@@ -75,10 +77,12 @@ export default function IntelligenceSettings({
                         Intelligence
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        The model reads a lead and proposes a summary, a score
-                        with reasons, extracted fields, and a reply draft.
-                        Automatic WhatsApp replies only fire when an owner
-                        rule matches — never at random.
+                        Provider:{' '}
+                        <span className="font-mono text-xs">{provider}</span>.
+                        Use OpenAI or Gemini via LLM_PROVIDER. The live
+                        webhook assistant (WhatsApp settings) knows your
+                        products and keeps the conversation topic. Rules below
+                        only run when the live assistant is off.
                     </p>
                 </div>
 

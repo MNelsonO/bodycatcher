@@ -35,6 +35,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $purchase_timeline_note
  * @property string|null $next_action
  * @property CarbonInterface|null $next_follow_up_on
+ * @property CarbonInterface|null $marked_on
+ * @property string|null $marked_label
  * @property string|null $lost_reason
  * @property CarbonInterface|null $closed_at
  * @property bool $automation_paused
@@ -61,6 +63,8 @@ use Illuminate\Support\Carbon;
     'purchase_timeline_note',
     'next_action',
     'next_follow_up_on',
+    'marked_on',
+    'marked_label',
     'lost_reason',
     'closed_at',
     'automation_paused',
@@ -82,6 +86,7 @@ class Lead extends Model
             'branch_count' => 'integer',
             'decision_maker_status' => DecisionMakerStatus::class,
             'next_follow_up_on' => 'date',
+            'marked_on' => 'date',
             'closed_at' => 'datetime',
             'automation_paused' => 'boolean',
             'taken_over' => 'boolean',

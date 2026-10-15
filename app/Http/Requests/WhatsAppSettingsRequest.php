@@ -29,6 +29,7 @@ class WhatsAppSettingsRequest extends FormRequest
     {
         return [
             'automatic_sends_paused' => ['required', 'boolean'],
+            'live_assistant_enabled' => ['required', 'boolean'],
             'inbound_product_id' => ['nullable', 'integer', Rule::exists('products', 'id')],
         ];
     }

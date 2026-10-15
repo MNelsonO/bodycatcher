@@ -24,6 +24,9 @@ export default function WhatsAppSettings({
     variables,
     webhook_paths,
     automatic_sends_paused,
+    live_assistant_enabled,
+    llm_ready,
+    llm_provider,
     inbound_product_id,
     products,
     opt_out_keywords,
@@ -33,6 +36,9 @@ export default function WhatsAppSettings({
     variables: Variable[];
     webhook_paths: WebhookPaths;
     automatic_sends_paused: boolean;
+    live_assistant_enabled: boolean;
+    llm_ready: boolean;
+    llm_provider: string;
     inbound_product_id: number | null;
     products: ProductOption[];
     opt_out_keywords: string[];
@@ -125,11 +131,27 @@ export default function WhatsAppSettings({
                 </section>
 
                 <section className="rounded-lg border p-4">
+                    <h2 className="text-sm font-medium">
+                        Live AI assistant
+                    </h2>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                        When on, inbound webhook messages are answered by{' '}
+                        <span className="font-mono text-xs">{llm_provider}</span>{' '}
+                        with your product catalog and the running conversation
+                        topic. LLM must be configured (
+                        {llm_ready ? 'ready' : 'missing keys'}).
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                        Set LLM_PROVIDER to openai or gemini, plus LLM_API_KEY,
+                        LLM_BASE_URL, and LLM_MODEL in .env.
+                    </p>
+                </section>
+
+                <section className="rounded-lg border p-4">
                     <h2 className="text-sm font-medium">Desk controls</h2>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Pausing automatic sends does not block a message an
-                        operator types on a lead. Auto-reply rules on
-                        Intelligence still respect this pause.
+                        Pausing automatic sends blocks the live assistant and
+                        rule-based replies. Manual operator sends still work.
                     </p>
                     {can_manage ? (
                         <Form
@@ -156,6 +178,24 @@ export default function WhatsAppSettings({
                                             },
                                         ]}
                                         error={errors.automatic_sends_paused}
+                                    />
+                                    <SelectField
+                                        name="live_assistant_enabled"
+                                        label="Live AI assistant"
+                                        defaultValue={
+                                            live_assistant_enabled ? '1' : '0'
+                                        }
+                                        options={[
+                                            {
+                                                value: '0',
+                                                label: 'Off — use Intelligence rules only',
+                                            },
+                                            {
+                                                value: '1',
+                                                label: 'On — reply on webhook with topic memory',
+                                            },
+                                        ]}
+                                        error={errors.live_assistant_enabled}
                                     />
                                     <SelectField
                                         name="inbound_product_id"
@@ -189,7 +229,9 @@ export default function WhatsAppSettings({
                             {automatic_sends_paused
                                 ? 'paused for the whole desk'
                                 : 'running'}
-                            . Only the owner can change that.
+                            . Live assistant is{' '}
+                            {live_assistant_enabled ? 'on' : 'off'}. Only the
+                            owner can change that.
                         </p>
                     )}
                 </section>

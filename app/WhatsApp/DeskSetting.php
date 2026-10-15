@@ -11,9 +11,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property bool $automatic_sends_paused
  * @property int|null $inbound_product_id
+ * @property bool $live_assistant_enabled
  * @property-read Product|null $inboundProduct
  */
-#[Fillable(['automatic_sends_paused', 'inbound_product_id'])]
+#[Fillable(['automatic_sends_paused', 'inbound_product_id', 'live_assistant_enabled'])]
 class DeskSetting extends Model
 {
     protected $table = 'desk_settings';
@@ -25,6 +26,7 @@ class DeskSetting extends Model
     {
         return [
             'automatic_sends_paused' => 'boolean',
+            'live_assistant_enabled' => 'boolean',
         ];
     }
 
@@ -46,6 +48,7 @@ class DeskSetting extends Model
 
         return self::query()->create([
             'automatic_sends_paused' => false,
+            'live_assistant_enabled' => false,
         ]);
     }
 }

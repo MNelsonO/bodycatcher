@@ -2,7 +2,7 @@
 
 namespace App\Ai\Jobs;
 
-use App\Ai\Services\ConditionalAutoReply;
+use App\Ai\Services\InboundAssistantRouter;
 use App\Leads\Lead;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -16,7 +16,7 @@ class RunConditionalAutoReply implements ShouldQueue
         public string $inboundBody,
     ) {}
 
-    public function handle(ConditionalAutoReply $replies): void
+    public function handle(InboundAssistantRouter $router): void
     {
         $lead = Lead::query()->find($this->leadId);
 
@@ -24,6 +24,6 @@ class RunConditionalAutoReply implements ShouldQueue
             return;
         }
 
-        $replies->handle($lead, $this->inboundBody);
+        $router->handle($lead, $this->inboundBody);
     }
 }

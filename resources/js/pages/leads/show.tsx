@@ -60,6 +60,7 @@ export default function LeadShow({
                         <NoteDialog leadId={lead.id} />
                         <MessageDialog leadId={lead.id} />
                         <FollowUpDialog lead={lead} />
+                        <MarkDateDialog lead={lead} />
                         <MessagingControls lead={lead} />
                         {won ? (
                             <Form
@@ -225,6 +226,27 @@ export default function LeadShow({
                                 Follow-up:{' '}
                                 {lead.next_follow_up_label ?? 'no date set'}
                             </p>
+                            <p className="mt-2 text-muted-foreground">
+                                Marked date:{' '}
+                                {lead.marked_on_label
+                                    ? `${lead.marked_on_label}${lead.marked_label ? ` · ${lead.marked_label}` : ''}`
+                                    : 'none'}
+                            </p>
+                            {lead.conversation_topic ? (
+                                <div className="mt-3 rounded-md bg-muted/40 p-3">
+                                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                        Live topic
+                                    </p>
+                                    <p className="mt-1 font-medium">
+                                        {lead.conversation_topic}
+                                    </p>
+                                    {lead.conversation_topic_summary ? (
+                                        <p className="mt-1 text-muted-foreground">
+                                            {lead.conversation_topic_summary}
+                                        </p>
+                                    ) : null}
+                                </div>
+                            ) : null}
                             {lead.stage.default_follow_up_delay_hours !==
                             null ? (
                                 <p className="mt-2 text-xs text-muted-foreground">
@@ -705,6 +727,62 @@ function FollowUpDialog({ lead }: { lead: LeadDetail }) {
                             />
                             <Button type="submit" disabled={processing}>
                                 Save follow-up
+                            </Button>
+                        </>
+                    )}
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function MarkDateDialog({ lead }: { lead: LeadDetail }) {
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="outline">Mark date</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Mark a date</DialogTitle>
+                    <DialogDescription>
+                        Tag this lead with a day (visit, pickup, install).
+                        Optionally drop it on your laundry calendar.
+                    </DialogDescription>
+                </DialogHeader>
+                <Form
+                    action={`/leads/${lead.id}/mark-date`}
+                    method="post"
+                    className="grid gap-3"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <TextField
+                                name="marked_on"
+                                label="Date"
+                                type="date"
+                                defaultValue={lead.marked_on ?? ''}
+                                error={errors.marked_on}
+                            />
+                            <TextField
+                                name="marked_label"
+                                label="Label"
+                                defaultValue={lead.marked_label ?? ''}
+                                hint="e.g. Site visit, Laundry pickup"
+                                error={errors.marked_label}
+                            />
+                            <SelectField
+                                name="add_to_calendar"
+                                label="Also add to calendar"
+                                defaultValue="1"
+                                options={[
+                                    { value: '1', label: 'Yes — blue calendar item' },
+                                    { value: '0', label: 'No — lead only' },
+                                ]}
+                                error={errors.add_to_calendar}
+                            />
+                            <Button type="submit" disabled={processing}>
+                                Save marked date
                             </Button>
                         </>
                     )}

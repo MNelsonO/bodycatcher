@@ -69,6 +69,11 @@ export type LeadDetail = {
     next_action: string | null;
     next_follow_up_on: string | null;
     next_follow_up_label: string | null;
+    marked_on: string | null;
+    marked_on_label: string | null;
+    marked_label: string | null;
+    conversation_topic: string | null;
+    conversation_topic_summary: string | null;
     lost_reason: string | null;
     created_at_label: string | null;
     contact: ContactSummary;

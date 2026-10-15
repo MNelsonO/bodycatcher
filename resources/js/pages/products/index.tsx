@@ -1,4 +1,4 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,10 @@ type ProductRow = {
     pricing_notes: string | null;
     is_active: boolean;
     archived: boolean;
+    leads_total: number;
+    leads_open: number;
+    leads_won: number;
+    leads_lost: number;
 };
 
 export default function ProductsIndex({
@@ -37,8 +41,9 @@ export default function ProductsIndex({
                             Products
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            No prices live here. Pricing notes are whatever you
-                            type.
+                            The desk knows each product and tracks leads under
+                            it. Pricing notes are whatever you type — no
+                            checkout prices.
                         </p>
                     </div>
                     <ProductDialog
@@ -89,6 +94,32 @@ export default function ProductsIndex({
                                             {product.pricing_notes}
                                         </p>
                                     ) : null}
+                                    <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                                        <Link
+                                            href={`/leads?product_id=${product.id}`}
+                                            className="rounded-full border px-2 py-1 hover:underline"
+                                        >
+                                            {product.leads_total} leads
+                                        </Link>
+                                        <Link
+                                            href={`/leads?product_id=${product.id}&kind=active`}
+                                            className="rounded-full border px-2 py-1 hover:underline"
+                                        >
+                                            {product.leads_open} open
+                                        </Link>
+                                        <Link
+                                            href={`/leads?product_id=${product.id}&kind=won`}
+                                            className="rounded-full border px-2 py-1 hover:underline"
+                                        >
+                                            {product.leads_won} won
+                                        </Link>
+                                        <Link
+                                            href={`/leads?product_id=${product.id}&kind=lost`}
+                                            className="rounded-full border px-2 py-1 hover:underline"
+                                        >
+                                            {product.leads_lost} lost
+                                        </Link>
+                                    </div>
                                 </div>
                                 <div className="flex gap-2">
                                     <ProductDialog

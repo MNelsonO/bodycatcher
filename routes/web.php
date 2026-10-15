@@ -51,6 +51,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('leads/{lead}/notes', [LeadController::class, 'note'])->name('leads.notes.store');
     Route::post('leads/{lead}/messages', [LeadController::class, 'message'])->name('leads.messages.store');
     Route::put('leads/{lead}/follow-up', [LeadController::class, 'followUp'])->name('leads.follow-up.update');
+    Route::post('leads/{lead}/mark-date', [LeadController::class, 'markDate'])->name('leads.mark-date');
     Route::post('leads/{lead}/whatsapp', [LeadMessagingController::class, 'send'])->name('leads.whatsapp.send');
     Route::post('leads/{lead}/messaging', [LeadMessagingController::class, 'update'])->name('leads.messaging.update');
     Route::post('leads/{lead}/analyses', [LeadAnalysisController::class, 'store'])->name('leads.analyses.store');

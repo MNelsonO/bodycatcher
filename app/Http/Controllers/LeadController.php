@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Contacts\Contact;
 use App\Conversations\Actions\LogMessage;
 use App\Conversations\MessageDirection;
+use App\Calendar\CalendarActivity;
 use App\Http\Requests\FollowUpRequest;
 use App\Http\Requests\LeadMessageRequest;
 use App\Http\Requests\LeadNoteRequest;
 use App\Http\Requests\LeadRequest;
 use App\Http\Requests\LeadStageRequest;
+use App\Http\Requests\MarkDateRequest;
 use App\Leads\Actions\AddLeadNote;
 use App\Leads\Actions\CreateLead;
 use App\Leads\Actions\SetFollowUp;
@@ -193,6 +195,34 @@ class LeadController extends Controller
         );
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Follow-up saved.']);
+
+        return redirect()->route('leads.show', $lead);
+    }
+
+    public function markDate(MarkDateRequest $request, Lead $lead): RedirectResponse
+    {
+        /** @var User $actor */
+        $actor = $request->user();
+        $date = $request->string('marked_on')->toString();
+        $label = $request->string('marked_label')->toString();
+
+        $lead->marked_on = $date;
+        $lead->marked_label = $label === '' ? null : $label;
+        $lead->save();
+
+        if ($request->boolean('add_to_calendar')) {
+            CalendarActivity::query()->create([
+                'user_id' => $actor->id,
+                'activity_on' => $date,
+                'title' => ($label !== '' ? $label.' · ' : '').$lead->contact->full_name,
+                'notes' => 'Marked from lead #'.$lead->id.' · '.$lead->product->name,
+                'activity_type' => 'task',
+                'color' => 'blue',
+                'lead_id' => $lead->id,
+            ]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Date marked on the lead.']);
 
         return redirect()->route('leads.show', $lead);
     }

@@ -11,12 +11,20 @@ class LlmConfiguration
             && $this->value('ai.model') !== '';
     }
 
+    public function provider(): string
+    {
+        $provider = $this->value('ai.provider');
+
+        return $provider !== '' ? $provider : 'openai';
+    }
+
     /**
      * @return list<array{key: string, configured: bool}>
      */
     public function variables(): array
     {
         return [
+            ['key' => 'LLM_PROVIDER', 'configured' => $this->provider() !== ''],
             ['key' => 'LLM_API_KEY', 'configured' => $this->value('ai.api_key') !== ''],
             ['key' => 'LLM_BASE_URL', 'configured' => $this->value('ai.base_url') !== ''],
             ['key' => 'LLM_MODEL', 'configured' => $this->value('ai.model') !== ''],

@@ -57,7 +57,7 @@ php artisan queue:work
 
 ## Phase 3
 
-A replaceable language model reads one lead. It does not send WhatsApp and it does not move a stage by itself unless an owner saves a conditional auto-reply rule on Intelligence. No matching rule means silence — the model never replies at random.
+A replaceable language model (OpenAI or Gemini via `LLM_PROVIDER`) reads one lead. Turn on **Live AI assistant** under WhatsApp to answer inbound webhooks with product-aware replies that keep a running conversation topic. When the live assistant is off, owner rules on Intelligence still apply — no matching rule means silence.
 
 ## Calendar
 
