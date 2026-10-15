@@ -2,8 +2,10 @@
 
 namespace App\Http\Middleware;
 
+use App\Billing\BusinessProfile;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
+use Throwable;
 
 class HandleInertiaRequests extends Middleware
 {
@@ -39,10 +41,36 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'displayTimezone' => config('app.display_timezone'),
+            'brand' => $this->brand(),
             'auth' => [
                 'user' => $request->user(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    /**
+     * @return array{name: string, tagline: string, logo_url: string}
+     */
+    private function brand(): array
+    {
+        $fallback = [
+            'name' => (string) config('app.name', 'Kemet Tech'),
+            'tagline' => 'Laundry sales desk',
+            'logo_url' => '/brand/kemet-mark.svg',
+        ];
+
+        try {
+            $profile = BusinessProfile::current();
+            $name = $profile->trading_name ?: $profile->legal_name ?: $fallback['name'];
+
+            return [
+                'name' => $name,
+                'tagline' => 'Laundry sales desk',
+                'logo_url' => $profile->logoUrl() ?: $fallback['logo_url'],
+            ];
+        } catch (Throwable) {
+            return $fallback;
+        }
     }
 }

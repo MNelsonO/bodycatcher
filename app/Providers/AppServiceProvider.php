@@ -7,6 +7,7 @@ use App\Ai\FakeLlmClient;
 use App\Ai\LaravelAnalysisDispatcher;
 use App\Ai\LlmClient;
 use App\Ai\OpenAiCompatibleClient;
+use App\Billing\BusinessProfile;
 use App\WhatsApp\CloudWhatsAppClient;
 use App\WhatsApp\FakeWhatsAppClient;
 use App\WhatsApp\FlareSendWhatsAppClient;
@@ -15,7 +16,9 @@ use App\WhatsApp\TwilioWhatsAppClient;
 use App\WhatsApp\WebhookDispatcher;
 use App\WhatsApp\WhatsAppClient;
 use Carbon\CarbonImmutable;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
@@ -58,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureAuthMail();
     }
 
     /**
@@ -80,5 +84,40 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    protected function configureAuthMail(): void
+    {
+        ResetPassword::toMailUsing(function (object $notifiable, string $token): MailMessage {
+            $email = method_exists($notifiable, 'getEmailForPasswordReset')
+                ? $notifiable->getEmailForPasswordReset()
+                : (string) ($notifiable->email ?? '');
+
+            $url = url(route('password.reset', [
+                'token' => $token,
+                'email' => $email,
+            ], false));
+
+            $brand = config('app.name', 'Kemet Tech');
+
+            try {
+                $profile = BusinessProfile::current();
+                $brand = $profile->trading_name ?: $profile->legal_name ?: $brand;
+            } catch (\Throwable) {
+                // Keep app name fallback when billing tables are not ready.
+            }
+
+            $expire = (int) config('auth.passwords.'.config('auth.defaults.passwords').'.expire', 60);
+
+            return (new MailMessage)
+                ->subject('Reset your '.$brand.' desk password')
+                ->markdown('mail.auth.reset-password', [
+                    'url' => $url,
+                    'email' => $email,
+                    'name' => (string) ($notifiable->name ?? 'there'),
+                    'brand' => $brand,
+                    'expire' => $expire,
+                ]);
+        });
     }
 }

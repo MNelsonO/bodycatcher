@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import AppLogoIcon from '@/components/app-logo-icon';
+import BrandLogo from '@/components/brand-logo';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
@@ -9,28 +9,36 @@ export default function AuthSimpleLayout({
     description,
 }: AuthLayoutProps) {
     return (
-        <div className="flex min-h-svh flex-col items-center justify-center gap-6 bg-background p-6 md:p-10">
-            <div className="w-full max-w-sm">
-                <div className="flex flex-col gap-8">
-                    <div className="flex flex-col items-center gap-4">
-                        <Link
-                            href={home()}
-                            className="flex flex-col items-center gap-2 font-medium"
-                        >
-                            <div className="mb-1 flex h-9 w-9 items-center justify-center rounded-md">
-                                <AppLogoIcon className="size-9 fill-current text-[var(--foreground)] dark:text-white" />
-                            </div>
-                            <span className="sr-only">{title}</span>
+        <div className="flex min-h-svh flex-col items-center justify-center bg-laundry-mist p-6 md:p-10">
+            <div className="w-full max-w-[380px]">
+                <div className="overflow-hidden bg-laundry-white shadow-[0_0_0_2px_var(--laundry-blue)]">
+                    <div className="bg-primary px-6 py-7 text-primary-foreground">
+                        <Link href={home()} className="inline-flex">
+                            <BrandLogo
+                                inverted
+                                markClassName="h-11 w-11"
+                                className="gap-3"
+                            />
                         </Link>
-
-                        <div className="space-y-2 text-center">
-                            <h1 className="text-xl font-medium">{title}</h1>
-                            <p className="text-center text-sm text-muted-foreground">
-                                {description}
-                            </p>
-                        </div>
                     </div>
-                    {children}
+
+                    <div className="space-y-6 px-6 py-7">
+                        {(title || description) && (
+                            <div className="space-y-1.5">
+                                {title ? (
+                                    <h1 className="text-xl font-semibold tracking-tight text-primary">
+                                        {title}
+                                    </h1>
+                                ) : null}
+                                {description ? (
+                                    <p className="text-sm text-muted-foreground">
+                                        {description}
+                                    </p>
+                                ) : null}
+                            </div>
+                        )}
+                        {children}
+                    </div>
                 </div>
             </div>
         </div>
