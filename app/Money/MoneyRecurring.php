@@ -4,7 +4,7 @@ namespace App\Money;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
+use Carbon\CarbonInterface;
 
 class MoneyRecurring extends Model
 {
@@ -66,7 +66,7 @@ class MoneyRecurring extends Model
         };
     }
 
-    private function nextMonthlyDue(Carbon $from): Carbon
+    private function nextMonthlyDue(CarbonInterface $from): CarbonInterface
     {
         $day = min(max((int) ($this->day_of_month ?: $from->day), 1), 28);
         $next = $from->copy()->addMonthNoOverflow()->day($day);
