@@ -75,9 +75,10 @@ export function initializeTheme(): void {
         return;
     }
 
+    // Laundry desk defaults to light (white + blue). Users can still switch.
     if (!localStorage.getItem('appearance')) {
-        localStorage.setItem('appearance', 'system');
-        setCookie('appearance', 'system');
+        localStorage.setItem('appearance', 'light');
+        setCookie('appearance', 'light');
     }
 
     currentAppearance = getStoredAppearance();

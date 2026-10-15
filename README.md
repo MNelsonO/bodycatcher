@@ -63,6 +63,10 @@ A replaceable language model (OpenAI or Gemini via `LLM_PROVIDER`) reads one lea
 
 The Laundry calendar (`/calendar`) lets you pick days, filter the month, and assign blue/white activities. `external_calendar_id` is reserved for trading with your own Google Calendar later.
 
+## Desk colours
+
+The UI follows Laundry OS: **white + blue** (`#1d4ed8`) as the base brand. Special-effect tones: **green** (won / paid / upcoming), **red** (lost / overdue), and **lead slate** (neutral lead counts and void states). Appearance defaults to light.
+
 ## Billing
 
 Invoices (`/invoices`) support logo + address on the business profile, PDF download, a public share link, paid/unpaid/overdue status, monthly customers with due-date alerts, and a tax log (`/billing/tax-log`) that records tax when an invoice is marked paid.

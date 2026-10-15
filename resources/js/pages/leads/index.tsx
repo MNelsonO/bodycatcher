@@ -17,6 +17,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { followUpTone, leadOutcomeTone } from '@/lib/status-tone';
 import type { LeadRow, Option, Paginator } from '@/types/crm';
 
 type Filters = {
@@ -81,7 +82,7 @@ export default function LeadsIndex({
             <div className="flex flex-col gap-4 p-4 md:p-6">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight">
+                        <h1 className="text-xl font-semibold tracking-tight text-primary">
                             Leads
                         </h1>
                         <p className="text-sm text-muted-foreground">
@@ -205,19 +206,35 @@ export default function LeadsIndex({
                                                 {lead.product_name}
                                             </TableCell>
                                             <TableCell>
-                                                <Badge variant="outline">
-                                                    {lead.stage_name}
-                                                </Badge>
+                                                <div className="flex flex-wrap gap-1">
+                                                    <Badge variant="laundry">
+                                                        {lead.stage_name}
+                                                    </Badge>
+                                                    <Badge
+                                                        variant={leadOutcomeTone(
+                                                            lead.outcome,
+                                                        )}
+                                                    >
+                                                        {lead.outcome}
+                                                    </Badge>
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 {lead.next_follow_up_label ??
                                                     'None'}
-                                                <div className="text-xs text-muted-foreground">
-                                                    {
-                                                        followUpLabel[
-                                                            lead.follow_up_state
-                                                        ]
-                                                    }
+                                                <div className="mt-1">
+                                                    <Badge
+                                                        variant={followUpTone(
+                                                            lead.follow_up_state,
+                                                        )}
+                                                    >
+                                                        {
+                                                            followUpLabel[
+                                                                lead
+                                                                    .follow_up_state
+                                                            ]
+                                                        }
+                                                    </Badge>
                                                 </div>
                                             </TableCell>
                                             <TableCell className="max-w-56 truncate">

@@ -40,7 +40,7 @@ export default function IntegrationsIndex({
             <Head title="Integrations" />
             <div className="flex flex-col gap-6 p-4 md:p-6">
                 <div>
-                    <h1 className="text-xl font-semibold tracking-tight">
+                    <h1 className="text-xl font-semibold tracking-tight text-primary">
                         Traffic & Meta reports
                     </h1>
                     <p className="text-sm text-muted-foreground">

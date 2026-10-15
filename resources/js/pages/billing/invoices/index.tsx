@@ -1,5 +1,6 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { Badge } from '@/components/ui/badge';
+import { invoiceStatusTone } from '@/lib/status-tone';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -72,7 +73,7 @@ export default function InvoicesIndex({
 
                 {(alerts.overdue_invoices.length > 0 ||
                     alerts.due_subscriptions.length > 0) && (
-                    <section className="grid gap-3 rounded-lg border border-red-200 bg-red-50/40 p-4 md:grid-cols-2">
+                    <section className="grid gap-3 rounded-lg border tone-red-soft p-4 md:grid-cols-2">
                         <div>
                             <h2 className="text-sm font-medium">
                                 Overdue invoices
@@ -186,7 +187,11 @@ export default function InvoicesIndex({
                                             : ''}
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant="outline">
+                                        <Badge
+                                            variant={invoiceStatusTone(
+                                                invoice.status,
+                                            )}
+                                        >
                                             {invoice.status}
                                         </Badge>
                                     </TableCell>

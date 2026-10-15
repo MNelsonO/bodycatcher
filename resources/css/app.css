@@ -41,6 +41,19 @@
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
 
+    --color-success: var(--success);
+    --color-success-foreground: var(--success-foreground);
+    --color-success-soft: var(--success-soft);
+
+    --color-lead: var(--lead);
+    --color-lead-foreground: var(--lead-foreground);
+    --color-lead-soft: var(--lead-soft);
+
+    --color-laundry: var(--laundry-blue);
+    --color-laundry-soft: var(--laundry-blue-soft);
+    --color-laundry-white: var(--laundry-white);
+    --color-laundry-ink: var(--laundry-ink);
+
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
@@ -61,75 +74,108 @@
     --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/*
+ * Laundry OS desk palette
+ * Base: white + laundry blue
+ * Special effects: green (won/paid), red (lost/overdue), lead/slate (neutral lead states)
+ */
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.87 0 0);
-    --chart-1: oklch(0.646 0.222 41.116);
-    --chart-2: oklch(0.6 0.118 184.704);
-    --chart-3: oklch(0.398 0.07 227.392);
-    --chart-4: oklch(0.828 0.189 84.429);
-    --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.87 0 0);
+    --laundry-blue: #1d4ed8;
+    --laundry-blue-soft: #dbeafe;
+    --laundry-white: #ffffff;
+    --laundry-ink: #0f172a;
+    --laundry-mist: #f0f7ff;
+
+    --success: #15803d;
+    --success-foreground: #ffffff;
+    --success-soft: #dcfce7;
+
+    --lead: #475569;
+    --lead-foreground: #ffffff;
+    --lead-soft: #e2e8f0;
+
+    --background: var(--laundry-mist);
+    --foreground: var(--laundry-ink);
+    --card: var(--laundry-white);
+    --card-foreground: var(--laundry-ink);
+    --popover: var(--laundry-white);
+    --popover-foreground: var(--laundry-ink);
+    --primary: var(--laundry-blue);
+    --primary-foreground: var(--laundry-white);
+    --secondary: var(--laundry-blue-soft);
+    --secondary-foreground: var(--laundry-blue);
+    --muted: #eef4fc;
+    --muted-foreground: #64748b;
+    --accent: var(--laundry-blue-soft);
+    --accent-foreground: var(--laundry-blue);
+    --destructive: #dc2626;
+    --destructive-foreground: #ffffff;
+    --border: color-mix(in srgb, var(--laundry-blue) 16%, white);
+    --input: color-mix(in srgb, var(--laundry-blue) 18%, white);
+    --ring: color-mix(in srgb, var(--laundry-blue) 45%, white);
+    --chart-1: var(--laundry-blue);
+    --chart-2: var(--success);
+    --chart-3: var(--destructive);
+    --chart-4: var(--lead);
+    --chart-5: #38bdf8;
+    --radius: 0.75rem;
+    --sidebar: var(--laundry-white);
+    --sidebar-foreground: var(--laundry-ink);
+    --sidebar-primary: var(--laundry-blue);
+    --sidebar-primary-foreground: var(--laundry-white);
+    --sidebar-accent: var(--laundry-blue-soft);
+    --sidebar-accent-foreground: var(--laundry-blue);
+    --sidebar-border: color-mix(in srgb, var(--laundry-blue) 14%, white);
+    --sidebar-ring: color-mix(in srgb, var(--laundry-blue) 40%, white);
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.145 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.145 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
-    --border: oklch(0.269 0 0);
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0);
-    --chart-1: oklch(0.488 0.243 264.376);
-    --chart-2: oklch(0.696 0.17 162.48);
-    --chart-3: oklch(0.769 0.188 70.08);
-    --chart-4: oklch(0.627 0.265 303.9);
-    --chart-5: oklch(0.645 0.246 16.439);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.985 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(0.269 0 0);
-    --sidebar-ring: oklch(0.439 0 0);
+    --laundry-blue: #60a5fa;
+    --laundry-blue-soft: #1e3a5f;
+    --laundry-white: #0b1220;
+    --laundry-ink: #e2e8f0;
+    --laundry-mist: #0a1020;
+
+    --success: #4ade80;
+    --success-foreground: #052e16;
+    --success-soft: #14532d;
+
+    --lead: #94a3b8;
+    --lead-foreground: #0f172a;
+    --lead-soft: #334155;
+
+    --background: #0a1020;
+    --foreground: #e2e8f0;
+    --card: #111827;
+    --card-foreground: #e2e8f0;
+    --popover: #111827;
+    --popover-foreground: #e2e8f0;
+    --primary: #60a5fa;
+    --primary-foreground: #0b1220;
+    --secondary: #1e3a5f;
+    --secondary-foreground: #bfdbfe;
+    --muted: #1e293b;
+    --muted-foreground: #94a3b8;
+    --accent: #1e3a5f;
+    --accent-foreground: #bfdbfe;
+    --destructive: #f87171;
+    --destructive-foreground: #450a0a;
+    --border: #1e293b;
+    --input: #1e293b;
+    --ring: #3b82f6;
+    --chart-1: #60a5fa;
+    --chart-2: #4ade80;
+    --chart-3: #f87171;
+    --chart-4: #94a3b8;
+    --chart-5: #38bdf8;
+    --sidebar: #0f172a;
+    --sidebar-foreground: #e2e8f0;
+    --sidebar-primary: #60a5fa;
+    --sidebar-primary-foreground: #0b1220;
+    --sidebar-accent: #1e3a5f;
+    --sidebar-accent-foreground: #bfdbfe;
+    --sidebar-border: #1e293b;
+    --sidebar-ring: #3b82f6;
 }
 
 @layer base {
@@ -139,5 +185,88 @@
 
     body {
         @apply bg-background text-foreground;
+        background-image: linear-gradient(
+            180deg,
+            var(--laundry-blue-soft) 0%,
+            var(--laundry-mist) 28%,
+            var(--laundry-mist) 100%
+        );
+        background-attachment: fixed;
+        min-height: 100vh;
+    }
+}
+
+@layer utilities {
+    .tone-blue {
+        background: var(--laundry-blue);
+        color: var(--laundry-white);
+    }
+
+    .tone-blue-soft {
+        background: var(--laundry-blue-soft);
+        color: var(--laundry-blue);
+        border-color: color-mix(in srgb, var(--laundry-blue) 25%, transparent);
+    }
+
+    .tone-white {
+        background: var(--laundry-white);
+        color: var(--laundry-blue);
+        border: 1px solid var(--laundry-blue);
+    }
+
+    .tone-green {
+        background: var(--success);
+        color: var(--success-foreground);
+    }
+
+    .tone-green-soft {
+        background: var(--success-soft);
+        color: var(--success);
+    }
+
+    .tone-red {
+        background: var(--destructive);
+        color: var(--destructive-foreground);
+    }
+
+    .tone-red-soft {
+        background: color-mix(in srgb, var(--destructive) 16%, var(--card));
+        color: var(--destructive);
+    }
+
+    .tone-lead {
+        background: var(--lead);
+        color: var(--lead-foreground);
+    }
+
+    .tone-lead-soft {
+        background: var(--lead-soft);
+        color: var(--lead);
+    }
+
+    .pill-blue {
+        background: var(--laundry-blue);
+        color: var(--laundry-white);
+    }
+
+    .pill-white {
+        background: var(--laundry-white);
+        color: var(--laundry-blue);
+        border: 1px solid var(--laundry-blue);
+    }
+
+    .pill-green {
+        background: var(--success);
+        color: var(--success-foreground);
+    }
+
+    .pill-red {
+        background: var(--destructive);
+        color: var(--destructive-foreground);
+    }
+
+    .pill-lead {
+        background: var(--lead);
+        color: var(--lead-foreground);
     }
 }

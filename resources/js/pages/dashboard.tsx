@@ -10,24 +10,48 @@ import {
 import type { DashboardMetrics } from '@/types/crm';
 
 const cards = [
-    { key: 'total_leads', label: 'Total leads', href: '/leads' },
+    {
+        key: 'total_leads',
+        label: 'Total leads',
+        href: '/leads',
+        tone: 'tone-lead-soft',
+        accent: 'bg-lead',
+    },
     {
         key: 'new_leads_today',
         label: 'New leads today',
         href: '/leads?created=today',
+        tone: 'tone-blue-soft',
+        accent: 'bg-primary',
     },
     {
         key: 'follow_ups_due_today',
         label: 'Follow-ups due today',
         href: '/leads?follow_up=due_today',
+        tone: 'tone-blue-soft',
+        accent: 'bg-primary',
     },
     {
         key: 'overdue_follow_ups',
         label: 'Overdue follow-ups',
         href: '/leads?follow_up=overdue',
+        tone: 'tone-red-soft',
+        accent: 'bg-destructive',
     },
-    { key: 'won_count', label: 'Won', href: '/leads?kind=won' },
-    { key: 'lost_count', label: 'Lost', href: '/leads?kind=lost' },
+    {
+        key: 'won_count',
+        label: 'Won',
+        href: '/leads?kind=won',
+        tone: 'tone-green-soft',
+        accent: 'bg-success',
+    },
+    {
+        key: 'lost_count',
+        label: 'Lost',
+        href: '/leads?kind=lost',
+        tone: 'tone-lead-soft',
+        accent: 'bg-lead',
+    },
 ] as const;
 
 export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
@@ -38,7 +62,7 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
             <Head title="Command centre" />
             <div className="flex flex-col gap-6 p-4 md:p-6">
                 <div className="flex flex-col gap-1">
-                    <h1 className="text-xl font-semibold tracking-tight">
+                    <h1 className="text-xl font-semibold tracking-tight text-primary">
                         Command centre
                     </h1>
                     <p className="text-sm text-muted-foreground">
@@ -53,14 +77,20 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                         <Link
                             key={card.key}
                             href={card.href}
-                            className="rounded-xl outline-none ring-offset-background transition hover:bg-accent/40 focus-visible:ring-2 focus-visible:ring-ring"
+                            className="rounded-xl outline-none ring-offset-background transition hover:brightness-[0.98] focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                            <Card className="h-full shadow-none">
+                            <Card
+                                className={`h-full overflow-hidden border shadow-none ${card.tone}`}
+                            >
+                                <div
+                                    className={`h-1.5 w-full ${card.accent}`}
+                                    aria-hidden
+                                />
                                 <CardHeader className="pb-2">
-                                    <CardDescription>
+                                    <CardDescription className="text-current/70">
                                         {card.label}
                                     </CardDescription>
-                                    <CardTitle className="text-3xl tabular-nums">
+                                    <CardTitle className="text-3xl tabular-nums text-current">
                                         {metrics[card.key]}
                                     </CardTitle>
                                 </CardHeader>
@@ -70,9 +100,11 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                 </div>
 
                 <div className="grid gap-6 lg:grid-cols-5">
-                    <Card className="shadow-none lg:col-span-2">
+                    <Card className="border-primary/15 shadow-none lg:col-span-2">
                         <CardHeader>
-                            <CardTitle>Leads by stage</CardTitle>
+                            <CardTitle className="text-primary">
+                                Leads by stage
+                            </CardTitle>
                             <CardDescription>
                                 Every open and closed lead, grouped by its
                                 current stage. Click a stage to filter.
@@ -85,7 +117,7 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                     counts appear here.
                                 </p>
                             ) : (
-                                <ul className="divide-y">
+                                <ul className="divide-y divide-primary/10">
                                     {metrics.leads_by_stage.map((row) => (
                                         <li key={row.stage_id}>
                                             <Link
@@ -100,7 +132,7 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                                         {row.pipeline_name}
                                                     </span>
                                                 </span>
-                                                <span className="tabular-nums">
+                                                <span className="rounded-full tone-lead-soft px-2 py-0.5 text-xs tabular-nums">
                                                     {row.total}
                                                 </span>
                                             </Link>
@@ -111,9 +143,11 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                         </CardContent>
                     </Card>
 
-                    <Card className="shadow-none lg:col-span-3">
+                    <Card className="border-primary/15 shadow-none lg:col-span-3">
                         <CardHeader>
-                            <CardTitle>Follow-ups</CardTitle>
+                            <CardTitle className="text-primary">
+                                Follow-ups
+                            </CardTitle>
                             <CardDescription>
                                 Due today and overdue. Each row says why it is
                                 listed.
@@ -125,12 +159,12 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                     Nothing is due today and nothing is overdue.
                                 </p>
                             ) : (
-                                <ul className="divide-y">
+                                <ul className="divide-y divide-primary/10">
                                     {metrics.follow_up_rows.map((row) => (
                                         <li key={row.id} className="py-3">
                                             <Link
                                                 href={`/leads/${row.id}`}
-                                                className="font-medium hover:underline"
+                                                className="font-medium text-primary hover:underline"
                                             >
                                                 {row.contact_name}
                                                 {row.business_name
@@ -138,7 +172,15 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                                     : ''}
                                             </Link>
                                             <p className="mt-1 text-sm text-muted-foreground">
-                                                <Badge variant="outline">
+                                                <Badge
+                                                    variant={
+                                                        row.reason
+                                                            .toLowerCase()
+                                                            .includes('overdue')
+                                                            ? 'destructive'
+                                                            : 'laundry'
+                                                    }
+                                                >
                                                     {row.reason}
                                                 </Badge>{' '}
                                                 {row.follow_up_label} ·{' '}

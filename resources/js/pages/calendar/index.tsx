@@ -42,18 +42,8 @@ export default function CalendarIndex({
     return (
         <>
             <Head title="Calendar" />
-            <div className="laundry-calendar flex flex-col gap-6 p-4 md:p-6">
+            <div className="laundry-calendar flex flex-col gap-6 rounded-2xl p-4 md:p-6">
                 <style>{`
-                    .laundry-calendar {
-                        --laundry-blue: #1d4ed8;
-                        --laundry-blue-soft: #dbeafe;
-                        --laundry-white: #ffffff;
-                        --laundry-ink: #0f172a;
-                        background:
-                            linear-gradient(180deg, var(--laundry-blue-soft) 0%, var(--laundry-white) 42%, var(--laundry-white) 100%);
-                        border-radius: 1rem;
-                        color: var(--laundry-ink);
-                    }
                     .laundry-calendar .day-cell {
                         border: 1px solid color-mix(in srgb, var(--laundry-blue) 18%, white);
                         background: var(--laundry-white);
@@ -63,23 +53,14 @@ export default function CalendarIndex({
                         color: var(--laundry-white);
                         border-color: var(--laundry-blue);
                     }
-                    .laundry-calendar .pill-blue {
-                        background: var(--laundry-blue);
-                        color: var(--laundry-white);
-                    }
-                    .laundry-calendar .pill-white {
-                        background: var(--laundry-white);
-                        color: var(--laundry-blue);
-                        border: 1px solid var(--laundry-blue);
-                    }
                 `}</style>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div>
-                        <h1 className="text-xl font-semibold tracking-tight text-[var(--laundry-blue)]">
+                        <h1 className="text-xl font-semibold tracking-tight text-primary">
                             Laundry calendar
                         </h1>
-                        <p className="text-sm text-slate-600">
+                        <p className="text-sm text-muted-foreground">
                             Pick a day, filter the list, and set activity for
                             each date. Times use {timezone}. Google Calendar
                             trade can attach later via{' '}

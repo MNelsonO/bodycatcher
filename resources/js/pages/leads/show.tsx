@@ -42,16 +42,26 @@ export default function LeadShow({
                             {lead.product.name}
                         </p>
                         <div className="mt-2 flex flex-wrap gap-2">
-                            <Badge>{lead.stage.name}</Badge>
-                            <Badge variant="outline">{lead.outcome}</Badge>
+                            <Badge variant="laundry">{lead.stage.name}</Badge>
+                            <Badge
+                                variant={
+                                    lead.outcome === 'won'
+                                        ? 'success'
+                                        : lead.outcome === 'lost'
+                                          ? 'destructive'
+                                          : 'lead'
+                                }
+                            >
+                                {lead.outcome}
+                            </Badge>
                             {lead.intelligence.latest?.status === 'completed' &&
                             lead.intelligence.latest.score !== null ? (
-                                <Badge variant="outline">
+                                <Badge variant="laundry">
                                     Score {lead.intelligence.latest.score}
                                 </Badge>
                             ) : null}
                             {lead.contact.consent_status === 'opted_out' ? (
-                                <Badge variant="outline">Opted out</Badge>
+                                <Badge variant="destructive">Opted out</Badge>
                             ) : null}
                         </div>
                     </div>
@@ -72,7 +82,10 @@ export default function LeadShow({
                                     name="stage_id"
                                     value={won.id}
                                 />
-                                <Button type="submit" variant="outline">
+                                <Button
+                                    type="submit"
+                                    className="bg-success text-success-foreground hover:bg-success/90"
+                                >
                                     Mark won
                                 </Button>
                             </Form>
@@ -802,7 +815,7 @@ function LostDialog({
     return (
         <Dialog>
             <DialogTrigger asChild>
-                <Button variant="outline" disabled={stages.length === 0}>
+                <Button variant="destructive" disabled={stages.length === 0}>
                     Mark lost
                 </Button>
             </DialogTrigger>
