@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import InputError from '@/components/input-error';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -102,16 +102,16 @@ export function SelectField({
 }) {
     const [value, setValue] = useState(defaultValue);
 
+    useEffect(() => {
+        setValue(defaultValue);
+    }, [defaultValue]);
+
     return (
         <div className="grid gap-2">
             <Label htmlFor={name}>{label}</Label>
-            <input
-                type="hidden"
-                name={name}
-                value={value}
-                required={required}
-            />
             <Select
+                name={name}
+                required={required}
                 value={value === '' ? undefined : value}
                 onValueChange={(next) => {
                     setValue(next);

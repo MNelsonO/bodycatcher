@@ -229,3 +229,30 @@ it('finds a lead by business name or a local Kenyan phone', function () {
             ->has('leads.data', 1)
             ->where('leads.data.0.phone', '+254722100201'));
 });
+
+it('filters the lead list to one stage', function () {
+    $desk = crmDesk();
+    $this->actingAs(crmSalesUser());
+
+    $this->post(route('leads.store'), leadPayload($desk, [
+        'contact' => Contact::factory()->create(['full_name' => 'Amina Wanjiku']),
+        'stage_id' => $desk['stage']->id,
+    ]))->assertRedirect();
+
+    $this->post(route('leads.store'), leadPayload($desk, [
+        'contact' => Contact::factory()->create(['full_name' => 'Brian Otieno']),
+        'stage_id' => $desk['side']->id,
+    ]))->assertRedirect();
+
+    $this->get(route('leads.index', ['stage_id' => $desk['side']->id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('leads.data', 1)
+            ->where('leads.data.0.contact_name', 'Brian Otieno')
+            ->where('leads.data.0.stage_name', 'Side door')
+            ->where('filters.stage_id', (string) $desk['side']->id));
+
+    $this->get(route('leads.index', ['stage_id' => 'all']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page->has('leads.data', 2));
+});
