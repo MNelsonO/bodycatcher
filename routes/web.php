@@ -17,6 +17,7 @@ use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadMessagingController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SharedInvoiceController;
 use App\Http\Controllers\TaxLedgerController;
 use App\Http\Controllers\TwilioWebhookController;
@@ -80,6 +81,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('expenses', [ExpenseController::class, 'index'])->name('expenses.index');
     Route::post('expenses', [ExpenseController::class, 'store'])->name('expenses.store');
     Route::delete('expenses/{expense}', [ExpenseController::class, 'destroy'])->name('expenses.destroy');
+
+    Route::get('reports', [ReportController::class, 'index'])->name('reports.index');
 
     Route::get('integrations', [IntegrationController::class, 'index'])->name('integrations.index');
     Route::put('integrations/{account}', [IntegrationController::class, 'update'])->name('integrations.update');

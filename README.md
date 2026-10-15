@@ -75,6 +75,10 @@ Invoices (`/invoices`) support logo + address on the business profile, PDF downl
 
 `/expenses` logs spend by category with receipts and monthly stats. Expense tax writes into the same tax log under `system_name` (default `expenses`).
 
+## Reports
+
+`/reports` is the desk analytics board. Pick a date range (or 7d / 30d / 90d) to see leads per product, conversion per product, high-interest leads per product (Interested / Demo / Proposal / Negotiation or AI score ≥ 70), daily lead/won charts, and spend every day plus category totals.
+
 ## WhatsApp knowledge pull
 
 On Intelligence, **Pull WhatsApp knowledge** syncs Meta WhatsApp Business profile fields (when Meta credentials exist) and mines frequent inbound questions from desk conversations into knowledge notes.

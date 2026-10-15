@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     CalendarDays,
     ChartColumn,
+    ChartPie,
     FileText,
     LayoutGrid,
     ListTodo,
@@ -38,6 +39,7 @@ export function AppSidebar() {
         { title: 'Calendar', href: '/calendar', icon: CalendarDays },
         { title: 'Invoices', href: '/invoices', icon: FileText },
         { title: 'Expenses', href: '/expenses', icon: Wallet },
+        { title: 'Reports', href: '/reports', icon: ChartPie },
         { title: 'Integrations', href: '/integrations', icon: ChartColumn },
         { title: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
         { title: 'Intelligence', href: '/ai', icon: Sparkles },
