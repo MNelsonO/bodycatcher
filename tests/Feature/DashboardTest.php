@@ -24,4 +24,22 @@ class DashboardTest extends TestCase
         $response = $this->get(route('dashboard'));
         $response->assertOk();
     }
+
+    public function test_dashboard_includes_whatsapp_demo_order_and_chart_metrics(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('dashboard'))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('dashboard')
+                ->has('metrics.whatsapp.conversations')
+                ->has('metrics.demos.in_flight')
+                ->has('metrics.orders.bought_count')
+                ->has('metrics.charts.leads_7d', 7)
+                ->has('metrics.charts.whatsapp_7d', 7)
+                ->has('metrics.charts.bought_7d', 7)
+            );
+    }
 }

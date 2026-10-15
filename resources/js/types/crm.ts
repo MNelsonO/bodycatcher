@@ -185,6 +185,17 @@ export type FollowUpRow = {
     reason: string;
 };
 
+export type ChartDay = {
+    date: string;
+    label: string;
+    opened?: number;
+    won?: number;
+    inbound?: number;
+    outbound?: number;
+    count?: number;
+    revenue?: number;
+};
+
 export type DashboardMetrics = {
     total_leads: number;
     new_leads_today: number;
@@ -192,6 +203,7 @@ export type DashboardMetrics = {
     overdue_follow_ups: number;
     won_count: number;
     lost_count: number;
+    open_leads: number;
     leads_by_stage: Array<{
         stage_id: number;
         stage_name: string;
@@ -200,6 +212,44 @@ export type DashboardMetrics = {
         total: number;
     }>;
     follow_up_rows: FollowUpRow[];
+    whatsapp: {
+        conversations: number;
+        messages_today: number;
+        inbound_today: number;
+        outbound_today: number;
+        messages_7d: number;
+        active_7d: number;
+    };
+    demos: {
+        requested: number;
+        scheduled: number;
+        completed: number;
+        in_flight: number;
+        total: number;
+    };
+    orders: {
+        bought_count: number;
+        bought_revenue: number;
+        unpaid_count: number;
+        overdue_count: number;
+        draft_count: number;
+        currency: string;
+    };
+    spend: {
+        month_total: number;
+    };
+    charts: {
+        leads_7d: ChartDay[];
+        whatsapp_7d: ChartDay[];
+        bought_7d: ChartDay[];
+        funnel: Array<{
+            stage_id: number;
+            stage_name: string;
+            pipeline_name: string;
+            kind: string;
+            total: number;
+        }>;
+    };
     today: string;
     timezone: string;
 };

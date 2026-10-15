@@ -2,10 +2,19 @@
 
 namespace App\Leads\Services;
 
+use App\Billing\Invoice;
+use App\Billing\InvoiceStatus;
+use App\Conversations\Conversation;
+use App\Conversations\Message;
+use App\Conversations\MessageChannel;
+use App\Conversations\MessageDirection;
+use App\Expenses\Expense;
 use App\Leads\Lead;
 use App\SalesPipelines\StageKind;
 use App\Settings\DisplayClock;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class CommandCentre
 {
@@ -21,6 +30,7 @@ class CommandCentre
     {
         [$start, $end] = $this->clock->todayUtcRange();
         $today = $this->clock->today();
+        $days = $this->lastDays(7);
 
         $byStage = Lead::query()
             ->join('pipeline_stages', 'pipeline_stages.id', '=', 'leads.current_stage_id')
@@ -39,7 +49,20 @@ class CommandCentre
             ])
             ->all();
 
-        $followUpRows = $this->followUpRows($today);
+        $demoRequested = $this->countByStageName('Demo Requested');
+        $demoScheduled = $this->countByStageName('Demo Scheduled');
+        $demoCompleted = $this->countByStageName('Demo Completed');
+
+        $paidRevenue = (float) Invoice::query()
+            ->where('status', InvoiceStatus::Paid->value)
+            ->sum('total');
+
+        $expenseMonth = (float) Expense::query()
+            ->whereBetween('spent_on', [
+                Carbon::parse($today)->startOfMonth()->toDateString(),
+                Carbon::parse($today)->endOfMonth()->toDateString(),
+            ])
+            ->sum(DB::raw('amount + tax_amount'));
 
         return [
             'total_leads' => Lead::query()->count(),
@@ -48,8 +71,39 @@ class CommandCentre
             'overdue_follow_ups' => $this->followUps->apply(Lead::query(), 'overdue')->count(),
             'won_count' => $this->countByKind(StageKind::Won),
             'lost_count' => $this->countByKind(StageKind::Lost),
+            'open_leads' => Lead::query()
+                ->whereHas('currentStage', fn ($q) => $q->where('kind', StageKind::Active->value))
+                ->count(),
             'leads_by_stage' => $byStage,
-            'follow_up_rows' => $followUpRows,
+            'follow_up_rows' => $this->followUpRows($today),
+            'whatsapp' => $this->whatsappMetrics($start, $end, $days),
+            'demos' => [
+                'requested' => $demoRequested,
+                'scheduled' => $demoScheduled,
+                'completed' => $demoCompleted,
+                'in_flight' => $demoRequested + $demoScheduled,
+                'total' => $demoRequested + $demoScheduled + $demoCompleted,
+            ],
+            'orders' => [
+                'bought_count' => Invoice::query()->where('status', InvoiceStatus::Paid->value)->count(),
+                'bought_revenue' => $paidRevenue,
+                'unpaid_count' => Invoice::query()->whereIn('status', [
+                    InvoiceStatus::Sent->value,
+                    InvoiceStatus::Unpaid->value,
+                ])->count(),
+                'overdue_count' => Invoice::query()->where('status', InvoiceStatus::Overdue->value)->count(),
+                'draft_count' => Invoice::query()->where('status', InvoiceStatus::Draft->value)->count(),
+                'currency' => Invoice::query()->value('currency') ?? 'KES',
+            ],
+            'spend' => [
+                'month_total' => $expenseMonth,
+            ],
+            'charts' => [
+                'leads_7d' => $this->leadsSeries($days),
+                'whatsapp_7d' => $this->whatsappSeries($days),
+                'bought_7d' => $this->boughtSeries($days),
+                'funnel' => $byStage,
+            ],
             'today' => $today,
             'timezone' => $this->clock->timezone(),
         ];
@@ -60,6 +114,152 @@ class CommandCentre
         return Lead::query()
             ->whereHas('currentStage', fn (mixed $query) => $query->where('kind', $kind->value))
             ->count();
+    }
+
+    private function countByStageName(string $name): int
+    {
+        return Lead::query()
+            ->whereHas('currentStage', fn ($q) => $q->where('name', $name))
+            ->count();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function lastDays(int $count): array
+    {
+        $today = Carbon::parse($this->clock->today(), $this->clock->timezone())->startOfDay();
+        $days = [];
+
+        for ($i = $count - 1; $i >= 0; $i--) {
+            $days[] = $today->copy()->subDays($i)->toDateString();
+        }
+
+        return $days;
+    }
+
+    /**
+     * @param  list<string>  $days
+     * @return array<string, mixed>
+     */
+    private function whatsappMetrics(mixed $start, mixed $end, array $days): array
+    {
+        $inboundToday = Message::query()
+            ->where('channel', MessageChannel::WhatsApp->value)
+            ->where('direction', MessageDirection::Inbound->value)
+            ->whereBetween('sent_at', [$start, $end])
+            ->count();
+        $outboundToday = Message::query()
+            ->where('channel', MessageChannel::WhatsApp->value)
+            ->where('direction', MessageDirection::Outbound->value)
+            ->whereBetween('sent_at', [$start, $end])
+            ->count();
+
+        $windowStart = Carbon::parse($days[0], $this->clock->timezone())->startOfDay()->utc();
+        $windowEnd = Carbon::parse($days[count($days) - 1], $this->clock->timezone())->endOfDay()->utc();
+
+        return [
+            'conversations' => Conversation::query()->count(),
+            'messages_today' => $inboundToday + $outboundToday,
+            'inbound_today' => $inboundToday,
+            'outbound_today' => $outboundToday,
+            'messages_7d' => Message::query()
+                ->where('channel', MessageChannel::WhatsApp->value)
+                ->whereBetween('sent_at', [$windowStart, $windowEnd])
+                ->count(),
+            'active_7d' => Conversation::query()
+                ->whereHas('messages', function ($q) use ($windowStart, $windowEnd): void {
+                    $q->where('channel', MessageChannel::WhatsApp->value)
+                        ->whereBetween('sent_at', [$windowStart, $windowEnd]);
+                })
+                ->count(),
+        ];
+    }
+
+    /**
+     * @param  list<string>  $days
+     * @return list<array{date: string, label: string, opened: int, won: int}>
+     */
+    private function leadsSeries(array $days): array
+    {
+        return array_map(function (string $day): array {
+            [$start, $end] = $this->dayUtcRange($day);
+
+            $opened = Lead::query()->whereBetween('created_at', [$start, $end])->count();
+            $won = Lead::query()
+                ->whereHas('currentStage', fn ($q) => $q->where('kind', StageKind::Won->value))
+                ->whereBetween('closed_at', [$start, $end])
+                ->count();
+
+            return [
+                'date' => $day,
+                'label' => Carbon::parse($day)->format('D'),
+                'opened' => $opened,
+                'won' => $won,
+            ];
+        }, $days);
+    }
+
+    /**
+     * @param  list<string>  $days
+     * @return list<array{date: string, label: string, inbound: int, outbound: int}>
+     */
+    private function whatsappSeries(array $days): array
+    {
+        return array_map(function (string $day): array {
+            [$start, $end] = $this->dayUtcRange($day);
+
+            $inbound = Message::query()
+                ->where('channel', MessageChannel::WhatsApp->value)
+                ->where('direction', MessageDirection::Inbound->value)
+                ->whereBetween('sent_at', [$start, $end])
+                ->count();
+            $outbound = Message::query()
+                ->where('channel', MessageChannel::WhatsApp->value)
+                ->where('direction', MessageDirection::Outbound->value)
+                ->whereBetween('sent_at', [$start, $end])
+                ->count();
+
+            return [
+                'date' => $day,
+                'label' => Carbon::parse($day)->format('D'),
+                'inbound' => $inbound,
+                'outbound' => $outbound,
+            ];
+        }, $days);
+    }
+
+    /**
+     * @param  list<string>  $days
+     * @return list<array{date: string, label: string, count: int, revenue: float}>
+     */
+    private function boughtSeries(array $days): array
+    {
+        return array_map(function (string $day): array {
+            [$start, $end] = $this->dayUtcRange($day);
+
+            $base = Invoice::query()
+                ->where('status', InvoiceStatus::Paid->value)
+                ->whereBetween('paid_at', [$start, $end]);
+
+            return [
+                'date' => $day,
+                'label' => Carbon::parse($day)->format('D'),
+                'count' => (int) (clone $base)->count(),
+                'revenue' => (float) (clone $base)->sum('total'),
+            ];
+        }, $days);
+    }
+
+    /**
+     * @return array{0: Carbon, 1: Carbon}
+     */
+    private function dayUtcRange(string $day): array
+    {
+        $start = Carbon::parse($day, $this->clock->timezone())->startOfDay()->utc();
+        $end = Carbon::parse($day, $this->clock->timezone())->endOfDay()->utc();
+
+        return [$start, $end];
     }
 
     /**
