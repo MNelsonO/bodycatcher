@@ -19,6 +19,8 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->validateCsrfTokens(except: [
             'webhooks/whatsapp',
+            'webhooks/flaresend',
+            'webhooks/twilio',
         ]);
 
         $middleware->web(append: [
