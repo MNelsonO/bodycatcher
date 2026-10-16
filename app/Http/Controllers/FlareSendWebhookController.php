@@ -8,6 +8,7 @@ use App\WhatsApp\WebhookEvent;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class FlareSendWebhookController extends Controller
@@ -21,6 +22,8 @@ class FlareSendWebhookController extends Controller
         $header = (string) $request->header('X-FlareSend-Secret', $request->header('Authorization', ''));
 
         if ($secret !== '' && ! $this->authorized($secret, $header)) {
+            Log::warning('FlareSend webhook rejected: secret did not match.');
+
             return response('Invalid FlareSend secret.', 403);
         }
 
