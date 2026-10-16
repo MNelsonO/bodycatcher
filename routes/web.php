@@ -32,6 +32,10 @@ use Inertia\Inertia;
 Route::get('webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('whatsapp.webhook.verify');
 Route::post('webhooks/whatsapp', [WhatsAppWebhookController::class, 'store'])->name('whatsapp.webhook.store');
 Route::post('webhooks/flaresend', [FlareSendWebhookController::class, 'store'])->name('flaresend.webhook.store');
+Route::post('webhook', [FlareSendWebhookController::class, 'store']);
+Route::post('webhooks/flare-send', [FlareSendWebhookController::class, 'store']);
+Route::post('api/webhook', [FlareSendWebhookController::class, 'store']);
+Route::post('api/flaresend', [FlareSendWebhookController::class, 'store']);
 Route::post('webhooks/twilio', [TwilioWebhookController::class, 'store'])->name('twilio.webhook.store');
 
 Route::get('share/invoices/{token}', [SharedInvoiceController::class, 'show'])->name('invoices.share');

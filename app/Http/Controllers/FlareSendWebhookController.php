@@ -18,6 +18,12 @@ class FlareSendWebhookController extends Controller
         InboundPayloadNormalizer $normalizer,
         WebhookDispatcher $dispatcher,
     ): Response {
+        Log::info('FlareSend hit', [
+            'path' => $request->path(),
+            'ip' => $request->ip(),
+            'body' => mb_substr($request->getContent(), 0, 500),
+        ]);
+
         $secret = (string) config('whatsapp.flaresend.webhook_secret');
         $header = (string) $request->header('X-FlareSend-Secret', $request->header('Authorization', ''));
 
