@@ -25,12 +25,14 @@ class InboundConversationResolver
     public function __construct(
         private PhoneNormalizer $phones,
         private RecordActivity $activity,
+        private FlareSendContactNameLookup $flareSendNames,
     ) {}
 
     public function resolve(string $waId, ?string $profileName): Lead
     {
         $phone = $this->phones->normalize($waId);
-        $contact = $this->contact($phone, $profileName);
+        $resolvedName = $this->resolveName($phone, $profileName);
+        $contact = $this->contact($phone, $resolvedName);
 
         $open = $contact->leads()
             ->open()
@@ -45,10 +47,9 @@ class InboundConversationResolver
         return $this->openLead($contact);
     }
 
-    private function contact(string $phone, ?string $profileName): Contact
+    private function contact(string $phone, string $name): Contact
     {
         $existing = ContactPhone::query()->where('phone', $phone)->first();
-        $name = $this->usableName($profileName, $phone);
 
         if ($existing !== null) {
             $contact = $existing->contact->survivor();
@@ -58,7 +59,7 @@ class InboundConversationResolver
         }
 
         $contact = Contact::query()->create([
-            'full_name' => $name,
+            'full_name' => $name !== '' ? $name : $phone,
             'primary_phone' => $phone,
             'preferred_channel' => PreferredChannel::Whatsapp,
             'consent_status' => ConsentStatus::Unknown,
@@ -78,12 +79,31 @@ class InboundConversationResolver
         return $contact;
     }
 
-    private function usableName(?string $profileName, string $phone): string
+    private function resolveName(string $phone, ?string $profileName): string
+    {
+        $fromWebhook = $this->usableName($profileName, '');
+
+        if ($fromWebhook !== '') {
+            return $fromWebhook;
+        }
+
+        if ((string) config('whatsapp.driver') === 'flaresend') {
+            $lookedUp = $this->flareSendNames->find($phone);
+
+            if ($lookedUp !== null && ! $this->isPlaceholderName($lookedUp)) {
+                return mb_substr($lookedUp, 0, 120);
+            }
+        }
+
+        return $phone;
+    }
+
+    private function usableName(?string $profileName, string $fallback): string
     {
         $name = trim((string) $profileName);
 
         if ($name === '' || $this->isPlaceholderName($name)) {
-            return $phone;
+            return $fallback;
         }
 
         return mb_substr($name, 0, 120);
@@ -95,14 +115,11 @@ class InboundConversationResolver
             return;
         }
 
-        if (! $this->isPlaceholderName($contact->full_name) && $contact->full_name !== $contact->primary_phone) {
-            return;
-        }
-
         if ($contact->full_name === $incoming) {
             return;
         }
 
+        // Always prefer a real WhatsApp display name when FlareSend sends one.
         $contact->full_name = $incoming;
         $contact->save();
     }

@@ -140,36 +140,103 @@ class InboundPayloadNormalizer
      */
     private function displayName(array $payload, array $data, array $message, string $from): string
     {
-        $candidates = [
-            $data['name'] ?? null,
-            $data['pushName'] ?? null,
-            $data['pushname'] ?? null,
-            $data['notify'] ?? null,
-            $data['verifiedName'] ?? null,
-            $data['verifiedBizName'] ?? null,
-            $data['senderName'] ?? null,
-            $data['profileName'] ?? null,
-            $data['contactName'] ?? null,
-            $message['pushName'] ?? null,
-            $message['pushname'] ?? null,
-            $payload['name'] ?? null,
-            $payload['pushName'] ?? null,
-            $payload['ProfileName'] ?? null,
-        ];
-
-        $key = is_array($data['key'] ?? null) ? $data['key'] : [];
-        $candidates[] = $key['pushName'] ?? null;
-        $candidates[] = $key['participant'] ?? null;
-
-        foreach ($candidates as $candidate) {
-            $clean = $this->cleanName(is_string($candidate) ? $candidate : '');
+        foreach ($this->nameCandidates($payload, $data, $message) as $candidate) {
+            $clean = $this->cleanName($candidate);
 
             if ($clean !== null) {
                 return $clean;
             }
         }
 
+        $fromText = $this->nameFromMessageText($this->textFrom($message, $data));
+
+        if ($fromText !== null) {
+            return $fromText;
+        }
+
         return $this->fallbackName($from);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $message
+     * @return list<string>
+     */
+    private function nameCandidates(array $payload, array $data, array $message): array
+    {
+        $candidates = [];
+        $keys = [
+            'name', 'pushName', 'pushname', 'notify', 'verifiedName', 'verifiedBizName',
+            'senderName', 'profileName', 'contactName', 'ProfileName', 'displayName',
+        ];
+
+        foreach ([$data, $message, $payload] as $block) {
+            foreach ($keys as $key) {
+                $value = $block[$key] ?? null;
+
+                if (is_string($value)) {
+                    $candidates[] = $value;
+                }
+            }
+        }
+
+        $key = is_array($data['key'] ?? null) ? $data['key'] : [];
+
+        foreach ($keys as $field) {
+            $value = $key[$field] ?? null;
+
+            if (is_string($value)) {
+                $candidates[] = $value;
+            }
+        }
+
+        $this->collectNamedStrings($payload, $candidates);
+
+        return $candidates;
+    }
+
+    /**
+     * @param  array<string, mixed>  $node
+     * @param  list<string>  $into
+     */
+    private function collectNamedStrings(array $node, array &$into, int $depth = 0): void
+    {
+        if ($depth > 4) {
+            return;
+        }
+
+        foreach ($node as $key => $value) {
+            $keyLower = mb_strtolower((string) $key);
+
+            if (is_string($value) && (
+                str_contains($keyLower, 'name')
+                || $keyLower === 'notify'
+                || $keyLower === 'pushname'
+            )) {
+                $into[] = $value;
+            }
+
+            if (is_array($value)) {
+                /** @var array<string, mixed> $value */
+                $this->collectNamedStrings($value, $into, $depth + 1);
+            }
+        }
+    }
+
+    private function nameFromMessageText(string $text): ?string
+    {
+        $text = trim($text);
+
+        if ($text === '') {
+            return null;
+        }
+
+        if (preg_match('/\b(?:my name is|i am|i\'m|this is)\s+([A-Za-z][A-Za-z\'\-]+(?:\s+[A-Za-z][A-Za-z\'\-]+)?)\b/iu', $text, $match) !== 1) {
+            return null;
+        }
+
+        return $this->cleanName($match[1] ?? '');
     }
 
     private function cleanName(string $value): ?string
