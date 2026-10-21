@@ -1,5 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { MoreHorizontal } from 'lucide-react';
+import { MessageCircle, MoreHorizontal } from 'lucide-react';
 import { SelectField, TextField } from '@/components/crm/fields';
 import {
     Page,
@@ -211,6 +211,9 @@ export default function LeadsIndex({
                                         <TableHead className="px-5 py-3 text-secondary-foreground">
                                             Next action
                                         </TableHead>
+                                        <TableHead className="px-5 py-3 text-secondary-foreground">
+                                            Chat
+                                        </TableHead>
                                         <TableHead className="px-5 py-3" />
                                     </TableRow>
                                 </TableHeader>
@@ -272,6 +275,22 @@ export default function LeadsIndex({
                                                 {lead.next_action ?? '—'}
                                             </TableCell>
                                             <TableCell className="px-5 py-4 align-top">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href={`/leads/${lead.id}#chat`}
+                                                    >
+                                                        <MessageCircle className="size-4" />
+                                                        {lead.message_count > 0
+                                                            ? `${lead.message_count}`
+                                                            : 'Open'}
+                                                    </Link>
+                                                </Button>
+                                            </TableCell>
+                                            <TableCell className="px-5 py-4 align-top">
                                                 <RowMenu id={lead.id} />
                                             </TableCell>
                                         </TableRow>
@@ -282,27 +301,47 @@ export default function LeadsIndex({
 
                         <div className="grid gap-4 md:hidden">
                             {leads.data.map((lead) => (
-                                <Link
+                                <div
                                     key={lead.id}
-                                    href={`/leads/${lead.id}`}
-                                    className={`block p-4 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${surfaceClass}`}
+                                    className={`p-4 ${surfaceClass}`}
                                 >
-                                    <div className="font-semibold text-primary">
-                                        {lead.contact_name}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground">
-                                        {lead.business_name ?? 'No business'} ·{' '}
-                                        {lead.phone}
-                                    </div>
-                                    <div className="mt-3 text-sm font-medium">
-                                        {lead.stage_name} · {lead.product_name}
-                                    </div>
-                                    <div className="mt-0.5 text-sm text-muted-foreground">
-                                        {lead.next_follow_up_label
-                                            ? `${followUpLabel[lead.follow_up_state]} · ${lead.next_follow_up_label}`
-                                            : 'No follow-up date'}
-                                    </div>
-                                </Link>
+                                    <Link
+                                        href={`/leads/${lead.id}`}
+                                        className="block outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    >
+                                        <div className="font-semibold text-primary">
+                                            {lead.contact_name}
+                                        </div>
+                                        <div className="text-sm text-muted-foreground">
+                                            {lead.business_name ??
+                                                'No business'}{' '}
+                                            · {lead.phone}
+                                        </div>
+                                        <div className="mt-3 text-sm font-medium">
+                                            {lead.stage_name} ·{' '}
+                                            {lead.product_name}
+                                        </div>
+                                        <div className="mt-0.5 text-sm text-muted-foreground">
+                                            {lead.next_follow_up_label
+                                                ? `${followUpLabel[lead.follow_up_state]} · ${lead.next_follow_up_label}`
+                                                : 'No follow-up date'}
+                                        </div>
+                                    </Link>
+                                    <Button
+                                        className="mt-3 w-full"
+                                        variant="outline"
+                                        size="sm"
+                                        asChild
+                                    >
+                                        <Link href={`/leads/${lead.id}#chat`}>
+                                            <MessageCircle className="size-4" />
+                                            Open chat
+                                            {lead.message_count > 0
+                                                ? ` (${lead.message_count})`
+                                                : ''}
+                                        </Link>
+                                    </Button>
+                                </div>
                             ))}
                         </div>
                         <Pager paginator={leads} />
@@ -324,6 +363,9 @@ function RowMenu({ id }: { id: number }) {
             <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild>
                     <Link href={`/leads/${id}`}>Open lead</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    <Link href={`/leads/${id}#chat`}>Open chat history</Link>
                 </DropdownMenuItem>
             </DropdownMenuContent>
         </DropdownMenu>

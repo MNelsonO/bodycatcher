@@ -166,9 +166,12 @@ class InboundPayloadNormalizer
     private function nameCandidates(array $payload, array $data, array $message): array
     {
         $candidates = [];
+        // Prefer WhatsApp username / push name. Formal (personal) chats often have
+        // no verified business name — verifiedBiz* is last-resort only.
         $keys = [
-            'name', 'pushName', 'pushname', 'notify', 'verifiedName', 'verifiedBizName',
-            'senderName', 'profileName', 'contactName', 'ProfileName', 'displayName',
+            'pushName', 'pushname', 'notify', 'senderName', 'profileName',
+            'contactName', 'ProfileName', 'displayName', 'name',
+            'verifiedName', 'verifiedBizName',
         ];
 
         foreach ([$data, $message, $payload] as $block) {

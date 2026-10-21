@@ -7,8 +7,11 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Best-effort WhatsApp display-name lookup via FlareSend when the webhook
- * payload does not include pushName / name.
+ * Best-effort WhatsApp username lookup via FlareSend when the webhook
+ * payload does not include pushName.
+ *
+ * Formal/personal chats usually have no WhatsApp Business name — we only
+ * want the username (pushName / notify), not a verified business title.
  */
 class FlareSendContactNameLookup
 {
@@ -75,19 +78,25 @@ class FlareSendContactNameLookup
     private function extract(array $payload): ?string
     {
         $candidates = [
-            $payload['name'] ?? null,
             $payload['pushName'] ?? null,
             $payload['pushname'] ?? null,
             $payload['notify'] ?? null,
+            $payload['username'] ?? null,
+            $payload['userName'] ?? null,
+            $payload['profileName'] ?? null,
+            $payload['name'] ?? null,
+            // Business titles only if username fields were empty.
             $payload['verifiedName'] ?? null,
             $payload['verifiedBizName'] ?? null,
-            $payload['profileName'] ?? null,
         ];
 
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : [];
-        $candidates[] = $data['name'] ?? null;
         $candidates[] = $data['pushName'] ?? null;
+        $candidates[] = $data['pushname'] ?? null;
         $candidates[] = $data['notify'] ?? null;
+        $candidates[] = $data['username'] ?? null;
+        $candidates[] = $data['profileName'] ?? null;
+        $candidates[] = $data['name'] ?? null;
         $candidates[] = $data['verifiedName'] ?? null;
 
         foreach ($candidates as $candidate) {

@@ -119,7 +119,18 @@ class InboundConversationResolver
             return;
         }
 
-        // Always prefer a real WhatsApp display name when FlareSend sends one.
+        $current = trim((string) $contact->full_name);
+
+        // Keep a desk-saved real name; only fill when empty, phone, or placeholder.
+        // Stage / lead status is never touched here — only the WhatsApp username.
+        if (
+            $current !== ''
+            && $current !== $contact->primary_phone
+            && ! $this->isPlaceholderName($current)
+        ) {
+            return;
+        }
+
         $contact->full_name = $incoming;
         $contact->save();
     }

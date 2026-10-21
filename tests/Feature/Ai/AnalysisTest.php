@@ -150,6 +150,30 @@ it('drops a stage suggestion that is not a permitted move', function () {
         ->and($setup['lead']->fresh()?->current_stage_id)->toBe($setup['desk']['stage']->id);
 });
 
+it('stores a suggested product id in extraction when the product is active', function () {
+    aiReady();
+    $setup = aiLead();
+    $otherId = $setup['desk']['other']->id;
+    app(FakeLlmClient::class)->push(aiJson([
+        'suggested_product_id' => $otherId,
+        'product_reason' => 'They asked about the other catalog line.',
+        'extraction' => [
+            'business_problem' => 'Needs a different product fit.',
+            'suggested_product_id' => $otherId,
+            'product_reason' => 'They asked about the other catalog line.',
+        ],
+    ]));
+
+    $this->post(route('leads.analyses.store', $setup['lead']))->assertRedirect();
+
+    $analysis = LeadAnalysis::query()->first();
+
+    expect($analysis?->status)->toBe(AnalysisStatus::Completed)
+        ->and($analysis?->extraction['suggested_product_id'] ?? null)->toBe($otherId)
+        ->and($analysis?->extraction['product_reason'] ?? null)->toBe('They asked about the other catalog line.')
+        ->and($setup['lead']->fresh()?->product_id)->toBe($setup['desk']['product']->id);
+});
+
 it('marks the analysis failed and keeps the message when the model errors', function () {
     aiReady();
     $setup = aiLead();

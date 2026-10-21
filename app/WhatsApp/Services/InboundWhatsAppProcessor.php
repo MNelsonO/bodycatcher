@@ -2,7 +2,9 @@
 
 namespace App\WhatsApp\Services;
 
+use App\Ai\Jobs\RaiseUnfamiliarQuestionJob;
 use App\Ai\Jobs\RunConditionalAutoReply;
+use App\Contacts\Actions\CaptureChatContactName;
 use App\Contacts\ConsentStatus;
 use App\Conversations\Conversation;
 use App\Conversations\Message;
@@ -14,7 +16,6 @@ use App\Conversations\MessageStatus;
 use App\FollowUps\Services\CancelFollowUpsOnReply;
 use App\Leads\Actions\RecordActivity;
 use App\Leads\ActivityEvent;
-use App\Ai\Jobs\RaiseUnfamiliarQuestionJob;
 use App\Leads\Jobs\CaptureChatFollowUpJob;
 use App\WhatsApp\OptOutKeywords;
 use App\WhatsApp\WebhookEvent;
@@ -28,6 +29,7 @@ class InboundWhatsAppProcessor
         private ApplyMessageStatus $statuses,
         private RecordActivity $activity,
         private CancelFollowUpsOnReply $cancellations,
+        private CaptureChatContactName $captureName,
     ) {}
 
     public function process(int $eventId): void
@@ -187,6 +189,7 @@ class InboundWhatsAppProcessor
                 'keyword' => mb_strtolower(trim($parsed['body'])),
             ]);
         } elseif ($type === 'text' && $parsed['body'] !== '') {
+            $this->captureName->handle($lead, $parsed['body']);
             CaptureChatFollowUpJob::dispatch($lead->id, $parsed['body']);
             RaiseUnfamiliarQuestionJob::dispatch($lead->id, $parsed['body']);
             RunConditionalAutoReply::dispatch($lead->id, $parsed['body']);
@@ -223,10 +226,12 @@ class InboundWhatsAppProcessor
                 continue;
             }
 
-            $name = $profileBlock['name'] ?? null;
+            foreach (['pushName', 'pushname', 'notify', 'username', 'name'] as $field) {
+                $name = $profileBlock[$field] ?? ($profile[$field] ?? null);
 
-            if (is_string($name) && trim($name) !== '') {
-                return trim($name);
+                if (is_string($name) && trim($name) !== '') {
+                    return trim($name);
+                }
             }
         }
 

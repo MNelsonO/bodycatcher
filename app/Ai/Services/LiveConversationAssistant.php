@@ -4,9 +4,8 @@ namespace App\Ai\Services;
 
 use App\Ai\LlmClient;
 use App\Ai\LlmConfiguration;
+use App\Contacts\Actions\CaptureChatContactName;
 use App\Conversations\Conversation;
-use App\Conversations\Message;
-use App\Conversations\MessageDirection;
 use App\Conversations\MessageOrigin;
 use App\Leads\Lead;
 use App\Models\User;
@@ -33,6 +32,7 @@ class LiveConversationAssistant
         private EscalateToOperator $escalate,
         private ReplyGroundingGate $grounding,
         private LeadConversationMemory $memory,
+        private CaptureChatContactName $captureName,
     ) {}
 
     public function enabled(): bool
@@ -90,21 +90,6 @@ class LiveConversationAssistant
             ->orderBy('name')
             ->get(['id', 'name', 'slug', 'description', 'pricing_notes']);
 
-        $history = Message::query()
-            ->where('conversation_id', $conversation->id)
-            ->orderByDesc('sent_at')
-            ->orderByDesc('id')
-            ->limit((int) config('ai.live_history_limit', 12))
-            ->get()
-            ->sortBy([['sent_at', 'asc'], ['id', 'asc']])
-            ->values()
-            ->map(function (Message $message): string {
-                $who = $message->direction === MessageDirection::Inbound ? 'Customer' : 'Desk';
-
-                return $who.': '.trim((string) $message->body);
-            })
-            ->implode("\n");
-
         $catalog = $products->map(function (Product $product): string {
             $bits = [
                 "- {$product->name} (slug: {$product->slug})",
@@ -132,45 +117,36 @@ class LiveConversationAssistant
             ? $lessons
             : 'No solid lesson matched — only greet / acknowledge; escalate if they ask for facts.';
 
-        $memoryPack = $this->memory->build($lead);
+        $historyLimit = (int) config('ai.live_history_limit', 40);
+        $memoryBlock = $this->memory->asPromptBlock($lead, $historyLimit);
         $provider = (string) config('ai.provider', 'openai');
-        $topic = (string) ($conversation->topic ?? 'General sales inquiry');
-        $topicSummary = (string) ($conversation->topic_summary ?? 'No topic locked yet.');
-        $memorySummary = $memoryPack['memory_summary'];
         $productName = $lead->product->name;
         $contactName = $lead->contact->full_name;
         $stageName = $lead->currentStage->name;
 
         $system = <<<PROMPT
-You are a Kemet Tech sales person texting on WhatsApp — not a bot script.
+You are a Meta Business-style WhatsApp sales agent for Kemet Tech — one conversation only (this lead), not a generic chatbot.
 Provider: {$provider}.
-Write like a real human: warm, clear, short, natural Kenyan business WhatsApp English. No markdown, no bullet walls, no "As an AI".
-Only reply when you understand THIS conversation from the history and solid lessons below.
-Do not invent prices, discounts, contracts, dates, or features.
-If history is thin, lessons are vague, or you are unsure — ESCALATE. Never bluff.
-Use only catalog + solid lessons + memory. Prefer [lesson]/[fact]/[session] notes over guesses.
-Stay on topic. Keep the lead on its current stage.
+Write valuable, short WhatsApp replies: warm, clear, natural Kenyan business English. No markdown, no bullet walls, no "As an AI".
+Treat knowledge notes / solid lessons as training — prefer them over guesses.
+Never invent prices, discounts, contracts, dates, features, or personal facts.
+If you are unsure, history is thin, or lessons do not cover the ask — ESCALATE. Never bluff.
+Stay on THIS conversation only. Do not change the lead's pipeline stage.
+Keep the lead on its current stage: {$stageName}.
 
-Contact: {$contactName}
-Product: {$productName}
-Stage: {$stageName}
-Topic: {$topic}
-Topic notes: {$topicSummary}
-Memory: {$memorySummary}
+Contact (may be a placeholder): {$contactName}
+Assigned product: {$productName}
 
 Solid lessons (RAG — trust these):
 {$lessonsBlock}
 
-Product catalog:
+Product catalog (slugs for PRODUCT_SLUG only — do not change stage):
 {$catalog}
 
-{$memoryPack['touches']}
+{$memoryBlock}
 PROMPT;
 
         $user = <<<PROMPT
-Conversation history (must make sense before you reply):
-{$history}
-
 Latest customer message:
 {$body}
 
@@ -179,6 +155,8 @@ If you understand and have solid grounding:
 2) TOPIC: <short topic>
 3) TOPIC_SUMMARY: <one sentence>
 4) MEMORY: <how to deal with this person next time>
+5) CONTACT_NAME: <only if they clearly gave their name in chat; else omit>
+6) PRODUCT_SLUG: <optional catalog slug if they clearly want a different product; never change stage>
 
 If anything is unclear, thin, or not covered by solid lessons:
 1) ESCALATE: <why>
@@ -198,6 +176,12 @@ PROMPT;
         }
 
         $parsed = $this->parse($raw);
+
+        if ($parsed['contact_name'] !== '') {
+            $this->captureName->applyName($lead, $parsed['contact_name']);
+        }
+
+        // PRODUCT_SLUG may appear in the model reply for awareness; never auto-change stage or product.
 
         if ($parsed['memory'] !== '') {
             $conversation->memory_summary = mb_substr($parsed['memory'], 0, 500);
@@ -257,7 +241,7 @@ PROMPT;
     }
 
     /**
-     * @return array{reply: string, topic: string, topic_summary: string, memory: string, escalate: string, suggested: string}
+     * @return array{reply: string, topic: string, topic_summary: string, memory: string, escalate: string, suggested: string, contact_name: string, product_slug: string}
      */
     private function parse(string $raw): array
     {
@@ -267,6 +251,8 @@ PROMPT;
         $memory = '';
         $escalate = '';
         $suggested = '';
+        $contactName = '';
+        $productSlug = '';
         $mode = null;
 
         foreach (preg_split("/\r\n|\n|\r/", trim($raw)) ?: [] as $line) {
@@ -315,6 +301,20 @@ PROMPT;
                 continue;
             }
 
+            if (str_starts_with($upper, 'CONTACT_NAME:')) {
+                $mode = 'contact_name';
+                $contactName = trim(substr($trimmed, 13));
+
+                continue;
+            }
+
+            if (str_starts_with($upper, 'PRODUCT_SLUG:')) {
+                $mode = 'product_slug';
+                $productSlug = trim(substr($trimmed, 13));
+
+                continue;
+            }
+
             if ($mode === 'reply') {
                 $reply = trim($reply."\n".$trimmed);
             } elseif ($mode === 'topic') {
@@ -327,6 +327,10 @@ PROMPT;
                 $escalate = trim($escalate.' '.$trimmed);
             } elseif ($mode === 'suggested') {
                 $suggested = trim($suggested."\n".$trimmed);
+            } elseif ($mode === 'contact_name') {
+                $contactName = trim($contactName.' '.$trimmed);
+            } elseif ($mode === 'product_slug') {
+                $productSlug = trim($productSlug.' '.$trimmed);
             }
         }
 
@@ -341,6 +345,8 @@ PROMPT;
             'memory' => trim($memory),
             'escalate' => trim($escalate),
             'suggested' => trim($suggested),
+            'contact_name' => trim($contactName),
+            'product_slug' => trim($productSlug),
         ];
     }
 }

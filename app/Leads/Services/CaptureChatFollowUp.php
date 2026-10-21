@@ -2,15 +2,20 @@
 
 namespace App\Leads\Services;
 
+use App\Calendar\CalendarActivity;
 use App\Contacts\ConsentStatus;
+use App\Integrations\Services\GoogleCalendarSync;
 use App\Leads\Actions\RecordActivity;
 use App\Leads\Actions\ScheduleLeadConversation;
 use App\Leads\Actions\SetFollowUp;
 use App\Leads\ActivityEvent;
+use App\Leads\ChatScheduleHint;
 use App\Leads\Lead;
 use App\Models\User;
 use App\Security\Role;
 use App\Settings\DisplayClock;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Reads an inbound chat, places follow-up / talk dates, and re-ranks the lead.
@@ -24,11 +29,12 @@ class CaptureChatFollowUp
         private FollowUpRanker $ranker,
         private RecordActivity $activity,
         private DisplayClock $clock,
+        private GoogleCalendarSync $google,
     ) {}
 
     public function handle(Lead $lead, string $inboundBody): bool
     {
-        $lead->loadMissing(['contact', 'currentStage']);
+        $lead->loadMissing(['contact', 'currentStage', 'product']);
 
         if ($lead->conversations_stopped || $lead->closed_at !== null) {
             return false;
@@ -83,7 +89,7 @@ class CaptureChatFollowUp
             }
         }
 
-        $lead = $this->ranker->refresh($lead->fresh(['currentStage', 'contact']) ?? $lead);
+        $lead = $this->ranker->refresh($lead->fresh(['currentStage', 'contact', 'product']) ?? $lead);
 
         $this->activity->handle(ActivityEvent::ChatFollowUpCaptured, $lead, $lead->contact, $actor, [
             'source' => 'chat',
@@ -94,6 +100,47 @@ class CaptureChatFollowUp
             'rank_reason' => $lead->follow_up_rank_reason,
         ]);
 
+        $this->createCalendarActivity($lead, $actor, $hint);
+
         return true;
+    }
+
+    private function createCalendarActivity(Lead $lead, User $actor, ChatScheduleHint $hint): void
+    {
+        $activityOn = $hint->conversationAt !== null
+            ? $hint->conversationAt->toDateString()
+            : $hint->followUpOn->toDateString();
+
+        $activityType = $hint->conversationAt !== null ? 'meeting' : 'follow_up';
+        $title = trim($lead->contact->full_name.' · '.$lead->product->name);
+        $notes = mb_substr(trim($hint->matchedSnippet), 0, 1000);
+
+        try {
+            $activity = CalendarActivity::query()->create([
+                'user_id' => $actor->id,
+                'activity_on' => $activityOn,
+                'title' => $title,
+                'notes' => $notes !== '' ? $notes : 'Captured from WhatsApp chat · lead #'.$lead->id,
+                'activity_type' => $activityType,
+                'color' => 'blue',
+                'lead_id' => $lead->id,
+            ]);
+
+            if ($this->google->activated()) {
+                try {
+                    $this->google->push($activity);
+                } catch (Throwable $exception) {
+                    Log::warning('Chat follow-up Google Calendar push failed.', [
+                        'lead_id' => $lead->id,
+                        'error' => $exception->getMessage(),
+                    ]);
+                }
+            }
+        } catch (Throwable $exception) {
+            Log::warning('Chat follow-up calendar activity failed.', [
+                'lead_id' => $lead->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }

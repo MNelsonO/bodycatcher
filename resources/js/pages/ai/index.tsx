@@ -220,7 +220,7 @@ export default function IntelligenceSettings({
             <Page width="content">
                 <PageHeader
                     title="Intelligence"
-                    description="Teach the desk what it should know, review what it could not answer, and control when it replies on WhatsApp."
+                    description="Meta-style sales agent: feed knowledge notes to train replies, keep each WhatsApp chat on its own lead (no mix-ups), escalate when unsure, and turn live assistant on under WhatsApp settings."
                     actions={
                         <>
                             <Badge

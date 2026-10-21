@@ -36,7 +36,7 @@ return [
     | Intelligence still apply when the live assistant is off.
     */
 
-    'live_history_limit' => (int) env('LLM_LIVE_HISTORY_LIMIT', 12),
+    'live_history_limit' => (int) env('LLM_LIVE_HISTORY_LIMIT', 40),
 
     /*
     | Auto follow-ups read this many prior WhatsApp messages per lead, plus

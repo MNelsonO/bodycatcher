@@ -26,6 +26,7 @@ class SendWhatsAppMessage
     public function __construct(
         private WhatsAppClient $client,
         private MessagingGuard $guard,
+        private ServiceWindow $window,
         private RecordActivity $activity,
     ) {}
 
@@ -48,7 +49,7 @@ class SendWhatsAppMessage
 
             $locked->load('contact');
             $message = $this->storeQueued($locked, $body, $actor, $origin, $idempotencyKey);
-            $result = $this->client->sendText($locked->contact->primary_phone, $body, $idempotencyKey);
+            $result = $this->dispatchSend($locked, $body, $idempotencyKey);
 
             return new OutboundSend($message, false, $this->applyAttempt($message, $result));
         });
@@ -100,9 +101,9 @@ class SendWhatsAppMessage
                 return false;
             }
 
-            $result = $this->client->sendText(
-                $lead->contact->primary_phone,
-                $message->body,
+            $result = $this->dispatchSend(
+                $lead,
+                (string) $message->body,
                 (string) $message->idempotency_key,
             );
 
@@ -112,6 +113,21 @@ class SendWhatsAppMessage
         if ($retry) {
             $this->dispatchRetry($messageId);
         }
+    }
+
+    private function dispatchSend(Lead $lead, string $body, string $idempotencyKey): WhatsAppSendResult
+    {
+        $lead->loadMissing('contact');
+        $to = $lead->contact->primary_phone;
+        $useTemplate = $this->guard->enforcesServiceWindow()
+            && ! $this->window->isOpen($lead->contact)
+            && $this->guard->canSendMetaTemplateOutsideWindow();
+
+        if ($useTemplate) {
+            return $this->client->sendTemplate($to, $body, $idempotencyKey);
+        }
+
+        return $this->client->sendText($to, $body, $idempotencyKey);
     }
 
     private function storeRefusal(Lead $lead, string $body, User $actor, MessageOrigin $origin, string $reason): Message

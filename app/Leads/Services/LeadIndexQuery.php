@@ -25,7 +25,13 @@ class LeadIndexQuery
         $search = trim($request->string('q')->toString());
 
         $query = Lead::query()
-            ->with(['contact.phones', 'product', 'currentStage', 'pipeline']);
+            ->with([
+                'contact.phones',
+                'product',
+                'currentStage',
+                'pipeline',
+                'conversation' => fn ($conversation) => $conversation->withCount('messages'),
+            ]);
 
         $followUp = $request->string('follow_up')->toString();
 
@@ -120,6 +126,7 @@ class LeadIndexQuery
             'follow_up_rank' => (int) $lead->follow_up_rank,
             'follow_up_rank_reason' => $lead->follow_up_rank_reason,
             'follow_up_source' => $lead->follow_up_source,
+            'message_count' => (int) ($lead->conversation?->messages_count ?? 0),
         ];
     }
 

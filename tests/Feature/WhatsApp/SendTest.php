@@ -37,7 +37,8 @@ it('blocks outbound when the contact has opted out', function () {
         ->and(Message::query()->where('status', MessageStatus::Queued)->count())->toBe(0);
 });
 
-it('refuses free-form text outside the 24-hour window', function () {
+it('refuses free-form text outside the 24-hour window on Meta without a template', function () {
+    config(['whatsapp.driver' => 'meta', 'whatsapp.template.name' => '']);
     $lead = whatsappOpenLead();
     whatsappInbound($lead, now()->subHours(25));
 
@@ -53,8 +54,51 @@ it('refuses free-form text outside the 24-hour window', function () {
 
     expect(app(FakeWhatsAppClient::class)->sends)->toBe(0)
         ->and($refused)->not->toBeNull()
-        ->and($refused->refusal_reason)->toContain('template')
+        ->and($refused->refusal_reason)->toContain('WHATSAPP_TEMPLATE_NAME')
         ->and(Message::query()->where('status', MessageStatus::Queued)->count())->toBe(0);
+});
+
+it('sends a Meta template when the 24-hour window is closed', function () {
+    config([
+        'whatsapp.driver' => 'meta',
+        'whatsapp.template.name' => 'desk_follow_up',
+        'whatsapp.template.language' => 'en',
+    ]);
+    $lead = whatsappOpenLead();
+    whatsappInbound($lead, now()->subHours(25));
+
+    $outcome = app(SendWhatsAppMessage::class)->send(
+        $lead->fresh() ?? $lead,
+        'Checking in about the laundry system.',
+        User::query()->firstOrFail(),
+        MessageOrigin::Manual,
+        'window-template-1',
+    );
+
+    expect($outcome->message->status)->toBe(MessageStatus::Sent)
+        ->and(app(FakeWhatsAppClient::class)->sends)->toBe(1)
+        ->and(app(FakeWhatsAppClient::class)->calls[0]['mode'])->toBe('template');
+});
+
+it('allows free-form FlareSend text outside any 24-hour window', function () {
+    config([
+        'whatsapp.driver' => 'flaresend',
+        'whatsapp.flaresend.api_key' => 'test-flare-key',
+    ]);
+    $lead = whatsappOpenLead();
+    whatsappInbound($lead, now()->subHours(48));
+
+    $outcome = app(SendWhatsAppMessage::class)->send(
+        $lead->fresh() ?? $lead,
+        'Following up on POS.',
+        User::query()->firstOrFail(),
+        MessageOrigin::Manual,
+        'flare-window-1',
+    );
+
+    expect($outcome->message->status)->toBe(MessageStatus::Sent)
+        ->and(app(FakeWhatsAppClient::class)->sends)->toBe(1)
+        ->and(app(FakeWhatsAppClient::class)->calls[0]['mode'])->toBe('text');
 });
 
 it('stores the provider id when a manual send is inside the window', function () {

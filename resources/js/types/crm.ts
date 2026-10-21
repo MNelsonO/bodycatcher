@@ -59,6 +59,7 @@ export type LeadRow = {
     next_follow_up_on: string | null;
     next_follow_up_label: string | null;
     follow_up_state: string;
+    message_count: number;
 };
 
 export type StageOption = {
@@ -133,7 +134,13 @@ export type LeadDetail = {
     }>;
     whatsapp: {
         configured: boolean;
+        driver: string;
         window_open: boolean;
+        enforces_service_window: boolean;
+        template_ready: boolean;
+        template_name: string;
+        can_send: boolean;
+        can_send_free_form: boolean;
         last_inbound_label: string | null;
         window_closes_label: string | null;
         automation_paused: boolean;
@@ -176,6 +183,11 @@ export type LeadDetail = {
             score_reasons: string[];
             extraction: Array<{ key: string; label: string; value: string }>;
             suggested_stage: { id: number; name: string } | null;
+            suggested_product: {
+                id: number;
+                name: string;
+                reason: string | null;
+            } | null;
             stage_reason: string | null;
             stage_rejected_reason: string | null;
             knowledge: Array<{ id: number; title: string }>;

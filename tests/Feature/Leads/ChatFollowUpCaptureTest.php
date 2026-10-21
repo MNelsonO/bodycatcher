@@ -1,5 +1,6 @@
 <?php
 
+use App\Calendar\CalendarActivity;
 use App\Contacts\ConsentStatus;
 use App\Contacts\Contact;
 use App\Leads\Jobs\CaptureChatFollowUpJob;
@@ -49,6 +50,16 @@ it('captures a chat date onto the lead and ranks it for follow-up', function () 
         ->and($lead->follow_up_rank)->toBeGreaterThan(0)
         ->and($lead->next_conversation_at)->not->toBeNull()
         ->and($owner->email)->not->toBe('');
+
+    $activity = CalendarActivity::query()->where('lead_id', $lead->id)->first();
+
+    expect($activity)->not->toBeNull()
+        ->and($activity->user_id)->toBe($owner->id)
+        ->and($activity->activity_on?->toDateString())->toBe('2026-10-17')
+        ->and($activity->activity_type)->toBe('meeting')
+        ->and($activity->title)->toContain('Amina Wanjiku')
+        ->and($activity->title)->toContain($desk['product']->name)
+        ->and($activity->notes)->not->toBe('');
 });
 
 it('skips opted-out contacts', function () {

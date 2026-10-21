@@ -23,8 +23,19 @@ class MessagingGuard
             return 'This contact opted out. No WhatsApp message can be sent.';
         }
 
-        if (! $this->window->isOpen($contact)) {
-            return 'The 24-hour customer-service window is closed. Free-form text needs a template, and this desk does not send templates yet.';
+        if ($this->enforcesServiceWindow() && ! $this->window->isOpen($contact)) {
+            if ($this->canSendMetaTemplateOutsideWindow()) {
+                // SendWhatsAppMessage will deliver as an approved Cloud API template.
+                return null;
+            }
+
+            $driver = (string) config('whatsapp.driver', 'meta');
+
+            if ($driver === 'meta') {
+                return 'The 24-hour customer-service window is closed. Set WHATSAPP_TEMPLATE_NAME to an approved Meta template (with a body variable for your message), or wait until the contact messages you again.';
+            }
+
+            return 'The 24-hour customer-service window is closed. Free-form WhatsApp text needs a recent inbound message.';
         }
 
         if ($origin === MessageOrigin::Automatic) {
@@ -40,6 +51,24 @@ class MessagingGuard
         }
 
         return null;
+    }
+
+    /**
+     * Meta Cloud API and Twilio enforce the customer-care window.
+     * FlareSend (session/Baileys) does not — free-form text is always allowed.
+     */
+    public function enforcesServiceWindow(): bool
+    {
+        return match ((string) config('whatsapp.driver', 'meta')) {
+            'flaresend' => false,
+            default => true,
+        };
+    }
+
+    public function canSendMetaTemplateOutsideWindow(): bool
+    {
+        return (string) config('whatsapp.driver', 'meta') === 'meta'
+            && filled(config('whatsapp.template.name'));
     }
 
     public function driverConfigured(): bool

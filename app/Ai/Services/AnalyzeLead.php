@@ -16,6 +16,7 @@ use App\Leads\ActivityEvent;
 use App\Leads\Lead;
 use App\Models\User;
 use App\SalesPipelines\PipelineStage;
+use App\Settings\Product;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -90,11 +91,12 @@ class AnalyzeLead
         $lead->load(['contact.notes', 'interactions', 'product', 'currentStage.outgoingTransitions.toStage', 'conversation.messages']);
         $articles = $this->knowledge->forLead($lead);
         $permitted = $this->permittedStages($lead);
+        $products = $this->activeProducts();
         $raw = $this->client->complete(
             $this->systemPrompt(),
-            $this->userPrompt($lead, $articles, $permitted),
+            $this->userPrompt($lead, $articles, $permitted, $products),
         );
-        $parsed = $this->parser->parse($raw, $this->stageIds($permitted));
+        $parsed = $this->parser->parse($raw, $this->stageIds($permitted), $this->productIds($products));
 
         DB::transaction(function () use ($analysis, $lead, $articles, $parsed): void {
             $locked = LeadAnalysis::query()->lockForUpdate()->find($analysis->id);
@@ -182,11 +184,13 @@ class AnalyzeLead
 You help a sales desk read one lead. Reply with one JSON object and no other text.
 Keys:
 summary: string, a short brief of the conversation.
-extraction: object with only facts the contact stated. Allowed keys are business_problem, current_solution, branch_count, budget_note, decision_maker_status (unknown, yes, or no), purchase_timeline_note, next_action, next_follow_up_on (YYYY-MM-DD). Omit keys you cannot support from the conversation.
+extraction: object with only facts the contact stated. Allowed keys are business_problem, current_solution, branch_count, budget_note, decision_maker_status (unknown, yes, or no), purchase_timeline_note, next_action, next_follow_up_on (YYYY-MM-DD), suggested_product_id (active product id from the list), product_reason (why that product fits). Omit keys you cannot support from the conversation.
 score: integer from 0 to 100 for how ready this lead is to buy.
 score_reasons: array of short strings that explain the score.
 suggested_stage_id: one permitted stage id, or null.
 stage_reason: why that stage fits, or null.
+suggested_product_id: optional active product id when a different catalog product fits better than the assigned one, or null.
+product_reason: why that product fits, or null.
 reply_draft: a short WhatsApp reply in plain language, or null if a reply would be wrong.
 Do not invent prices, dates, branch counts, or stages that were not provided.
 PROMPT;
@@ -195,10 +199,12 @@ PROMPT;
     /**
      * @param  Collection<int, KnowledgeArticle>  $articles
      * @param  Collection<int, PipelineStage>  $stages
+     * @param  Collection<int, Product>  $products
      */
-    private function userPrompt(Lead $lead, Collection $articles, Collection $stages): string
+    private function userPrompt(Lead $lead, Collection $articles, Collection $stages, Collection $products): string
     {
         $stageLines = $stages->map(fn (PipelineStage $stage): string => $stage->id.' '.$stage->name.' ('.$stage->kind->value.')')->implode("\n");
+        $productLines = $products->map(fn (Product $product): string => $product->id.' '.$product->name.($product->slug ? ' ('.$product->slug.')' : ''))->implode("\n");
         $knowledge = $articles->map(function (KnowledgeArticle $article): string {
             return 'Article '.$article->id.' — '.$article->title."\n".mb_substr($article->body, 0, 1500);
         })->implode("\n\n");
@@ -227,8 +233,9 @@ PROMPT;
             $touches !== '' ? "Desk touches:\n".$touches : null,
             'Next conversation: '.($lead->next_conversation_at?->toDateTimeString() ?? 'none'),
             'Conversations stopped: '.($lead->conversations_stopped ? 'yes' : 'no'),
-            'Product: '.$lead->product->name,
+            'Assigned product: '.$lead->product->name.' (id '.$lead->product->id.')',
             'Product notes: '.($lead->product->description ?? 'none'),
+            "Active products (use id for suggested_product_id):\n".($productLines !== '' ? $productLines : 'none'),
             'Current stage: '.$lead->currentStage->name,
             "Permitted next stages:\n".($stageLines !== '' ? $stageLines : 'none'),
             'Known problem: '.($lead->business_problem ?? 'none'),
@@ -243,6 +250,18 @@ PROMPT;
     }
 
     /**
+     * @return Collection<int, Product>
+     */
+    private function activeProducts(): Collection
+    {
+        return Product::query()
+            ->where('is_active', true)
+            ->whereNull('archived_at')
+            ->orderBy('name')
+            ->get(['id', 'name', 'slug']);
+    }
+
+    /**
      * @param  Collection<int, PipelineStage>  $stages
      * @return list<int>
      */
@@ -252,6 +271,21 @@ PROMPT;
 
         foreach ($stages as $stage) {
             $ids[] = $stage->id;
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @param  Collection<int, Product>  $products
+     * @return list<int>
+     */
+    private function productIds(Collection $products): array
+    {
+        $ids = [];
+
+        foreach ($products as $product) {
+            $ids[] = $product->id;
         }
 
         return $ids;

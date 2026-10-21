@@ -1,5 +1,6 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
+import { MessageCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
 import { LeadAnalysisPanel } from '@/components/crm/lead-analysis';
 import { FollowUpTasks } from '@/components/crm/follow-up-tasks';
@@ -38,6 +39,21 @@ export default function LeadShow({
             ? lead.contact.full_name
             : lead.contact.primary_phone;
 
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        if (window.location.hash !== '#chat') {
+            return;
+        }
+
+        document.getElementById('chat')?.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start',
+        });
+    }, [lead.id, lead.message_count]);
+
     return (
         <>
             <Head title={`${displayName} · ${lead.product.name}`} />
@@ -48,6 +64,15 @@ export default function LeadShow({
                     description={`${lead.contact.business_name ?? 'No business name'} · ${lead.contact.primary_phone}`}
                     actions={
                         <>
+                            <Button asChild>
+                                <a href="#chat">
+                                    <MessageCircle className="size-4" />
+                                    Chat
+                                    {lead.message_count > 0
+                                        ? ` (${lead.message_count})`
+                                        : ''}
+                                </a>
+                            </Button>
                             <StageDialog lead={lead} />
                             <InteractionDialog leadId={lead.id} />
                             <NoteDialog leadId={lead.id} />
@@ -117,11 +142,6 @@ export default function LeadShow({
                     ) : null}
                 </div>
 
-                <LeadBriefing
-                    lead={lead}
-                    productOptions={product_options}
-                />
-
                 {lead.escalation ? (
                     <EscalationPanel
                         leadId={lead.id}
@@ -129,17 +149,23 @@ export default function LeadShow({
                     />
                 ) : null}
 
-                <Surface>
+                <Surface id="chat" className="scroll-mt-20">
                     <SurfaceHeader
                         title="Chat history"
-                        description={`${lead.message_count} message${lead.message_count === 1 ? '' : 's'} on this lead. WhatsApp name shown above is the contact display name we fetched or saved.`}
+                        description={`${lead.message_count} message${lead.message_count === 1 ? '' : 's'} on this lead. Full WhatsApp thread for this person.`}
+                        badge={
+                            <Badge variant="laundry">
+                                {lead.message_count} msg
+                            </Badge>
+                        }
                     />
                     <SurfaceBody>
                         <WhatsAppSend lead={lead} />
                         {lead.messages.length === 0 ? (
                             <p className="mt-3 text-sm text-muted-foreground">
-                                No messages yet. Inbound WhatsApp will appear
-                                here.
+                                No messages yet on this lead. When WhatsApp
+                                inbound lands, the thread shows here. You can
+                                also log a desk message below.
                             </p>
                         ) : (
                             <ol className="mt-4 space-y-3">
@@ -226,6 +252,11 @@ export default function LeadShow({
                         )}
                     </SurfaceBody>
                 </Surface>
+
+                <LeadBriefing
+                    lead={lead}
+                    productOptions={product_options}
+                />
 
                 <div className="grid gap-6 xl:grid-cols-3">
                     <section className="space-y-6 xl:col-span-2">
@@ -565,7 +596,7 @@ function LeadBriefing({
         <Surface>
             <SurfaceHeader
                 title="What is this lead?"
-                description="Name comes from WhatsApp (or the name you saved). Pick the product when ads bring POS, laundry, hotel, and others into the same inbox."
+                description="We fetch the WhatsApp username (push name) — formal chats often have no business name. Status stays whatever stage you marked. Pick the product when ads mix POS, laundry, hotel, etc."
             />
             <SurfaceBody className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
                 <div className="space-y-4">
@@ -995,13 +1026,18 @@ function WhatsAppSend({ lead }: { lead: LeadDetail }) {
                             </p>
                         ) : null}
                         {!desk.configured ? (
-                            <p className="mt-1 text-muted-foreground">
-                                The WhatsApp token or phone number id is
-                                missing. Nothing will be sent until an owner
-                                sets those environment variables.
+                            <p className="mt-1 text-destructive">
+                                WhatsApp ({desk.driver}) is not configured.
+                                Fix keys on Integrations / WhatsApp settings.
                             </p>
                         ) : null}
-                        {desk.window_open ? (
+                        {!desk.enforces_service_window ? (
+                            <p className="mt-1 text-muted-foreground">
+                                FlareSend allows free-form chat anytime (no
+                                Meta 24-hour window). Last inbound{' '}
+                                {desk.last_inbound_label ?? 'none yet'}.
+                            </p>
+                        ) : desk.can_send_free_form ? (
                             <p className="mt-1 text-muted-foreground">
                                 Customer-service window is open
                                 {desk.window_closes_label
@@ -1010,14 +1046,30 @@ function WhatsAppSend({ lead }: { lead: LeadDetail }) {
                                 . Last inbound{' '}
                                 {desk.last_inbound_label ?? 'unknown'}.
                             </p>
-                        ) : (
+                        ) : desk.template_ready ? (
                             <p className="mt-1 text-muted-foreground">
+                                24-hour window is closed
+                                {desk.last_inbound_label
+                                    ? ` (last inbound ${desk.last_inbound_label})`
+                                    : ''}
+                                . Your message will send as Meta template{' '}
+                                <span className="font-mono text-xs">
+                                    {desk.template_name}
+                                </span>{' '}
+                                (body as {'{{1}}'}).
+                            </p>
+                        ) : (
+                            <p className="mt-1 text-destructive">
                                 The 24-hour window is closed
                                 {desk.last_inbound_label
                                     ? ` (last inbound ${desk.last_inbound_label})`
-                                    : ' because there is no inbound WhatsApp message'}
-                                . Free-form text needs a template. This desk
-                                does not send templates.
+                                    : ' — no inbound WhatsApp yet'}
+                                . Set{' '}
+                                <span className="font-mono text-xs">
+                                    WHATSAPP_TEMPLATE_NAME
+                                </span>{' '}
+                                to an approved Meta template, or wait for them
+                                to message you again.
                             </p>
                         )}
                         {desk.automation_paused ||
@@ -1045,8 +1097,20 @@ function WhatsAppSend({ lead }: { lead: LeadDetail }) {
                         required
                         error={errors.body}
                     />
-                    <Button type="submit" disabled={processing}>
-                        Send on WhatsApp
+                    <Button
+                        type="submit"
+                        disabled={
+                            processing ||
+                            desk.opted_out ||
+                            !desk.configured ||
+                            !desk.can_send
+                        }
+                    >
+                        {desk.can_send_free_form
+                            ? 'Send on WhatsApp'
+                            : desk.template_ready
+                              ? 'Send as template'
+                              : 'Cannot send yet'}
                     </Button>
                 </>
             )}

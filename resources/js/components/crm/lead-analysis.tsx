@@ -214,6 +214,47 @@ export function LeadAnalysisPanel({
                             </p>
                         ) : null}
 
+                        {latest.suggested_product ? (
+                            <Form
+                                action={`/leads/${leadId}`}
+                                method="put"
+                                className="grid gap-2"
+                            >
+                                {({ errors, processing }) => (
+                                    <>
+                                        <input
+                                            type="hidden"
+                                            name="product_id"
+                                            value={latest.suggested_product?.id}
+                                        />
+                                        <p className="text-sm">
+                                            Suggested product:{' '}
+                                            <span className="font-medium">
+                                                {latest.suggested_product?.name}
+                                            </span>
+                                            {latest.suggested_product?.reason
+                                                ? ` — ${latest.suggested_product.reason}`
+                                                : ''}
+                                        </p>
+                                        {errors.product_id ? (
+                                            <p className="text-sm text-destructive">
+                                                {errors.product_id}
+                                            </p>
+                                        ) : null}
+                                        <div>
+                                            <Button
+                                                type="submit"
+                                                variant="outline"
+                                                disabled={processing}
+                                            >
+                                                Apply suggested product
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
+                            </Form>
+                        ) : null}
+
                         {latest.draft ? (
                             <DraftForm leadId={leadId} draft={latest.draft} />
                         ) : (

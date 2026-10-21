@@ -12,8 +12,9 @@ class AnalysisParser
 {
     /**
      * @param  list<int>  $permittedStageIds
+     * @param  list<int>  $activeProductIds
      */
-    public function parse(string $raw, array $permittedStageIds): ParsedAnalysis
+    public function parse(string $raw, array $permittedStageIds, array $activeProductIds = []): ParsedAnalysis
     {
         $decoded = $this->decode($raw);
 
@@ -28,10 +29,20 @@ class AnalysisParser
         }
 
         [$stageId, $stageReason, $rejected] = $this->stage($decoded, $permittedStageIds);
+        $extractionSource = is_array($decoded['extraction'] ?? null) ? $decoded['extraction'] : [];
+
+        // Accept product suggestion at top level or inside extraction.
+        if (! isset($extractionSource['suggested_product_id']) && isset($decoded['suggested_product_id'])) {
+            $extractionSource['suggested_product_id'] = $decoded['suggested_product_id'];
+        }
+
+        if (! isset($extractionSource['product_reason']) && isset($decoded['product_reason'])) {
+            $extractionSource['product_reason'] = $decoded['product_reason'];
+        }
 
         return new ParsedAnalysis(
             summary: mb_substr(trim($summary), 0, 2000),
-            extraction: $this->extraction(is_array($decoded['extraction'] ?? null) ? $decoded['extraction'] : []),
+            extraction: $this->extraction($extractionSource, $activeProductIds),
             score: $this->score($decoded),
             scoreReasons: $this->score($decoded) === null ? [] : $this->reasons($decoded['score_reasons'] ?? null),
             suggestedStageId: $stageId,
@@ -61,14 +72,15 @@ class AnalysisParser
 
     /**
      * @param  array<mixed>  $decoded
+     * @param  list<int>  $activeProductIds
      * @return array<string, mixed>
      */
-    private function extraction(array $decoded): array
+    private function extraction(array $decoded, array $activeProductIds = []): array
     {
         $clean = [];
 
-        foreach (['business_problem', 'current_solution', 'budget_note', 'purchase_timeline_note', 'next_action'] as $key) {
-            $value = $this->text($decoded[$key] ?? null, 2000);
+        foreach (['business_problem', 'current_solution', 'budget_note', 'purchase_timeline_note', 'next_action', 'product_reason'] as $key) {
+            $value = $this->text($decoded[$key] ?? null, $key === 'product_reason' ? 500 : 2000);
 
             if ($value !== null) {
                 $clean[$key] = $value;
@@ -99,6 +111,24 @@ class AnalysisParser
 
         if ($date !== null) {
             $clean['next_follow_up_on'] = $date;
+        }
+
+        $suggestedProduct = $decoded['suggested_product_id'] ?? null;
+
+        if (
+            (is_int($suggestedProduct) || (is_string($suggestedProduct) && ctype_digit($suggestedProduct)))
+            && $activeProductIds !== []
+        ) {
+            $productId = (int) $suggestedProduct;
+
+            if (in_array($productId, $activeProductIds, true)) {
+                $clean['suggested_product_id'] = $productId;
+            }
+        }
+
+        // Drop orphan product_reason when no valid product id was accepted.
+        if (! isset($clean['suggested_product_id'])) {
+            unset($clean['product_reason']);
         }
 
         return $clean;

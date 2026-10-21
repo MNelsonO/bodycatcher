@@ -42,6 +42,17 @@ return [
     'service_window_hours' => 24,
 
     /*
+    | Meta Cloud API only: approved template used when the 24-hour window
+    | is closed. The desk message body is sent as body parameter {{1}}.
+    | FlareSend ignores this — free-form text is always allowed there.
+    |
+    */
+    'template' => [
+        'name' => env('WHATSAPP_TEMPLATE_NAME', ''),
+        'language' => env('WHATSAPP_TEMPLATE_LANGUAGE', 'en'),
+    ],
+
+    /*
     | Opt-out is an exact match on the whole inbound text, after trimming
     | and lowercasing. No other wording is treated as an opt-out.
     |

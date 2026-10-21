@@ -93,15 +93,21 @@ export function PageHeader({
 type SurfaceProps = {
     children: ReactNode;
     className?: string;
+    id?: string;
     as?: 'section' | 'div' | 'article';
 };
 
 export function Surface({
     children,
     className,
+    id,
     as: Tag = 'section',
 }: SurfaceProps) {
-    return <Tag className={cn(surfaceClass, className)}>{children}</Tag>;
+    return (
+        <Tag id={id} className={cn(surfaceClass, className)}>
+            {children}
+        </Tag>
+    );
 }
 
 type SurfaceHeaderProps = {

@@ -10,7 +10,9 @@ use App\Conversations\Message;
 use App\Conversations\MessageAttachment;
 use App\FollowUps\FollowUpTask;
 use App\Settings\DisplayClock;
+use App\Settings\Product;
 use App\WhatsApp\DeskSetting;
+use App\WhatsApp\Services\MessagingGuard;
 use App\WhatsApp\Services\ServiceWindow;
 
 class LeadPageData
@@ -321,16 +323,25 @@ class LeadPageData
      */
     private function whatsapp(Lead $lead): array
     {
-        $token = config('whatsapp.token');
-        $phoneNumberId = config('whatsapp.phone_number_id');
+        $guard = app(MessagingGuard::class);
         $lastInbound = $this->window->lastInboundAt($lead->contact);
         $open = $this->window->isOpen($lead->contact);
         $hours = (int) config('whatsapp.service_window_hours');
         $closesAt = $lastInbound?->copy()->addHours($hours);
+        $enforcesWindow = $guard->enforcesServiceWindow();
+        $templateReady = $guard->canSendMetaTemplateOutsideWindow();
+        $canSendFreeForm = ! $enforcesWindow || $open;
+        $canSend = $canSendFreeForm || $templateReady;
 
         return [
-            'configured' => is_string($token) && $token !== '' && is_string($phoneNumberId) && $phoneNumberId !== '',
+            'configured' => $guard->driverConfigured(),
+            'driver' => (string) config('whatsapp.driver', 'meta'),
             'window_open' => $open,
+            'enforces_service_window' => $enforcesWindow,
+            'template_ready' => $templateReady,
+            'template_name' => (string) config('whatsapp.template.name'),
+            'can_send' => $canSend,
+            'can_send_free_form' => $canSendFreeForm,
             'last_inbound_label' => $this->clock->formatDateTime($lastInbound),
             'window_closes_label' => $open ? $this->clock->formatDateTime($closesAt) : null,
             'automation_paused' => $lead->automation_paused,
@@ -397,6 +408,28 @@ class LeadPageData
             ? collect()
             : KnowledgeArticle::query()->whereIn('id', $articleIds)->get(['id', 'title']);
 
+        $extraction = is_array($latest->extraction) ? $latest->extraction : [];
+        $suggestedProductId = $extraction['suggested_product_id'] ?? null;
+        $suggestedProduct = null;
+
+        if (is_int($suggestedProductId) || (is_string($suggestedProductId) && ctype_digit($suggestedProductId))) {
+            $product = Product::query()
+                ->whereKey((int) $suggestedProductId)
+                ->where('is_active', true)
+                ->whereNull('archived_at')
+                ->first(['id', 'name']);
+
+            if ($product !== null) {
+                $suggestedProduct = [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'reason' => is_string($extraction['product_reason'] ?? null)
+                        ? $extraction['product_reason']
+                        : null,
+                ];
+            }
+        }
+
         return [
             'configured' => $configured,
             'latest' => [
@@ -410,6 +443,7 @@ class LeadPageData
                     'id' => $latest->suggestedStage->id,
                     'name' => $latest->suggestedStage->name,
                 ],
+                'suggested_product' => $suggestedProduct,
                 'stage_reason' => $latest->stage_reason,
                 'stage_rejected_reason' => $latest->stage_rejected_reason,
                 'knowledge' => $articles->map(fn (KnowledgeArticle $article): array => [

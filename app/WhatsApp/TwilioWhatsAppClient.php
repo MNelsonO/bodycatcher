@@ -64,4 +64,9 @@ class TwilioWhatsAppClient implements WhatsAppClient
 
         return WhatsAppSendResult::accepted($providerId, $raw);
     }
+
+    public function sendTemplate(string $toE164, string $body, string $idempotencyKey): WhatsAppSendResult
+    {
+        return $this->sendText($toE164, $body, $idempotencyKey);
+    }
 }
