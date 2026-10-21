@@ -34,8 +34,34 @@ it('accepts a FlareSend inbound message and opens a lead', function () {
 
     expect(WebhookEvent::query()->count())->toBe(1)
         ->and(Contact::query()->first()?->primary_phone)->toBe('+254722100201')
+        ->and(Contact::query()->first()?->full_name)->toBe('Amina Wanjiku')
         ->and(Lead::query()->count())->toBe(1)
         ->and(Message::query()->first()?->body)->toBe('Hello from FlareSend');
+});
+
+it('uses FlareSend pushName for the contact instead of WhatsApp contact', function () {
+    config([
+        'whatsapp.driver' => 'flaresend',
+        'whatsapp.flaresend.api_key' => 'fs-key',
+        'whatsapp.flaresend.webhook_secret' => '',
+    ]);
+    crmDesk();
+
+    $this->postJson('/webhooks/flaresend', [
+        'event' => 'message_received',
+        'data' => [
+            'from' => '254700111222@s.whatsapp.net',
+            'pushName' => 'Brian Otieno',
+            'message' => [
+                'extendedTextMessage' => ['text' => 'Need a hotel system'],
+            ],
+            'id' => 'fs-msg-pushname',
+            'timestamp' => now()->timestamp,
+        ],
+    ])->assertOk();
+
+    expect(Contact::query()->first()?->full_name)->toBe('Brian Otieno')
+        ->and(Contact::query()->first()?->full_name)->not->toBe('WhatsApp contact');
 });
 
 it('accepts the documented FlareSend message_received payload', function () {

@@ -48,14 +48,17 @@ class InboundConversationResolver
     private function contact(string $phone, ?string $profileName): Contact
     {
         $existing = ContactPhone::query()->where('phone', $phone)->first();
+        $name = $this->usableName($profileName, $phone);
 
         if ($existing !== null) {
-            return $existing->contact->survivor();
+            $contact = $existing->contact->survivor();
+            $this->refreshName($contact, $name);
+
+            return $contact;
         }
 
-        $name = trim((string) $profileName);
         $contact = Contact::query()->create([
-            'full_name' => $name !== '' ? $name : $phone,
+            'full_name' => $name,
             'primary_phone' => $phone,
             'preferred_channel' => PreferredChannel::Whatsapp,
             'consent_status' => ConsentStatus::Unknown,
@@ -73,6 +76,55 @@ class InboundConversationResolver
         ]);
 
         return $contact;
+    }
+
+    private function usableName(?string $profileName, string $phone): string
+    {
+        $name = trim((string) $profileName);
+
+        if ($name === '' || $this->isPlaceholderName($name)) {
+            return $phone;
+        }
+
+        return mb_substr($name, 0, 120);
+    }
+
+    private function refreshName(Contact $contact, string $incoming): void
+    {
+        if ($this->isPlaceholderName($incoming) || $incoming === $contact->primary_phone) {
+            return;
+        }
+
+        if (! $this->isPlaceholderName($contact->full_name) && $contact->full_name !== $contact->primary_phone) {
+            return;
+        }
+
+        if ($contact->full_name === $incoming) {
+            return;
+        }
+
+        $contact->full_name = $incoming;
+        $contact->save();
+    }
+
+    private function isPlaceholderName(string $name): bool
+    {
+        $lower = mb_strtolower(trim($name));
+
+        if ($lower === '') {
+            return true;
+        }
+
+        return in_array($lower, [
+            'whatsapp contact',
+            'whatsapp lead',
+            'unknown',
+            'null',
+            'undefined',
+            'contact',
+        ], true)
+            || str_starts_with($lower, 'whatsapp +')
+            || str_starts_with($lower, 'whatsapp ');
     }
 
     private function openLead(Contact $contact): Lead

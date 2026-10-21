@@ -25,7 +25,7 @@ class InboundPayloadNormalizer
             : (is_string($message['id'] ?? null) && $message['id'] !== ''
                 ? $message['id']
                 : 'flaresend-'.hash('sha256', $from.'|'.$text.'|'.$timestamp));
-        $name = is_string($data['name'] ?? null) ? $data['name'] : 'WhatsApp contact';
+        $name = $this->displayName($payload, $data, $message, $from);
 
         return $this->wrap($from, $id, $type, $text, (int) $timestamp, $name);
     }
@@ -40,7 +40,8 @@ class InboundPayloadNormalizer
         $from = $this->digits(str_replace('whatsapp:', '', $fromRaw));
         $text = (string) ($payload['Body'] ?? '');
         $id = (string) ($payload['MessageSid'] ?? ('twilio-'.hash('sha256', $from.'|'.$text)));
-        $name = is_string($payload['ProfileName'] ?? null) ? $payload['ProfileName'] : 'WhatsApp contact';
+        $name = $this->cleanName((string) ($payload['ProfileName'] ?? ''))
+            ?? $this->fallbackName($from);
         $timestamp = now()->timestamp;
 
         return $this->wrap($from, $id, 'text', $text, $timestamp, $name);
@@ -128,6 +129,86 @@ class InboundPayloadNormalizer
         }
 
         return now()->timestamp;
+    }
+
+    /**
+     * Pull a display name from the fields FlareSend / Baileys-style payloads use.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $data
+     * @param  array<string, mixed>  $message
+     */
+    private function displayName(array $payload, array $data, array $message, string $from): string
+    {
+        $candidates = [
+            $data['name'] ?? null,
+            $data['pushName'] ?? null,
+            $data['pushname'] ?? null,
+            $data['notify'] ?? null,
+            $data['verifiedName'] ?? null,
+            $data['verifiedBizName'] ?? null,
+            $data['senderName'] ?? null,
+            $data['profileName'] ?? null,
+            $data['contactName'] ?? null,
+            $message['pushName'] ?? null,
+            $message['pushname'] ?? null,
+            $payload['name'] ?? null,
+            $payload['pushName'] ?? null,
+            $payload['ProfileName'] ?? null,
+        ];
+
+        $key = is_array($data['key'] ?? null) ? $data['key'] : [];
+        $candidates[] = $key['pushName'] ?? null;
+        $candidates[] = $key['participant'] ?? null;
+
+        foreach ($candidates as $candidate) {
+            $clean = $this->cleanName(is_string($candidate) ? $candidate : '');
+
+            if ($clean !== null) {
+                return $clean;
+            }
+        }
+
+        return $this->fallbackName($from);
+    }
+
+    private function cleanName(string $value): ?string
+    {
+        $name = trim(preg_replace('/\s+/', ' ', $value) ?? '');
+
+        if ($name === '') {
+            return null;
+        }
+
+        $lower = mb_strtolower($name);
+        $junk = [
+            'whatsapp contact',
+            'whatsapp lead',
+            'unknown',
+            'null',
+            'undefined',
+            'contact',
+        ];
+
+        if (in_array($lower, $junk, true)) {
+            return null;
+        }
+
+        // Ignore raw JIDs / bare phone strings masquerading as names.
+        if (str_contains($name, '@') || preg_match('/^\+?\d{8,15}$/', $name) === 1) {
+            return null;
+        }
+
+        return mb_substr($name, 0, 120);
+    }
+
+    private function fallbackName(string $from): string
+    {
+        if ($from === '') {
+            return 'WhatsApp contact';
+        }
+
+        return 'WhatsApp +'.$from;
     }
 
     private function jid(string $value): string

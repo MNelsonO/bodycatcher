@@ -200,24 +200,34 @@ class InboundWhatsAppProcessor
      */
     private function profileName(array $profiles, string $waId): ?string
     {
+        $want = preg_replace('/\D+/', '', $waId) ?? $waId;
+
         foreach ($profiles as $profile) {
             if (! is_array($profile)) {
                 continue;
             }
 
-            if (($profile['wa_id'] ?? null) !== $waId) {
+            $candidateId = preg_replace('/\D+/', '', (string) ($profile['wa_id'] ?? '')) ?? '';
+
+            if ($candidateId !== '' && $candidateId !== $want) {
                 continue;
             }
 
             $profileBlock = $profile['profile'] ?? null;
 
             if (! is_array($profileBlock)) {
-                return null;
+                if ($candidateId === $want) {
+                    return null;
+                }
+
+                continue;
             }
 
             $name = $profileBlock['name'] ?? null;
 
-            return is_string($name) ? $name : null;
+            if (is_string($name) && trim($name) !== '') {
+                return trim($name);
+            }
         }
 
         return null;
