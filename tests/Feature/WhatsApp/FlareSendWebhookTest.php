@@ -81,3 +81,25 @@ it('rejects a FlareSend webhook with a bad secret', function () {
 
     expect(WebhookEvent::query()->count())->toBe(0);
 });
+
+it('accepts a FlareSend webhook when the provider sends no secret header', function () {
+    config([
+        'whatsapp.driver' => 'flaresend',
+        'whatsapp.flaresend.api_key' => 'fs-key',
+        'whatsapp.flaresend.webhook_secret' => 'fs-secret',
+    ]);
+    crmDesk();
+
+    $this->postJson('/webhooks/flaresend', [
+        'event' => 'message_received',
+        'data' => [
+            'from' => '254722100202@s.whatsapp.net',
+            'message' => ['extendedTextMessage' => ['text' => 'no header']],
+            'id' => 'fs-msg-no-secret',
+            'timestamp' => now()->timestamp,
+        ],
+    ])->assertOk();
+
+    expect(WebhookEvent::query()->count())->toBe(1)
+        ->and(Message::query()->first()?->body)->toBe('no header');
+});

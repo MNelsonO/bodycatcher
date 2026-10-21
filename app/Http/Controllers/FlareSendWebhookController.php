@@ -25,12 +25,21 @@ class FlareSendWebhookController extends Controller
         ]);
 
         $secret = (string) config('whatsapp.flaresend.webhook_secret');
-        $header = (string) $request->header('X-FlareSend-Secret', $request->header('Authorization', ''));
+        $header = (string) $request->header(
+            'X-FlareSend-Secret',
+            (string) $request->header('Authorization', ''),
+        );
 
-        if ($secret !== '' && ! $this->authorized($secret, $header)) {
+        // FlareSend's WhatsApp docs do not document a secret header. Only reject
+        // when a secret is configured AND the request sends a wrong one.
+        if ($secret !== '' && $header !== '' && ! $this->authorized($secret, $header)) {
             Log::warning('FlareSend webhook rejected: secret did not match.');
 
             return response('Invalid FlareSend secret.', 403);
+        }
+
+        if ($secret !== '' && $header === '') {
+            Log::info('FlareSend webhook accepted without secret header.');
         }
 
         $decoded = $request->all();
