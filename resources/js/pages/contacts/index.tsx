@@ -1,5 +1,13 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { SelectField, TextField } from '@/components/crm/fields';
+import {
+    Page,
+    PageHeader,
+    Surface,
+    SurfaceBody,
+    SurfaceHeader,
+    surfaceClass,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { ContactSummary, Option, Paginator } from '@/types/crm';
@@ -28,135 +36,138 @@ export default function ContactsIndex({
     return (
         <>
             <Head title="Contacts" />
-            <div className="flex flex-col gap-4 p-4 md:p-6">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <h1 className="text-xl font-semibold tracking-tight">
-                            Contacts
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Name, system they want, intent, and when you last
-                            spoke — filter by month, week, and scheduled talks.
-                        </p>
-                    </div>
-                    <Button asChild>
-                        <Link href="/contacts/create">Add contact</Link>
-                    </Button>
-                </div>
+            <Page width="desk">
+                <PageHeader
+                    title="Contacts"
+                    description="Name, system they want, intent, and when you last spoke — filter by month, week, and scheduled talks."
+                    actions={
+                        <Button asChild>
+                            <Link href="/contacts/create">Add contact</Link>
+                        </Button>
+                    }
+                />
 
-                <Form
-                    action="/contacts"
-                    method="get"
-                    className="grid max-w-5xl gap-3 md:grid-cols-2 xl:grid-cols-3"
-                >
-                    {({ processing }) => (
-                        <>
-                            <TextField
-                                name="q"
-                                label="Search name, intent, system"
-                                defaultValue={filters.q}
-                            />
-                            <SelectField
-                                name="product_id"
-                                label="System interested in"
-                                options={[
-                                    {
-                                        value: '__all__',
-                                        label: 'All systems',
-                                    },
-                                    ...product_options,
-                                ]}
-                                defaultValue={
-                                    filters.product_id !== ''
-                                        ? filters.product_id
-                                        : '__all__'
-                                }
-                            />
-                            <SelectField
-                                name="country"
-                                label="Country"
-                                options={[
-                                    {
-                                        value: '__all__',
-                                        label: 'All countries',
-                                    },
-                                    ...country_options,
-                                ]}
-                                defaultValue={
-                                    filters.country !== ''
-                                        ? filters.country
-                                        : '__all__'
-                                }
-                            />
-                            <SelectField
-                                name="spoke"
-                                label="Last conversation"
-                                options={spoke_options}
-                                defaultValue={
-                                    filters.spoke !== ''
-                                        ? filters.spoke
-                                        : '__all__'
-                                }
-                            />
-                            <SelectField
-                                name="scheduled"
-                                label="Scheduled talk"
-                                options={scheduled_options}
-                                defaultValue={
-                                    filters.scheduled !== ''
-                                        ? filters.scheduled
-                                        : '__all__'
-                                }
-                            />
-                            <div className="flex items-end gap-2">
-                                <Button type="submit" disabled={processing}>
-                                    Filter
-                                </Button>
-                                <Button variant="outline" asChild>
-                                    <Link href="/contacts">Clear</Link>
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </Form>
+                <Surface>
+                    <SurfaceHeader title="Filters" />
+                    <SurfaceBody>
+                        <Form
+                            action="/contacts"
+                            method="get"
+                            className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+                        >
+                            {({ processing }) => (
+                                <>
+                                    <TextField
+                                        name="q"
+                                        label="Search name, intent, system"
+                                        defaultValue={filters.q}
+                                    />
+                                    <SelectField
+                                        name="product_id"
+                                        label="System interested in"
+                                        options={[
+                                            {
+                                                value: '__all__',
+                                                label: 'All systems',
+                                            },
+                                            ...product_options,
+                                        ]}
+                                        defaultValue={
+                                            filters.product_id !== ''
+                                                ? filters.product_id
+                                                : '__all__'
+                                        }
+                                    />
+                                    <SelectField
+                                        name="country"
+                                        label="Country"
+                                        options={[
+                                            {
+                                                value: '__all__',
+                                                label: 'All countries',
+                                            },
+                                            ...country_options,
+                                        ]}
+                                        defaultValue={
+                                            filters.country !== ''
+                                                ? filters.country
+                                                : '__all__'
+                                        }
+                                    />
+                                    <SelectField
+                                        name="spoke"
+                                        label="Last conversation"
+                                        options={spoke_options}
+                                        defaultValue={
+                                            filters.spoke !== ''
+                                                ? filters.spoke
+                                                : '__all__'
+                                        }
+                                    />
+                                    <SelectField
+                                        name="scheduled"
+                                        label="Scheduled talk"
+                                        options={scheduled_options}
+                                        defaultValue={
+                                            filters.scheduled !== ''
+                                                ? filters.scheduled
+                                                : '__all__'
+                                        }
+                                    />
+                                    <div className="flex items-end gap-2">
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            Filter
+                                        </Button>
+                                        <Button variant="outline" asChild>
+                                            <Link href="/contacts">Clear</Link>
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </Form>
+                    </SurfaceBody>
+                </Surface>
 
                 {contacts.data.length === 0 ? (
-                    <div className="rounded-lg border border-dashed p-8 text-sm text-muted-foreground">
+                    <div className="rounded-xl border border-dashed border-input bg-card px-6 py-12 text-center text-sm text-muted-foreground">
                         No contacts match these filters. Widen the date range or
                         clear filters.
                     </div>
                 ) : (
-                    <div className="overflow-x-auto rounded-lg border">
+                    <div className={`overflow-x-auto ${surfaceClass}`}>
                         <table className="w-full min-w-[720px] text-left text-sm">
-                            <thead className="border-b bg-muted/40 text-muted-foreground">
+                            <thead className="border-b border-border bg-secondary text-secondary-foreground">
                                 <tr>
-                                    <th className="px-4 py-3 font-medium">
+                                    <th className="px-5 py-3 font-medium">
                                         Name
                                     </th>
-                                    <th className="px-4 py-3 font-medium">
+                                    <th className="px-5 py-3 font-medium">
                                         System interested in
                                     </th>
-                                    <th className="px-4 py-3 font-medium">
+                                    <th className="px-5 py-3 font-medium">
                                         Intent
                                     </th>
-                                    <th className="px-4 py-3 font-medium">
+                                    <th className="px-5 py-3 font-medium">
                                         Last spoke
                                     </th>
-                                    <th className="px-4 py-3 font-medium">
+                                    <th className="px-5 py-3 font-medium">
                                         Next talk
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y">
+                            <tbody className="divide-y divide-border">
                                 {contacts.data.map((contact) => (
                                     <tr
                                         key={contact.id}
-                                        className="hover:bg-muted/30"
+                                        className="bg-card hover:bg-muted"
                                     >
-                                        <td className="px-4 py-3 align-top">
+                                        <td className="px-5 py-4 align-top">
                                             <Link
                                                 href={`/contacts/${contact.id}`}
-                                                className="font-medium hover:underline"
+                                                className="font-semibold text-primary hover:underline"
                                             >
                                                 {contact.full_name}
                                             </Link>
@@ -179,7 +190,7 @@ export default function ContactsIndex({
                                                 </Badge>
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3 align-top">
+                                        <td className="px-5 py-4 align-top">
                                             {contact.interested_system ? (
                                                 <div className="space-y-1">
                                                     <span>
@@ -210,7 +221,7 @@ export default function ContactsIndex({
                                                 </span>
                                             )}
                                         </td>
-                                        <td className="px-4 py-3 align-top">
+                                        <td className="px-5 py-4 align-top">
                                             <p className="line-clamp-3 max-w-xs">
                                                 {contact.intent ?? (
                                                     <span className="text-muted-foreground">
@@ -219,16 +230,16 @@ export default function ContactsIndex({
                                                 )}
                                             </p>
                                         </td>
-                                        <td className="px-4 py-3 align-top tabular-nums text-muted-foreground">
+                                        <td className="px-5 py-4 align-top tabular-nums text-muted-foreground">
                                             {contact.last_spoke_at ?? '—'}
                                         </td>
-                                        <td className="px-4 py-3 align-top tabular-nums text-muted-foreground">
+                                        <td className="px-5 py-4 align-top tabular-nums text-muted-foreground">
                                             {contact.next_talk_at ?? '—'}
                                             {contact.open_lead_id ? (
                                                 <div className="mt-1">
                                                     <Link
                                                         href={`/leads/${contact.open_lead_id}`}
-                                                        className="text-xs underline"
+                                                        className="text-xs text-primary underline"
                                                     >
                                                         Open lead
                                                     </Link>
@@ -241,7 +252,7 @@ export default function ContactsIndex({
                         </table>
                     </div>
                 )}
-            </div>
+            </Page>
         </>
     );
 }

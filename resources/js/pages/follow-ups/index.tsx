@@ -1,5 +1,12 @@
 import { Form, Head } from '@inertiajs/react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
+import {
+    Page,
+    PageHeader,
+    Surface,
+    SurfaceBody,
+    SurfaceHeader,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { Option } from '@/types/crm';
@@ -73,116 +80,133 @@ export default function FollowUps({
     return (
         <>
             <Head title="Follow-ups" />
-            <div className="flex flex-col gap-6 p-4 md:p-6">
-                <div>
-                    <h1 className="text-xl font-semibold tracking-tight">
-                        Follow-ups
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Rules schedule tasks.{' '}
-                        <code className="text-xs">php artisan follow-ups:run</code>{' '}
-                        sends the WhatsApp ones that are due and still allowed.
-                        The scheduler calls that command every minute when{' '}
-                        <code className="text-xs">php artisan schedule:work</code>{' '}
-                        or cron is running. This page does not start the
-                        scheduler.
-                    </p>
-                </div>
+            <Page width="desk">
+                <PageHeader
+                    title="Follow-ups"
+                    description={
+                        <>
+                            Rules schedule tasks.{' '}
+                            <code className="text-xs">
+                                php artisan follow-ups:run
+                            </code>{' '}
+                            sends the WhatsApp ones that are due and still
+                            allowed. The scheduler calls that command every
+                            minute when{' '}
+                            <code className="text-xs">
+                                php artisan schedule:work
+                            </code>{' '}
+                            or cron is running. This page does not start the
+                            scheduler.
+                        </>
+                    }
+                />
 
-                <section className="grid gap-4">
-                    <div>
-                        <h2 className="text-sm font-medium">Rules</h2>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Use {'{contact}'}, {'{business}'}, and {'{action}'}
-                            in the message. No-response and stage-delay tasks
-                            are cancelled when the lead receives a WhatsApp
-                            reply. A follow-up date uses the rule&apos;s Nairobi
-                            time. Stage delay uses the hours stored on the
-                            stage, not a number in this form.
-                        </p>
-                    </div>
+                <Surface>
+                    <SurfaceHeader
+                        title="Rules"
+                        description={
+                            <>
+                                Use {'{contact}'}, {'{business}'}, and{' '}
+                                {'{action}'} in the message. No-response and
+                                stage-delay tasks are cancelled when the lead
+                                receives a WhatsApp reply. A follow-up date uses
+                                the rule&apos;s Nairobi time. Stage delay uses
+                                the hours stored on the stage, not a number in
+                                this form.
+                            </>
+                        }
+                    />
+                    <SurfaceBody className="grid gap-4">
+                        {can_manage ? (
+                            <RuleForm
+                                action="/follow-ups"
+                                method="post"
+                                productOptions={productOptions}
+                                submitLabel="Save rule"
+                            />
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                An owner adds and edits rules.
+                            </p>
+                        )}
 
-                    {can_manage ? (
-                        <RuleForm
-                            action="/follow-ups"
-                            method="post"
-                            productOptions={productOptions}
-                            submitLabel="Save rule"
-                        />
-                    ) : (
-                        <p className="text-sm text-muted-foreground">
-                            An owner adds and edits rules.
-                        </p>
-                    )}
+                        {rules.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                                No rules yet. Nothing is scheduled.
+                            </p>
+                        ) : (
+                            <div className="grid gap-4">
+                                {rules.map((rule) => (
+                                    <Surface key={rule.id}>
+                                        <SurfaceBody>
+                                            {can_manage ? (
+                                                <RuleForm
+                                                    action={`/follow-ups/${rule.id}`}
+                                                    method="put"
+                                                    productOptions={
+                                                        productOptions
+                                                    }
+                                                    submitLabel="Update rule"
+                                                    rule={rule}
+                                                />
+                                            ) : (
+                                                <RuleSummary rule={rule} />
+                                            )}
+                                        </SurfaceBody>
+                                    </Surface>
+                                ))}
+                            </div>
+                        )}
+                    </SurfaceBody>
+                </Surface>
 
-                    {rules.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                            No rules yet. Nothing is scheduled.
-                        </p>
-                    ) : (
-                        rules.map((rule) => (
-                            <article
-                                key={rule.id}
-                                className="rounded-lg border p-4"
-                            >
-                                {can_manage ? (
-                                    <RuleForm
-                                        action={`/follow-ups/${rule.id}`}
-                                        method="put"
-                                        productOptions={productOptions}
-                                        submitLabel="Update rule"
-                                        rule={rule}
-                                    />
-                                ) : (
-                                    <RuleSummary rule={rule} />
-                                )}
-                            </article>
-                        ))
-                    )}
-                </section>
-
-                <section className="grid gap-3">
-                    <h2 className="text-sm font-medium">Recent tasks</h2>
-                    {tasks.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                            No tasks yet.
-                        </p>
-                    ) : (
-                        <ul className="divide-y rounded-lg border">
-                            {tasks.map((task) => (
-                                <li
-                                    key={task.id}
-                                    className="flex flex-col gap-1 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
-                                >
-                                    <div>
-                                        <a
-                                            href={`/leads/${task.lead_id}`}
-                                            className="font-medium hover:underline"
-                                        >
-                                            {task.contact_name}
-                                        </a>
-                                        <p className="text-xs text-muted-foreground">
-                                            {task.rule ?? 'Follow-up'} · due{' '}
-                                            {task.due_label ?? 'unscheduled'}
-                                        </p>
-                                        {task.held_reason ? (
-                                            <p className="text-xs">
-                                                {task.held_reason}
+                <Surface>
+                    <SurfaceHeader title="Recent tasks" />
+                    <SurfaceBody>
+                        {tasks.length === 0 ? (
+                            <p className="text-sm text-muted-foreground">
+                                No tasks yet.
+                            </p>
+                        ) : (
+                            <ul className="divide-y divide-border rounded-lg border border-border">
+                                {tasks.map((task) => (
+                                    <li
+                                        key={task.id}
+                                        className="flex flex-col gap-1 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                                    >
+                                        <div>
+                                            <a
+                                                href={`/leads/${task.lead_id}`}
+                                                className="font-medium text-primary hover:underline"
+                                            >
+                                                {task.contact_name}
+                                            </a>
+                                            <p className="text-xs text-muted-foreground">
+                                                {task.rule ?? 'Follow-up'} · due{' '}
+                                                {task.due_label ??
+                                                    'unscheduled'}
                                             </p>
-                                        ) : null}
-                                        {task.failure_reason ? (
-                                            <p className="text-xs text-destructive">
-                                                {task.failure_reason}
-                                            </p>
-                                        ) : null}
-                                    </div>
-                                    <Badge variant="outline">{task.status}</Badge>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </section>
-            </div>
+                                            {task.held_reason ? (
+                                                <p className="text-xs">
+                                                    {task.held_reason}
+                                                </p>
+                                            ) : null}
+                                            {task.failure_reason ? (
+                                                <p className="text-xs text-destructive">
+                                                    {task.failure_reason}
+                                                </p>
+                                            ) : null}
+                                        </div>
+                                        <Badge variant="outline">
+                                            {task.status}
+                                        </Badge>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </SurfaceBody>
+                </Surface>
+            </Page>
         </>
     );
 }

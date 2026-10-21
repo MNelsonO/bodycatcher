@@ -1,6 +1,13 @@
 import { Form, Head, Link, router } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
+import {
+    Page,
+    PageHeader,
+    Surface,
+    SurfaceBody,
+    SurfaceHeader,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -141,33 +148,29 @@ export default function InvoiceCreate({
     return (
         <>
             <Head title="New invoice" />
-            <div className="flex flex-col gap-6 p-4 md:p-6">
-                <div className="flex items-end justify-between gap-3">
-                    <div>
-                        <h1 className="text-xl font-semibold tracking-tight">
-                            New invoice
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Number, from/logo, bill to, terms, notes, and AI
-                            history live on this form.
-                        </p>
-                    </div>
-                    <Button variant="outline" asChild>
-                        <Link href="/invoices">Back</Link>
-                    </Button>
-                </div>
+            <Page width="wide">
+                <PageHeader
+                    title="New invoice"
+                    description="Number, from/logo, bill to, terms, notes, and AI history live on this form."
+                    actions={
+                        <Button variant="outline" asChild>
+                            <Link href="/invoices">Back</Link>
+                        </Button>
+                    }
+                />
 
                 <div className="grid gap-4 lg:grid-cols-2">
-                    <section className="rounded-lg border p-4 text-sm">
-                        <h2 className="font-medium">From</h2>
+                    <Surface>
+                        <SurfaceHeader title="From" />
+                        <SurfaceBody className="text-sm">
                         {business.logo_url ? (
                             <img
                                 src={business.logo_url}
                                 alt="Logo"
-                                className="mt-2 max-h-16"
+                                className="max-h-16"
                             />
                         ) : (
-                            <p className="mt-2 text-muted-foreground">
+                            <p className="text-muted-foreground">
                                 No logo yet.{' '}
                                 <Link
                                     href="/billing/profile"
@@ -190,36 +193,35 @@ export default function InvoiceCreate({
                                 Tax ID: {business.tax_id}
                             </p>
                         ) : null}
-                    </section>
-                    <section className="rounded-lg border p-4 text-sm">
-                        <h2 className="font-medium">Invoice number</h2>
-                        <p className="mt-2 text-lg font-semibold tracking-tight">
+                        </SurfaceBody>
+                    </Surface>
+                    <Surface>
+                        <SurfaceHeader title="Invoice number" />
+                        <SurfaceBody className="text-sm">
+                        <p className="text-lg font-semibold tracking-tight">
                             {defaults.next_number}
                         </p>
                         <p className="mt-1 text-muted-foreground">
                             Assigned when you save. Edit logo, address, and
                             default terms under Business profile.
                         </p>
-                    </section>
+                        </SurfaceBody>
+                    </Surface>
                 </div>
 
-                <section className="rounded-lg border p-4">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                            <h2 className="text-sm font-medium">
-                                AI invoice builder
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                Describe the invoice. History is stored so you
-                                can reopen any draft and regenerate.
-                            </p>
-                        </div>
-                        {!llm_ready ? (
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href="/ai">Configure LLM</Link>
-                            </Button>
-                        ) : null}
-                    </div>
+                <Surface>
+                    <SurfaceHeader
+                        title="AI invoice builder"
+                        description="Describe the invoice. History is stored so you can reopen any draft and regenerate."
+                        action={
+                            !llm_ready ? (
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href="/ai">Configure LLM</Link>
+                                </Button>
+                            ) : null
+                        }
+                    />
+                    <SurfaceBody>
                     <Form
                         action="/invoices/generate"
                         method="post"
@@ -264,7 +266,7 @@ export default function InvoiceCreate({
                                 </span>
                             </div>
                             {selected_generation.error ? (
-                                <p className="mt-2 text-red-600">
+                                <p className="mt-2 text-destructive">
                                     {selected_generation.error}
                                 </p>
                             ) : null}
@@ -389,8 +391,12 @@ export default function InvoiceCreate({
                             </ul>
                         </div>
                     ) : null}
-                </section>
+                    </SurfaceBody>
+                </Surface>
 
+                <Surface>
+                    <SurfaceHeader title="Invoice details" />
+                    <SurfaceBody>
                 <Form
                     key={formKey}
                     action="/invoices"
@@ -476,7 +482,7 @@ export default function InvoiceCreate({
                                 error={errors.terms_and_conditions}
                             />
 
-                            <div className="rounded-lg border p-4">
+                            <div className="rounded-lg border border-border p-4">
                                 <div className="mb-3 flex items-center justify-between">
                                     <h2 className="text-sm font-medium">
                                         Line items
@@ -577,7 +583,7 @@ export default function InvoiceCreate({
                                     ))}
                                 </div>
                                 {errors.items ? (
-                                    <p className="mt-2 text-sm text-red-600">
+                                    <p className="mt-2 text-sm text-destructive">
                                         {errors.items}
                                     </p>
                                 ) : null}
@@ -594,7 +600,9 @@ export default function InvoiceCreate({
                         </>
                     )}
                 </Form>
-            </div>
+                    </SurfaceBody>
+                </Surface>
+            </Page>
         </>
     );
 }

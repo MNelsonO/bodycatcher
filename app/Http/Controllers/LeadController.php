@@ -16,6 +16,7 @@ use App\Http\Requests\MarkDateRequest;
 use App\Http\Requests\ScheduleConversationRequest;
 use App\Integrations\Services\GoogleCalendarSync;
 use App\Leads\Actions\AddLeadNote;
+use App\Leads\Actions\AssignLeadProduct;
 use App\Leads\Actions\CreateLead;
 use App\Leads\Actions\RecordLeadInteraction;
 use App\Leads\Actions\ScheduleLeadConversation;
@@ -115,11 +116,26 @@ class LeadController extends Controller
                 'value' => $status->value,
                 'label' => ucfirst($status->value),
             ])->all(),
+            'product_options' => Product::query()
+                ->where('is_active', true)
+                ->whereNull('archived_at')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Product $product): array => [
+                    'value' => (string) $product->id,
+                    'label' => $product->name,
+                ])->all(),
         ]);
     }
 
-    public function update(LeadRequest $request, Lead $lead): RedirectResponse
-    {
+    public function update(
+        LeadRequest $request,
+        Lead $lead,
+        AssignLeadProduct $assignProduct,
+    ): RedirectResponse {
+        /** @var User $actor */
+        $actor = $request->user();
+
         $data = $request->safe()->only([
             'source',
             'business_problem',
@@ -132,6 +148,10 @@ class LeadController extends Controller
 
         $lead->fill($data);
         $lead->save();
+
+        if ($request->filled('product_id')) {
+            $assignProduct->handle($lead, $request->integer('product_id'), $actor);
+        }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Lead details saved.']);
 

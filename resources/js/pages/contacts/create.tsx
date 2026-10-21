@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
 import { ContactForm } from '@/components/crm/contact-form';
+import { Page, PageHeader } from '@/components/crm/page-frame';
 import type { ContactFormOptions } from '@/types/crm';
 
 export default function CreateContact({
@@ -10,18 +11,13 @@ export default function CreateContact({
     return (
         <>
             <Head title="Add contact" />
-            <div className="flex flex-col gap-4 p-4 md:p-6">
-                <div>
-                    <h1 className="text-xl font-semibold tracking-tight">
-                        Add contact
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        If the phone already exists, that contact is updated.
-                        Same name alone is not a match.
-                    </p>
-                </div>
+            <Page width="form">
+                <PageHeader
+                    title="Add contact"
+                    description="If the phone already exists, that contact is updated. Same name alone is not a match."
+                />
                 <ContactForm contact={null} options={options} />
-            </div>
+            </Page>
         </>
     );
 }

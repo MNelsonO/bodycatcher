@@ -1,6 +1,12 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
+import {
+    Page,
+    PageHeader,
+    Surface,
+    SurfaceHeader,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -26,9 +32,6 @@ type ProductRow = {
     leads_lost: number;
 };
 
-const surface =
-    'overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]';
-
 const chip =
     'rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
 
@@ -40,45 +43,42 @@ export default function ProductsIndex({
     return (
         <>
             <Head title="Products" />
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:gap-8 md:p-8">
-                {/* Page header */}
-                <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                            Products
-                        </h1>
-                        <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-muted-foreground">
-                            The desk knows each product and tracks leads under
-                            it. Pricing notes are whatever you type — no
-                            checkout prices.
-                        </p>
-                    </div>
-                    <ProductDialog
-                        title="Add product"
-                        description="A product a lead can be opened against."
-                        action="/products"
-                        method="post"
-                        product={null}
-                        trigger="Add product"
-                    />
-                </div>
+            <Page width="content">
+                <PageHeader
+                    title="Products"
+                    description="The desk knows each product and tracks leads under it. Pricing notes are whatever you type — no checkout prices."
+                    actions={
+                        <ProductDialog
+                            title="Add product"
+                            description="A product a lead can be opened against."
+                            action="/products"
+                            method="post"
+                            product={null}
+                            trigger="Add product"
+                        />
+                    }
+                />
 
                 {products.length === 0 ? (
-                    <div className="rounded-xl border border-dashed border-input bg-card px-6 py-12 text-center text-sm text-muted-foreground">
-                        No products yet. Add Kemet Laundry OS or whatever you
-                        actually sell.
-                    </div>
-                ) : (
-                    <section className={surface}>
-                        <div className="flex items-center justify-between border-b border-border bg-secondary px-5 py-3">
-                            <h2 className="text-sm font-semibold text-secondary-foreground">
-                                Catalogue
-                            </h2>
-                            <span className="text-sm tabular-nums text-secondary-foreground">
-                                {products.length}{' '}
-                                {products.length === 1 ? 'product' : 'products'}
-                            </span>
+                    <Surface>
+                        <div className="px-6 py-12 text-center text-sm text-muted-foreground">
+                            No products yet. Add Kemet Laundry OS or whatever
+                            you actually sell.
                         </div>
+                    </Surface>
+                ) : (
+                    <Surface>
+                        <SurfaceHeader
+                            title="Catalogue"
+                            badge={
+                                <span className="text-sm tabular-nums text-muted-foreground">
+                                    {products.length}{' '}
+                                    {products.length === 1
+                                        ? 'product'
+                                        : 'products'}
+                                </span>
+                            }
+                        />
                         <ul className="divide-y divide-border">
                             {products.map((product) => (
                                 <li
@@ -172,9 +172,9 @@ export default function ProductsIndex({
                                 </li>
                             ))}
                         </ul>
-                    </section>
+                    </Surface>
                 )}
-            </div>
+            </Page>
         </>
     );
 }

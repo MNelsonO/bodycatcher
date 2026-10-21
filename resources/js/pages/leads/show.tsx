@@ -3,6 +3,13 @@ import { useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
 import { LeadAnalysisPanel } from '@/components/crm/lead-analysis';
 import { FollowUpTasks } from '@/components/crm/follow-up-tasks';
+import {
+    Page,
+    PageHeader,
+    Surface,
+    SurfaceBody,
+    SurfaceHeader,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -18,272 +25,401 @@ import type { LeadDetail, Option } from '@/types/crm';
 export default function LeadShow({
     lead,
     decision_maker_options,
+    product_options,
 }: {
     lead: LeadDetail;
     decision_maker_options: Option[];
+    product_options: Option[];
 }) {
     const won = lead.permitted_stages.find((stage) => stage.kind === 'won');
     const lost = lead.permitted_stages.filter((stage) => stage.kind === 'lost');
+    const displayName =
+        lead.contact.full_name.trim() !== ''
+            ? lead.contact.full_name
+            : lead.contact.primary_phone;
 
     return (
         <>
-            <Head title={`${lead.contact.full_name} · ${lead.product.name}`} />
-            <div className="flex flex-col gap-6 p-4 md:p-6">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                        <p className="text-sm text-muted-foreground">
-                            {lead.pipeline.name}
-                        </p>
-                        <h1 className="text-xl font-semibold tracking-tight">
-                            {lead.contact.full_name}
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            {lead.contact.business_name ?? 'No business name'} ·{' '}
-                            {lead.product.name}
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                            <Badge variant="laundry">{lead.stage.name}</Badge>
-                            <Badge
-                                variant={
-                                    lead.outcome === 'won'
-                                        ? 'success'
-                                        : lead.outcome === 'lost'
-                                          ? 'destructive'
-                                          : 'lead'
-                                }
-                            >
-                                {lead.outcome}
-                            </Badge>
-                            {lead.intelligence.latest?.status === 'completed' &&
-                            lead.intelligence.latest.score !== null ? (
-                                <Badge variant="laundry">
-                                    Score {lead.intelligence.latest.score}
-                                </Badge>
-                            ) : null}
-                            {lead.contact.consent_status === 'opted_out' ? (
-                                <Badge variant="destructive">Opted out</Badge>
-                            ) : null}
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <StageDialog lead={lead} />
-                        <InteractionDialog leadId={lead.id} />
-                        <NoteDialog leadId={lead.id} />
-                        <MessageDialog leadId={lead.id} />
-                        <FollowUpDialog lead={lead} />
-                        <ScheduleConversationDialog lead={lead} />
-                        <MarkDateDialog lead={lead} />
-                        <MessagingControls lead={lead} />
-                        {won ? (
-                            <Form
-                                action={`/leads/${lead.id}/stage`}
-                                method="post"
-                            >
-                                <input
-                                    type="hidden"
-                                    name="stage_id"
-                                    value={won.id}
-                                />
-                                <Button
-                                    type="submit"
-                                    className="bg-success text-success-foreground hover:bg-success/90"
+            <Head title={`${displayName} · ${lead.product.name}`} />
+            <Page width="desk">
+                <PageHeader
+                    eyebrow={lead.pipeline.name}
+                    title={displayName}
+                    description={`${lead.contact.business_name ?? 'No business name'} · ${lead.contact.primary_phone}`}
+                    actions={
+                        <>
+                            <StageDialog lead={lead} />
+                            <InteractionDialog leadId={lead.id} />
+                            <NoteDialog leadId={lead.id} />
+                            <MessageDialog leadId={lead.id} />
+                            <FollowUpDialog lead={lead} />
+                            <ScheduleConversationDialog lead={lead} />
+                            <MarkDateDialog lead={lead} />
+                            <MessagingControls lead={lead} />
+                            {won ? (
+                                <Form
+                                    action={`/leads/${lead.id}/stage`}
+                                    method="post"
                                 >
+                                    <input
+                                        type="hidden"
+                                        name="stage_id"
+                                        value={won.id}
+                                    />
+                                    <Button
+                                        type="submit"
+                                        className="bg-success text-success-foreground hover:bg-success/90"
+                                    >
+                                        Mark won
+                                    </Button>
+                                </Form>
+                            ) : (
+                                <Button type="button" variant="outline" disabled>
                                     Mark won
                                 </Button>
-                            </Form>
-                        ) : (
-                            <Button type="button" variant="outline" disabled>
-                                Mark won
-                            </Button>
-                        )}
-                        <LostDialog leadId={lead.id} stages={lost} />
-                    </div>
+                            )}
+                            <LostDialog leadId={lead.id} stages={lost} />
+                        </>
+                    }
+                />
+
+                <div className="-mt-2 flex flex-wrap gap-2 md:-mt-4">
+                    <Badge variant="laundry">{lead.stage.name}</Badge>
+                    <Badge
+                        variant={
+                            lead.outcome === 'won'
+                                ? 'success'
+                                : lead.outcome === 'lost'
+                                  ? 'destructive'
+                                  : 'lead'
+                        }
+                    >
+                        {lead.outcome}
+                    </Badge>
+                    <Badge variant={lead.contact_is_new ? 'default' : 'outline'}>
+                        {lead.contact_is_new ? 'New contact' : 'Existing contact'}
+                    </Badge>
+                    <Badge
+                        variant={lead.conversation_is_new ? 'default' : 'outline'}
+                    >
+                        {lead.conversation_is_new
+                            ? 'New conversation'
+                            : 'Continuing chat'}
+                    </Badge>
+                    {lead.intelligence.latest?.status === 'completed' &&
+                    lead.intelligence.latest.score !== null ? (
+                        <Badge variant="laundry">
+                            Score {lead.intelligence.latest.score}
+                        </Badge>
+                    ) : null}
+                    {lead.contact.consent_status === 'opted_out' ? (
+                        <Badge variant="destructive">Opted out</Badge>
+                    ) : null}
                 </div>
 
+                <LeadBriefing
+                    lead={lead}
+                    productOptions={product_options}
+                />
+
                 {lead.escalation ? (
-                    <EscalationPanel leadId={lead.id} escalation={lead.escalation} />
+                    <EscalationPanel
+                        leadId={lead.id}
+                        escalation={lead.escalation}
+                    />
                 ) : null}
 
-                <div className="grid gap-6 xl:grid-cols-3">
-                    <section className="space-y-4 xl:col-span-2">
-                        <div className="rounded-lg border p-4">
-                            <h2 className="text-sm font-medium">Contact</h2>
-                            <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
-                                <Fact
-                                    label="Phone"
-                                    value={lead.contact.primary_phone}
-                                />
-                                <Fact
-                                    label="Other phones"
-                                    value={
-                                        lead.contact.additional_phones.join(
-                                            ', ',
-                                        ) || null
-                                    }
-                                />
-                                <Fact
-                                    label="Email"
-                                    value={lead.contact.email}
-                                />
-                                <Fact
-                                    label="Location"
-                                    value={lead.contact.location}
-                                />
-                                <Fact
-                                    label="Business type"
-                                    value={lead.contact.business_type}
-                                />
-                                <Fact
-                                    label="Channel"
-                                    value={lead.contact.preferred_channel}
-                                />
-                                <Fact
-                                    label="Consent"
-                                    value={lead.contact.consent_status.replaceAll(
-                                        '_',
-                                        ' ',
-                                    )}
-                                />
-                                <Fact
-                                    label="Opted out"
-                                    value={lead.contact.opted_out_at_label}
-                                />
-                                <Fact
-                                    label="Contact source"
-                                    value={lead.contact.lead_source}
-                                />
-                                <Fact
-                                    label="Contact added"
-                                    value={lead.contact.created_at_label}
-                                />
-                            </dl>
-                            <Button
-                                variant="link"
-                                className="mt-2 px-0"
-                                asChild
-                            >
-                                <Link href={`/contacts/${lead.contact.id}`}>
-                                    Open contact
-                                </Link>
-                            </Button>
-                        </div>
+                <Surface>
+                    <SurfaceHeader
+                        title="Chat history"
+                        description={`${lead.message_count} message${lead.message_count === 1 ? '' : 's'} on this lead. WhatsApp name shown above is the contact display name we fetched or saved.`}
+                    />
+                    <SurfaceBody>
+                        <WhatsAppSend lead={lead} />
+                        {lead.messages.length === 0 ? (
+                            <p className="mt-3 text-sm text-muted-foreground">
+                                No messages yet. Inbound WhatsApp will appear
+                                here.
+                            </p>
+                        ) : (
+                            <ol className="mt-4 space-y-3">
+                                {lead.messages.map((message) => {
+                                    const inbound =
+                                        message.direction === 'inbound';
 
-                        <Form
-                            action={`/leads/${lead.id}`}
-                            method="put"
-                            className="grid gap-4 rounded-lg border p-4"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <h2 className="text-sm font-medium">
-                                        Opportunity
-                                    </h2>
-                                    <TextField
-                                        name="source"
-                                        label="Source"
-                                        defaultValue={lead.source}
-                                        error={errors.source}
+                                    return (
+                                        <li
+                                            key={message.id}
+                                            className={`flex ${inbound ? 'justify-start' : 'justify-end'}`}
+                                        >
+                                            <div
+                                                className={`max-w-[min(40rem,92%)] rounded-xl px-3.5 py-2.5 text-sm ${
+                                                    inbound
+                                                        ? 'border border-border bg-card text-foreground shadow-[var(--shadow-card)]'
+                                                        : 'bg-primary text-primary-foreground'
+                                                }`}
+                                            >
+                                                <div
+                                                    className={`flex flex-wrap gap-x-2 text-xs ${
+                                                        inbound
+                                                            ? 'text-muted-foreground'
+                                                            : 'text-primary-foreground/80'
+                                                    }`}
+                                                >
+                                                    <span>
+                                                        {inbound
+                                                            ? displayName
+                                                            : 'You'}
+                                                    </span>
+                                                    <span>·</span>
+                                                    <span>
+                                                        {message.channel ===
+                                                        'whatsapp'
+                                                            ? 'WhatsApp'
+                                                            : 'Desk'}
+                                                    </span>
+                                                    <span>·</span>
+                                                    <span>
+                                                        {message.sent_at_label}
+                                                    </span>
+                                                </div>
+                                                <p className="mt-1 whitespace-pre-wrap">
+                                                    {message.body}
+                                                </p>
+                                                {message.refusal_reason ? (
+                                                    <p className="mt-1 text-xs text-destructive">
+                                                        {
+                                                            message.refusal_reason
+                                                        }
+                                                    </p>
+                                                ) : null}
+                                                {message.attachments.length >
+                                                0 ? (
+                                                    <ul
+                                                        className={`mt-1 text-xs ${
+                                                            inbound
+                                                                ? 'text-muted-foreground'
+                                                                : 'text-primary-foreground/80'
+                                                        }`}
+                                                    >
+                                                        {message.attachments.map(
+                                                            (attachment) => (
+                                                                <li
+                                                                    key={
+                                                                        attachment.id
+                                                                    }
+                                                                >
+                                                                    Attachment
+                                                                    {attachment.mime_type
+                                                                        ? ` · ${attachment.mime_type}`
+                                                                        : ''}
+                                                                </li>
+                                                            ),
+                                                        )}
+                                                    </ul>
+                                                ) : null}
+                                            </div>
+                                        </li>
+                                    );
+                                })}
+                            </ol>
+                        )}
+                    </SurfaceBody>
+                </Surface>
+
+                <div className="grid gap-6 xl:grid-cols-3">
+                    <section className="space-y-6 xl:col-span-2">
+                        <Surface>
+                            <SurfaceHeader title="Contact" />
+                            <SurfaceBody>
+                                <dl className="grid gap-3 text-sm sm:grid-cols-2">
+                                    <Fact
+                                        label="Phone"
+                                        value={lead.contact.primary_phone}
                                     />
-                                    <AreaField
-                                        name="business_problem"
-                                        label="Business problem"
-                                        defaultValue={lead.business_problem}
-                                        error={errors.business_problem}
-                                    />
-                                    <AreaField
-                                        name="current_solution"
-                                        label="Current solution"
-                                        defaultValue={lead.current_solution}
-                                        error={errors.current_solution}
-                                    />
-                                    <TextField
-                                        name="branch_count"
-                                        label="Branch count or size"
-                                        type="number"
-                                        defaultValue={lead.branch_count}
-                                        error={errors.branch_count}
-                                    />
-                                    <AreaField
-                                        name="budget_note"
-                                        label="Budget note"
-                                        defaultValue={lead.budget_note}
-                                        hint="Only what the operator wrote. Blank means no figure was given."
-                                        error={errors.budget_note}
-                                    />
-                                    <SelectField
-                                        name="decision_maker_status"
-                                        label="Decision maker"
-                                        options={decision_maker_options}
-                                        defaultValue={
-                                            lead.decision_maker_status
+                                    <Fact
+                                        label="Other phones"
+                                        value={
+                                            lead.contact.additional_phones.join(
+                                                ', ',
+                                            ) || null
                                         }
-                                        error={errors.decision_maker_status}
                                     />
-                                    <AreaField
-                                        name="purchase_timeline_note"
-                                        label="Purchase timeline"
-                                        defaultValue={
-                                            lead.purchase_timeline_note
-                                        }
-                                        error={errors.purchase_timeline_note}
+                                    <Fact
+                                        label="Email"
+                                        value={lead.contact.email}
                                     />
-                                    <Button type="submit" disabled={processing}>
-                                        Save details
-                                    </Button>
-                                </>
-                            )}
-                        </Form>
+                                    <Fact
+                                        label="Location"
+                                        value={lead.contact.location}
+                                    />
+                                    <Fact
+                                        label="Business type"
+                                        value={lead.contact.business_type}
+                                    />
+                                    <Fact
+                                        label="Channel"
+                                        value={lead.contact.preferred_channel}
+                                    />
+                                    <Fact
+                                        label="Consent"
+                                        value={lead.contact.consent_status.replaceAll(
+                                            '_',
+                                            ' ',
+                                        )}
+                                    />
+                                    <Fact
+                                        label="Opted out"
+                                        value={lead.contact.opted_out_at_label}
+                                    />
+                                    <Fact
+                                        label="Contact source"
+                                        value={lead.contact.lead_source}
+                                    />
+                                    <Fact
+                                        label="Contact added"
+                                        value={lead.contact.created_at_label}
+                                    />
+                                </dl>
+                                <Button
+                                    variant="link"
+                                    className="mt-2 px-0"
+                                    asChild
+                                >
+                                    <Link href={`/contacts/${lead.contact.id}`}>
+                                        Open contact
+                                    </Link>
+                                </Button>
+                            </SurfaceBody>
+                        </Surface>
+
+                        <Surface>
+                            <SurfaceHeader title="Opportunity" />
+                            <Form
+                                action={`/leads/${lead.id}`}
+                                method="put"
+                            >
+                                {({ errors, processing }) => (
+                                    <SurfaceBody className="grid gap-4">
+                                        <TextField
+                                            name="source"
+                                            label="Source"
+                                            defaultValue={lead.source}
+                                            error={errors.source}
+                                        />
+                                        <AreaField
+                                            name="business_problem"
+                                            label="Business problem"
+                                            defaultValue={lead.business_problem}
+                                            error={errors.business_problem}
+                                        />
+                                        <AreaField
+                                            name="current_solution"
+                                            label="Current solution"
+                                            defaultValue={lead.current_solution}
+                                            error={errors.current_solution}
+                                        />
+                                        <TextField
+                                            name="branch_count"
+                                            label="Branch count or size"
+                                            type="number"
+                                            defaultValue={lead.branch_count}
+                                            error={errors.branch_count}
+                                        />
+                                        <AreaField
+                                            name="budget_note"
+                                            label="Budget note"
+                                            defaultValue={lead.budget_note}
+                                            hint="Only what the operator wrote. Blank means no figure was given."
+                                            error={errors.budget_note}
+                                        />
+                                        <SelectField
+                                            name="decision_maker_status"
+                                            label="Decision maker"
+                                            options={decision_maker_options}
+                                            defaultValue={
+                                                lead.decision_maker_status
+                                            }
+                                            error={errors.decision_maker_status}
+                                        />
+                                        <AreaField
+                                            name="purchase_timeline_note"
+                                            label="Purchase timeline"
+                                            defaultValue={
+                                                lead.purchase_timeline_note
+                                            }
+                                            error={
+                                                errors.purchase_timeline_note
+                                            }
+                                        />
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            Save details
+                                        </Button>
+                                    </SurfaceBody>
+                                )}
+                            </Form>
+                        </Surface>
                     </section>
 
-                    <aside className="space-y-4">
-                        <div className="rounded-lg border p-4 text-sm">
-                            <h2 className="font-medium">Next step</h2>
-                            <p className="mt-2">
-                                {lead.next_action ?? 'No next action written.'}
-                            </p>
-                            <p className="mt-2 text-muted-foreground">
-                                Follow-up:{' '}
-                                {lead.next_follow_up_label ?? 'no date set'}
-                            </p>
-                            <p className="mt-2 text-muted-foreground">
-                                Marked date:{' '}
-                                {lead.marked_on_label
-                                    ? `${lead.marked_on_label}${lead.marked_label ? ` · ${lead.marked_label}` : ''}`
-                                    : 'none'}
-                            </p>
-                            {lead.conversation_topic ? (
-                                <div className="mt-3 rounded-md bg-muted/40 p-3">
-                                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                        Live topic
-                                    </p>
-                                    <p className="mt-1 font-medium">
-                                        {lead.conversation_topic}
-                                    </p>
-                                    {lead.conversation_topic_summary ? (
-                                        <p className="mt-1 text-muted-foreground">
-                                            {lead.conversation_topic_summary}
+                    <aside className="space-y-6">
+                        <Surface>
+                            <SurfaceHeader title="Next step" />
+                            <SurfaceBody className="text-sm">
+                                <p>
+                                    {lead.next_action ??
+                                        'No next action written.'}
+                                </p>
+                                <p className="mt-2 text-muted-foreground">
+                                    Follow-up:{' '}
+                                    {lead.next_follow_up_label ?? 'no date set'}
+                                </p>
+                                <p className="mt-2 text-muted-foreground">
+                                    Marked date:{' '}
+                                    {lead.marked_on_label
+                                        ? `${lead.marked_on_label}${lead.marked_label ? ` · ${lead.marked_label}` : ''}`
+                                        : 'none'}
+                                </p>
+                                {lead.conversation_topic ? (
+                                    <div className="mt-3 rounded-md bg-muted/40 p-3">
+                                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                            Live topic
                                         </p>
-                                    ) : null}
-                                </div>
-                            ) : null}
-                            {lead.stage.default_follow_up_delay_hours !==
-                            null ? (
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                    This stage stores a delay of{' '}
-                                    {lead.stage.default_follow_up_delay_hours}{' '}
-                                    hours. A stage-delay rule on Follow-ups
-                                    uses that number, and a reply cancels it.
+                                        <p className="mt-1 font-medium">
+                                            {lead.conversation_topic}
+                                        </p>
+                                        {lead.conversation_topic_summary ? (
+                                            <p className="mt-1 text-muted-foreground">
+                                                {lead.conversation_topic_summary}
+                                            </p>
+                                        ) : null}
+                                    </div>
+                                ) : null}
+                                {lead.stage.default_follow_up_delay_hours !==
+                                null ? (
+                                    <p className="mt-2 text-xs text-muted-foreground">
+                                        This stage stores a delay of{' '}
+                                        {
+                                            lead.stage
+                                                .default_follow_up_delay_hours
+                                        }{' '}
+                                        hours. A stage-delay rule on Follow-ups
+                                        uses that number, and a reply cancels
+                                        it.
+                                    </p>
+                                ) : null}
+                                {lead.outcome === 'lost' ? (
+                                    <p className="mt-3">
+                                        Lost reason: {lead.lost_reason ?? '—'}
+                                    </p>
+                                ) : null}
+                                <p className="mt-3 text-xs text-muted-foreground">
+                                    Opened {lead.created_at_label}
                                 </p>
-                            ) : null}
-                            {lead.outcome === 'lost' ? (
-                                <p className="mt-3">
-                                    Lost reason: {lead.lost_reason ?? '—'}
-                                </p>
-                            ) : null}
-                            <p className="mt-3 text-xs text-muted-foreground">
-                                Opened {lead.created_at_label}
-                            </p>
-                        </div>
+                            </SurfaceBody>
+                        </Surface>
                         <History history={lead.history} />
                     </aside>
                 </div>
@@ -295,177 +431,231 @@ export default function LeadShow({
 
                 <FollowUpTasks leadId={lead.id} tasks={lead.follow_ups} />
 
-                <section className="rounded-lg border p-4">
-                    <h2 className="text-sm font-medium">Conversation</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                        Desk logs stay on this lead. WhatsApp rows are the
-                        Cloud API messages, with their real status.
-                    </p>
-                    <WhatsAppSend lead={lead} />
-                    {lead.messages.length === 0 ? (
-                        <p className="mt-3 text-sm text-muted-foreground">
-                            No messages yet.
-                        </p>
-                    ) : (
-                        <ol className="mt-3 space-y-3">
-                            {lead.messages.map((message) => (
-                                <li
-                                    key={message.id}
-                                    className="rounded-md bg-muted/40 px-3 py-2 text-sm"
-                                >
-                                    <div className="flex flex-wrap gap-x-2 text-xs text-muted-foreground">
-                                        <span>{message.direction}</span>
-                                        <span>·</span>
-                                        <span>
-                                            {message.channel === 'whatsapp'
-                                                ? 'WhatsApp'
-                                                : 'Desk log'}
-                                        </span>
-                                        <span>·</span>
-                                        <span>{message.status}</span>
-                                        <span>·</span>
-                                        <span>{message.sent_at_label}</span>
-                                        {message.logged_by ? (
-                                            <span>· {message.logged_by}</span>
-                                        ) : null}
-                                    </div>
-                                    <p className="mt-1 whitespace-pre-wrap">
-                                        {message.body}
-                                    </p>
-                                    {message.refusal_reason ? (
-                                        <p className="mt-1 text-xs text-destructive">
-                                            {message.refusal_reason}
-                                        </p>
-                                    ) : null}
-                                    {message.attachments.length > 0 ? (
-                                        <ul className="mt-1 text-xs text-muted-foreground">
-                                            {message.attachments.map(
-                                                (attachment) => (
-                                                    <li key={attachment.id}>
-                                                        Attachment{' '}
-                                                        {attachment.provider_media_id}
-                                                        {attachment.mime_type
-                                                            ? ` · ${attachment.mime_type}`
-                                                            : ''}
-                                                        . Not downloaded.
-                                                    </li>
-                                                ),
-                                            )}
-                                        </ul>
-                                    ) : null}
-                                </li>
-                            ))}
-                        </ol>
-                    )}
-                </section>
-
-                <section className="rounded-lg border p-4">
-                    <div className="flex flex-wrap items-end justify-between gap-3">
-                        <div>
-                            <h2 className="text-sm font-medium">
-                                Touches & calls
-                            </h2>
+                <Surface>
+                    <SurfaceHeader
+                        title="Touches & calls"
+                        description="Every phone call, meeting, or desk note with date and time — backdating allowed. The sales agent keeps the stage while you speak."
+                        badge={
+                            <>
+                                {lead.next_conversation_label ? (
+                                    <Badge variant="laundry">
+                                        Next talk ·{' '}
+                                        {lead.next_conversation_label}
+                                    </Badge>
+                                ) : null}
+                                {lead.conversations_stopped ? (
+                                    <Badge variant="destructive">
+                                        Conversations stopped
+                                    </Badge>
+                                ) : null}
+                            </>
+                        }
+                    />
+                    <SurfaceBody>
+                        {lead.interactions.length === 0 ? (
                             <p className="text-sm text-muted-foreground">
-                                Every phone call, meeting, or desk note with
-                                date and time — backdating allowed. The sales
-                                agent keeps the stage while you speak.
+                                No calls or meetings logged yet. Record each
+                                touch.
                             </p>
-                        </div>
-                        {lead.next_conversation_label ? (
-                            <Badge variant="laundry">
-                                Next talk · {lead.next_conversation_label}
-                            </Badge>
-                        ) : null}
-                        {lead.conversations_stopped ? (
-                            <Badge variant="destructive">
-                                Conversations stopped
-                            </Badge>
-                        ) : null}
-                    </div>
-                    {lead.interactions.length === 0 ? (
-                        <p className="mt-3 text-sm text-muted-foreground">
-                            No calls or meetings logged yet. Record each touch.
-                        </p>
-                    ) : (
-                        <ul className="mt-3 divide-y rounded-lg border">
-                            {lead.interactions.map((row) => (
-                                <li key={row.id} className="px-3 py-2 text-sm">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <Badge variant="outline">
-                                            {row.type_label}
-                                        </Badge>
-                                        {row.direction !== 'none' ? (
-                                            <span className="text-xs text-muted-foreground">
-                                                {row.direction}
-                                            </span>
-                                        ) : null}
-                                        {row.duration_minutes !== null ? (
-                                            <span className="text-xs text-muted-foreground">
-                                                {row.duration_minutes} min
-                                            </span>
-                                        ) : null}
-                                        {row.outcome ? (
-                                            <span className="text-xs text-muted-foreground">
-                                                {row.outcome}
-                                            </span>
-                                        ) : null}
-                                    </div>
-                                    <p className="mt-1 whitespace-pre-wrap">
-                                        {row.body}
-                                    </p>
-                                    <p className="mt-1 text-xs text-muted-foreground">
-                                        {row.author} · {row.occurred_at_label}
-                                    </p>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </section>
+                        ) : (
+                            <ul className="divide-y divide-border rounded-lg border border-border">
+                                {lead.interactions.map((row) => (
+                                    <li
+                                        key={row.id}
+                                        className="px-3 py-2 text-sm"
+                                    >
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <Badge variant="outline">
+                                                {row.type_label}
+                                            </Badge>
+                                            {row.direction !== 'none' ? (
+                                                <span className="text-xs text-muted-foreground">
+                                                    {row.direction}
+                                                </span>
+                                            ) : null}
+                                            {row.duration_minutes !== null ? (
+                                                <span className="text-xs text-muted-foreground">
+                                                    {row.duration_minutes} min
+                                                </span>
+                                            ) : null}
+                                            {row.outcome ? (
+                                                <span className="text-xs text-muted-foreground">
+                                                    {row.outcome}
+                                                </span>
+                                            ) : null}
+                                        </div>
+                                        <p className="mt-1 whitespace-pre-wrap">
+                                            {row.body}
+                                        </p>
+                                        <p className="mt-1 text-xs text-muted-foreground">
+                                            {row.author} ·{' '}
+                                            {row.occurred_at_label}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </SurfaceBody>
+                </Surface>
 
                 <div className="grid gap-6 lg:grid-cols-2">
-                    <section className="rounded-lg border p-4">
-                        <h2 className="text-sm font-medium">Notes</h2>
-                        {lead.notes.length === 0 ? (
-                            <p className="mt-3 text-sm text-muted-foreground">
-                                No notes yet.
-                            </p>
-                        ) : (
-                            <ul className="mt-3 space-y-3 text-sm">
-                                {lead.notes.map((note) => (
-                                    <li key={note.id}>
-                                        <p className="whitespace-pre-wrap">
-                                            {note.body}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {note.author} · {note.at}
-                                        </p>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </section>
-                    <section className="rounded-lg border p-4">
-                        <h2 className="text-sm font-medium">Activity</h2>
-                        {lead.activities.length === 0 ? (
-                            <p className="mt-3 text-sm text-muted-foreground">
-                                No activity yet.
-                            </p>
-                        ) : (
-                            <ul className="mt-3 space-y-2 text-sm">
-                                {lead.activities.map((row) => (
-                                    <li key={row.id}>
-                                        <span>{row.label}</span>
-                                        <span className="block text-xs text-muted-foreground">
-                                            {row.actor ?? 'System'} · {row.at}
-                                        </span>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </section>
+                    <Surface>
+                        <SurfaceHeader title="Notes" />
+                        <SurfaceBody>
+                            {lead.notes.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                    No notes yet.
+                                </p>
+                            ) : (
+                                <ul className="space-y-3 text-sm">
+                                    {lead.notes.map((note) => (
+                                        <li key={note.id}>
+                                            <p className="whitespace-pre-wrap">
+                                                {note.body}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {note.author} · {note.at}
+                                            </p>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </SurfaceBody>
+                    </Surface>
+                    <Surface>
+                        <SurfaceHeader title="Activity" />
+                        <SurfaceBody>
+                            {lead.activities.length === 0 ? (
+                                <p className="text-sm text-muted-foreground">
+                                    No activity yet.
+                                </p>
+                            ) : (
+                                <ul className="space-y-2 text-sm">
+                                    {lead.activities.map((row) => (
+                                        <li key={row.id}>
+                                            <span>{row.label}</span>
+                                            <span className="block text-xs text-muted-foreground">
+                                                {row.actor ?? 'System'} ·{' '}
+                                                {row.at}
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </SurfaceBody>
+                    </Surface>
                 </div>
-            </div>
+            </Page>
         </>
+    );
+}
+
+function LeadBriefing({
+    lead,
+    productOptions,
+}: {
+    lead: LeadDetail;
+    productOptions: Option[];
+}) {
+    const currentIndex = lead.pipeline_stages.findIndex(
+        (stage) => stage.id === lead.stage.id,
+    );
+
+    return (
+        <Surface>
+            <SurfaceHeader
+                title="What is this lead?"
+                description="Name comes from WhatsApp (or the name you saved). Pick the product when ads bring POS, laundry, hotel, and others into the same inbox."
+            />
+            <SurfaceBody className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
+                <div className="space-y-4">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            They chased you up for
+                        </p>
+                        <p className="mt-1 text-base font-medium text-foreground">
+                            {lead.intent ??
+                                'Not clear yet — check the chat or write the business problem below.'}
+                        </p>
+                        {lead.conversation_topic &&
+                        lead.conversation_topic !== lead.intent ? (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                Live topic: {lead.conversation_topic}
+                            </p>
+                        ) : null}
+                    </div>
+
+                    <div>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Status · {lead.pipeline.name}
+                        </p>
+                        <ol className="flex flex-wrap gap-2">
+                            {lead.pipeline_stages.map((stage, index) => {
+                                const active = stage.id === lead.stage.id;
+                                const passed =
+                                    currentIndex >= 0 && index < currentIndex;
+                                const closedTone =
+                                    stage.kind === 'won'
+                                        ? 'tone-green'
+                                        : stage.kind === 'lost'
+                                          ? 'tone-red'
+                                          : null;
+
+                                return (
+                                    <li
+                                        key={stage.id}
+                                        className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${
+                                            active
+                                                ? closedTone ??
+                                                  'bg-primary text-primary-foreground'
+                                                : passed
+                                                  ? 'bg-secondary text-secondary-foreground'
+                                                  : 'bg-muted text-muted-foreground'
+                                        }`}
+                                    >
+                                        {stage.name}
+                                    </li>
+                                );
+                            })}
+                        </ol>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            Now:{' '}
+                            <span className="font-medium text-foreground">
+                                {lead.stage.name}
+                            </span>
+                            {lead.next_follow_up_label
+                                ? ` · follow-up ${lead.next_follow_up_label}`
+                                : ''}
+                            {lead.next_action
+                                ? ` · next: ${lead.next_action}`
+                                : ''}
+                        </p>
+                    </div>
+                </div>
+
+                <Form
+                    action={`/leads/${lead.id}`}
+                    method="put"
+                    className="rounded-xl border border-border bg-muted p-4"
+                >
+                    {({ processing, errors }) => (
+                        <div className="space-y-3">
+                            <SelectField
+                                name="product_id"
+                                label="Product / system"
+                                options={productOptions}
+                                defaultValue={String(lead.product.id)}
+                                hint="POS, laundry, hotel, etc. Change if the inbound default was wrong."
+                                error={errors.product_id}
+                            />
+                            <Button type="submit" disabled={processing}>
+                                {processing ? 'Saving…' : 'Save product'}
+                            </Button>
+                        </div>
+                    )}
+                </Form>
+            </SurfaceBody>
+        </Surface>
     );
 }
 
@@ -480,34 +670,36 @@ function Fact({ label, value }: { label: string; value: string | null }) {
 
 function History({ history }: { history: LeadDetail['history'] }) {
     return (
-        <div className="rounded-lg border p-4">
-            <h2 className="text-sm font-medium">Stage history</h2>
-            {history.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">
-                    No stage history.
-                </p>
-            ) : (
-                <ol className="mt-3 space-y-3 text-sm">
-                    {history.map((row) => (
-                        <li key={row.id}>
-                            <div>
-                                {row.from_stage
-                                    ? `${row.from_stage} → ${row.to_stage}`
-                                    : row.to_stage}
-                            </div>
-                            {row.reason ? (
-                                <p className="text-muted-foreground">
-                                    {row.reason}
+        <Surface>
+            <SurfaceHeader title="Stage history" />
+            <SurfaceBody>
+                {history.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                        No stage history.
+                    </p>
+                ) : (
+                    <ol className="space-y-3 text-sm">
+                        {history.map((row) => (
+                            <li key={row.id}>
+                                <div>
+                                    {row.from_stage
+                                        ? `${row.from_stage} → ${row.to_stage}`
+                                        : row.to_stage}
+                                </div>
+                                {row.reason ? (
+                                    <p className="text-muted-foreground">
+                                        {row.reason}
+                                    </p>
+                                ) : null}
+                                <p className="text-xs text-muted-foreground">
+                                    {row.actor} · {row.at}
                                 </p>
-                            ) : null}
-                            <p className="text-xs text-muted-foreground">
-                                {row.actor} · {row.at}
-                            </p>
-                        </li>
-                    ))}
-                </ol>
-            )}
-        </div>
+                            </li>
+                        ))}
+                    </ol>
+                )}
+            </SurfaceBody>
+        </Surface>
     );
 }
 
@@ -789,7 +981,7 @@ function WhatsAppSend({ lead }: { lead: LeadDetail }) {
         <Form
             action={`/leads/${lead.id}/whatsapp`}
             method="post"
-            className="mt-4 grid gap-3 rounded-md border border-dashed p-3"
+            className="grid gap-3 rounded-md border border-dashed border-border p-3"
             onSuccess={() => setIdempotencyKey(crypto.randomUUID())}
         >
             {({ errors, processing }) => (
@@ -1003,7 +1195,10 @@ function MarkDateDialog({ lead }: { lead: LeadDetail }) {
                                 label="Also add to calendar"
                                 defaultValue="1"
                                 options={[
-                                    { value: '1', label: 'Yes — blue calendar item' },
+                                    {
+                                        value: '1',
+                                        label: 'Yes — blue calendar item',
+                                    },
                                     { value: '0', label: 'No — lead only' },
                                 ]}
                                 error={errors.add_to_calendar}
@@ -1090,110 +1285,113 @@ function EscalationPanel({
     escalation: NonNullable<LeadDetail['escalation']>;
 }) {
     return (
-        <section className="rounded-xl border border-destructive/40 bg-card p-4 shadow-[var(--shadow-card)] md:p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-destructive">
-                        AI paused — needs your input
-                    </p>
-                    <h2 className="mt-1 text-lg font-semibold tracking-tight">
-                        Correct it, teach the desk, then resume
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
+        <Surface className="border-destructive/40">
+            <SurfaceHeader
+                title="Correct it, teach the desk, then resume"
+                description={
+                    <>
                         Automation stopped on this lead. You were emailed
                         {escalation.notified_at_label
                             ? ` (${escalation.notified_at_label})`
                             : ''}{' '}
                         and a Google Calendar ping was queued when Calendar is
                         connected.
-                    </p>
-                </div>
-                <Badge variant="destructive">{escalation.source}</Badge>
-            </div>
-            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-                <div>
-                    <dt className="text-muted-foreground">Name</dt>
-                    <dd className="font-medium">
-                        {escalation.contact_name ?? '—'}
-                    </dd>
-                </div>
-                <div>
-                    <dt className="text-muted-foreground">Status</dt>
-                    <dd className="font-medium">
-                        {escalation.lead_status ?? '—'}
-                    </dd>
-                </div>
-                <div>
-                    <dt className="text-muted-foreground">
-                        System interested in
-                    </dt>
-                    <dd className="font-medium">
-                        {escalation.product_name ?? '—'}
-                    </dd>
-                </div>
-                <div>
-                    <dt className="text-muted-foreground">Current position</dt>
-                    <dd className="font-medium">
-                        {escalation.stage_name ?? '—'}
-                    </dd>
-                </div>
-            </dl>
-            <p className="mt-3 text-sm">
-                <span className="font-medium">Why: </span>
-                {escalation.reason}
-            </p>
-            {escalation.inbound_snippet ? (
-                <p className="mt-2 rounded-md bg-muted/50 p-3 text-sm">
-                    <span className="font-medium">Latest chat: </span>
-                    {escalation.inbound_snippet}
-                </p>
-            ) : null}
-            <Form
-                action={`/leads/${leadId}/escalations/${escalation.id}/resolve`}
-                method="post"
-                className="mt-4 grid gap-3 md:grid-cols-2"
-            >
-                {({ errors, processing }) => (
-                    <>
-                        <AreaField
-                            name="correction"
-                            label="Teach the desk (required)"
-                            required
-                            hint="How should it handle this person next time? Saved to memory + knowledge."
-                            error={errors.correction}
-                        />
-                        <AreaField
-                            name="send_reply"
-                            label="Optional WhatsApp reply now"
-                            defaultValue={escalation.suggested_reply ?? ''}
-                            hint="Edit the suggested reply and send it yourself. Leave blank to only teach."
-                            error={errors.send_reply}
-                        />
-                        <SelectField
-                            name="resume_automation"
-                            label="After saving"
-                            options={[
-                                {
-                                    value: '1',
-                                    label: 'Resume automation on this lead',
-                                },
-                                {
-                                    value: '0',
-                                    label: 'Keep automation paused',
-                                },
-                            ]}
-                            defaultValue="1"
-                            error={errors.resume_automation}
-                        />
-                        <div className="flex items-end">
-                            <Button type="submit" disabled={processing}>
-                                Save correction
-                            </Button>
-                        </div>
                     </>
-                )}
-            </Form>
-        </section>
+                }
+                badge={<Badge variant="destructive">{escalation.source}</Badge>}
+                className="border-destructive/20"
+            />
+            <SurfaceBody>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-destructive">
+                    AI paused — needs your input
+                </p>
+                <dl className="grid gap-2 text-sm sm:grid-cols-2">
+                    <div>
+                        <dt className="text-muted-foreground">Name</dt>
+                        <dd className="font-medium">
+                            {escalation.contact_name ?? '—'}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-muted-foreground">Status</dt>
+                        <dd className="font-medium">
+                            {escalation.lead_status ?? '—'}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-muted-foreground">
+                            System interested in
+                        </dt>
+                        <dd className="font-medium">
+                            {escalation.product_name ?? '—'}
+                        </dd>
+                    </div>
+                    <div>
+                        <dt className="text-muted-foreground">
+                            Current position
+                        </dt>
+                        <dd className="font-medium">
+                            {escalation.stage_name ?? '—'}
+                        </dd>
+                    </div>
+                </dl>
+                <p className="mt-3 text-sm">
+                    <span className="font-medium">Why: </span>
+                    {escalation.reason}
+                </p>
+                {escalation.inbound_snippet ? (
+                    <p className="mt-2 rounded-md bg-muted/50 p-3 text-sm">
+                        <span className="font-medium">Latest chat: </span>
+                        {escalation.inbound_snippet}
+                    </p>
+                ) : null}
+                <Form
+                    action={`/leads/${leadId}/escalations/${escalation.id}/resolve`}
+                    method="post"
+                    className="mt-4 grid gap-3 md:grid-cols-2"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <AreaField
+                                name="correction"
+                                label="Teach the desk (required)"
+                                required
+                                hint="How should it handle this person next time? Saved to memory + knowledge."
+                                error={errors.correction}
+                            />
+                            <AreaField
+                                name="send_reply"
+                                label="Optional WhatsApp reply now"
+                                defaultValue={escalation.suggested_reply ?? ''}
+                                hint="Edit the suggested reply and send it yourself. Leave blank to only teach."
+                                error={errors.send_reply}
+                            />
+                            <SelectField
+                                name="resume_automation"
+                                label="After saving"
+                                options={[
+                                    {
+                                        value: '1',
+                                        label: 'Resume automation on this lead',
+                                    },
+                                    {
+                                        value: '0',
+                                        label: 'Keep automation paused',
+                                    },
+                                ]}
+                                defaultValue="1"
+                                error={errors.resume_automation}
+                            />
+                            <div className="flex items-end">
+                                <Button type="submit" disabled={processing}>
+                                    Save correction
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </Form>
+            </SurfaceBody>
+        </Surface>
     );
 }
 

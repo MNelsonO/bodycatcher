@@ -1,6 +1,13 @@
 import { Form, Head } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { SelectField } from '@/components/crm/fields';
+import {
+    Page,
+    PageHeader,
+    Surface,
+    SurfaceBody,
+    SurfaceHeader,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -20,9 +27,6 @@ type WebhookPaths = {
     twilio: string;
 };
 
-const surface =
-    'overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]';
-
 const code =
     'rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground';
 
@@ -36,19 +40,10 @@ function Panel({
     children: ReactNode;
 }) {
     return (
-        <section className={surface}>
-            <div className="border-b border-border bg-card px-5 py-4">
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                    {title}
-                </h2>
-                {description ? (
-                    <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-                        {description}
-                    </p>
-                ) : null}
-            </div>
-            <div className="bg-card px-5 py-5 text-sm">{children}</div>
-        </section>
+        <Surface>
+            <SurfaceHeader title={title} description={description} />
+            <SurfaceBody className="text-sm">{children}</SurfaceBody>
+        </Surface>
     );
 }
 
@@ -80,22 +75,22 @@ export default function WhatsAppSettings({
     return (
         <>
             <Head title="WhatsApp" />
-            <div className="mx-auto flex w-full max-w-4xl flex-col gap-6 p-4 md:gap-8 md:p-8">
-                {/* Page header */}
-                <div className="border-b border-border pb-5">
-                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                        WhatsApp
-                    </h1>
-                    <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-                        Active driver is <span className={code}>{driver}</span>.
-                        Paste FlareSend / Meta keys and switch the driver on{' '}
-                        <a href="/integrations" className="underline">
-                            Integrations
-                        </a>{' '}
-                        — no .env edit needed. Secrets are encrypted and never
-                        shown here.
-                    </p>
-                </div>
+            <Page width="narrow">
+                <PageHeader
+                    title="WhatsApp"
+                    description={
+                        <>
+                            Active driver is{' '}
+                            <span className={code}>{driver}</span>. Paste
+                            FlareSend / Meta keys and switch the driver on{' '}
+                            <a href="/integrations" className="underline">
+                                Integrations
+                            </a>{' '}
+                            — no .env edit needed. Secrets are encrypted and
+                            never shown here.
+                        </>
+                    }
+                />
 
                 <Panel title="Configuration">
                     <ul className="divide-y divide-border">
@@ -281,7 +276,7 @@ export default function WhatsAppSettings({
                         </p>
                     )}
                 </Panel>
-            </div>
+            </Page>
         </>
     );
 }

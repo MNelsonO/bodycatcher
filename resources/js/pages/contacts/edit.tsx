@@ -3,6 +3,7 @@ import {
     ContactForm,
     type ContactFormValues,
 } from '@/components/crm/contact-form';
+import { Page, PageHeader } from '@/components/crm/page-frame';
 import type { ContactFormOptions } from '@/types/crm';
 
 export default function EditContact({
@@ -15,12 +16,10 @@ export default function EditContact({
     return (
         <>
             <Head title={`Edit ${contact.full_name}`} />
-            <div className="flex flex-col gap-4 p-4 md:p-6">
-                <h1 className="text-xl font-semibold tracking-tight">
-                    Edit {contact.full_name}
-                </h1>
+            <Page width="form">
+                <PageHeader title={`Edit ${contact.full_name}`} />
                 <ContactForm contact={contact} options={options} />
-            </div>
+            </Page>
         </>
     );
 }

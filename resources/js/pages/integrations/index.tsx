@@ -1,6 +1,13 @@
 import { Form, Head } from '@inertiajs/react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
+import {
+    Page,
+    PageHeader,
+    Surface,
+    SurfaceBody,
+    SurfaceHeader,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -44,9 +51,6 @@ type Report = {
     fetched_at: string | null;
 };
 
-const surface =
-    'overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]';
-
 function Panel({
     title,
     description,
@@ -59,22 +63,14 @@ function Panel({
     aside?: ReactNode;
 }) {
     return (
-        <section className={surface}>
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border bg-card px-5 py-4">
-                <div>
-                    <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                        {title}
-                    </h2>
-                    {description ? (
-                        <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-                            {description}
-                        </p>
-                    ) : null}
-                </div>
-                {aside}
-            </div>
-            <div className="bg-card px-5 py-5 text-sm">{children}</div>
-        </section>
+        <Surface>
+            <SurfaceHeader
+                title={title}
+                description={description}
+                action={aside}
+            />
+            <SurfaceBody className="text-sm">{children}</SurfaceBody>
+        </Surface>
     );
 }
 
@@ -270,11 +266,13 @@ function IntegrationCard({
                     action={`/integrations/${account.id}/sync`}
                     method="post"
                     className="hidden"
-                />
+                >
+                    {null}
+                </Form>
             ) : null}
 
             {account.last_sync_error ? (
-                <p className="mt-3 text-sm text-red-600">
+                <p className="mt-3 text-sm text-destructive">
                     {account.last_sync_error}
                 </p>
             ) : account.last_synced_at ? (
@@ -366,26 +364,25 @@ export default function IntegrationsIndex({
     return (
         <>
             <Head title="Integrations" />
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:gap-8 md:p-8">
-                <div className="border-b border-border pb-5">
-                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                        Integrations
-                    </h1>
-                    <p className="mt-2 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
-                        Configure FlareSend, Meta, Search Console, and Google
-                        Calendar on the desk — not in .env. Each connection is
-                        pitched the way a salesperson would: what it unlocks,
-                        how demos feel, and how replies stay human with real
-                        conversation context. Stuck? Forward yourself to a
-                        technical supervisor for a live walkthrough.
-                    </p>
-                    <p className="mt-3 text-sm text-muted-foreground">
-                        Active messaging driver:{' '}
-                        <span className="font-medium text-foreground">
-                            {messaging_driver}
-                        </span>
-                    </p>
-                </div>
+            <Page width="content">
+                <PageHeader
+                    title="Integrations"
+                    description={
+                        <>
+                            Configure FlareSend, Meta, Search Console, and
+                            Google Calendar on the desk — not in .env. Each
+                            connection is pitched the way a salesperson would:
+                            what it unlocks, how demos feel, and how replies
+                            stay human with real conversation context. Stuck?
+                            Forward yourself to a technical supervisor for a
+                            live walkthrough. Active messaging driver:{' '}
+                            <span className="font-medium text-foreground">
+                                {messaging_driver}
+                            </span>
+                            .
+                        </>
+                    }
+                />
 
                 <Panel
                     title="Webhook endpoints"
@@ -479,7 +476,7 @@ export default function IntegrationsIndex({
                         </div>
                     )}
                 </Panel>
-            </div>
+            </Page>
         </>
     );
 }

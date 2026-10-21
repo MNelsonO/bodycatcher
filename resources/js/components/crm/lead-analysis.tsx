@@ -1,5 +1,10 @@
 import { Form, Link } from '@inertiajs/react';
 import { AreaField } from '@/components/crm/fields';
+import {
+    Surface,
+    SurfaceBody,
+    SurfaceHeader,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { LeadDetail } from '@/types/crm';
@@ -14,210 +19,212 @@ export function LeadAnalysisPanel({
     const latest = intelligence.latest;
 
     return (
-        <section className="rounded-lg border p-4">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div>
-                    <h2 className="text-sm font-medium">Intelligence</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                        The model proposes a summary, a score with reasons, and
-                        a reply. Applying a field or sending the reply is a
-                        separate step.
+        <Surface>
+            <SurfaceHeader
+                title="Intelligence"
+                description="The model proposes a summary, a score with reasons, and a reply. Applying a field or sending the reply is a separate step."
+                action={
+                    <Form
+                        action={`/leads/${leadId}/analyses`}
+                        method="post"
+                    >
+                        {({ processing }) => (
+                            <Button type="submit" disabled={processing}>
+                                Read the conversation
+                            </Button>
+                        )}
+                    </Form>
+                }
+            />
+            <SurfaceBody>
+                {!intelligence.configured ? (
+                    <p className="text-sm text-muted-foreground">
+                        The language model is missing.{' '}
+                        <Link href="/ai" className="underline">
+                            Check the Intelligence page
+                        </Link>{' '}
+                        for which environment variables are unset. A read still
+                        records that, and it does not invent a score.
                     </p>
-                </div>
-                <Form
-                    action={`/leads/${leadId}/analyses`}
-                    method="post"
-                >
-                    {({ processing }) => (
-                        <Button type="submit" disabled={processing}>
-                            Read the conversation
-                        </Button>
-                    )}
-                </Form>
-            </div>
+                ) : null}
 
-            {!intelligence.configured ? (
-                <p className="mt-3 text-sm text-muted-foreground">
-                    The language model is missing.{' '}
-                    <Link href="/ai" className="underline">
-                        Check the Intelligence page
-                    </Link>{' '}
-                    for which environment variables are unset. A read still
-                    records that, and it does not invent a score.
-                </p>
-            ) : null}
+                {latest === null ? (
+                    <p className="text-sm text-muted-foreground">
+                        No analysis yet.
+                    </p>
+                ) : null}
 
-            {latest === null ? (
-                <p className="mt-3 text-sm text-muted-foreground">
-                    No analysis yet.
-                </p>
-            ) : null}
+                {latest?.status === 'queued' ? (
+                    <p className="text-sm">
+                        Analysis is queued. If the queue was down, run{' '}
+                        <span className="font-mono text-xs">
+                            php artisan ai:retry
+                        </span>
+                        .
+                    </p>
+                ) : null}
 
-            {latest?.status === 'queued' ? (
-                <p className="mt-3 text-sm">
-                    Analysis is queued. If the queue was down, run{' '}
-                    <span className="font-mono text-xs">php artisan ai:retry</span>
-                    .
-                </p>
-            ) : null}
+                {latest &&
+                (latest.status === 'failed' ||
+                    latest.status === 'unavailable') ? (
+                    <p className="text-sm text-destructive">
+                        {latest.error ?? 'The analysis did not finish.'}
+                    </p>
+                ) : null}
 
-            {latest && (latest.status === 'failed' || latest.status === 'unavailable') ? (
-                <p className="mt-3 text-sm text-destructive">
-                    {latest.error ?? 'The analysis did not finish.'}
-                </p>
-            ) : null}
+                {latest?.status === 'completed' ? (
+                    <div className="grid gap-4">
+                        <div>
+                            <p className="text-sm">{latest.summary}</p>
+                            {latest.completed_at_label ? (
+                                <p className="mt-1 text-xs text-muted-foreground">
+                                    {latest.completed_at_label}
+                                </p>
+                            ) : null}
+                        </div>
 
-            {latest?.status === 'completed' ? (
-                <div className="mt-4 grid gap-4">
-                    <div>
-                        <p className="text-sm">{latest.summary}</p>
-                        {latest.completed_at_label ? (
-                            <p className="mt-1 text-xs text-muted-foreground">
-                                {latest.completed_at_label}
+                        {latest.score !== null ? (
+                            <div>
+                                <p className="text-sm font-medium">
+                                    Score {latest.score}
+                                </p>
+                                {latest.score_reasons.length > 0 ? (
+                                    <ul className="mt-1 list-disc pl-5 text-sm text-muted-foreground">
+                                        {latest.score_reasons.map((reason) => (
+                                            <li key={reason}>{reason}</li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        No reasons were returned with this
+                                        score.
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                No score was returned.
+                            </p>
+                        )}
+
+                        {latest.knowledge.length > 0 ? (
+                            <p className="text-xs text-muted-foreground">
+                                Knowledge used:{' '}
+                                {latest.knowledge
+                                    .map((article) => article.title)
+                                    .join(', ')}
                             </p>
                         ) : null}
-                    </div>
 
-                    {latest.score !== null ? (
-                        <div>
-                            <p className="text-sm font-medium">
-                                Score {latest.score}
-                            </p>
-                            {latest.score_reasons.length > 0 ? (
-                                <ul className="mt-1 list-disc pl-5 text-sm text-muted-foreground">
-                                    {latest.score_reasons.map((reason) => (
-                                        <li key={reason}>{reason}</li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    No reasons were returned with this score.
-                                </p>
-                            )}
-                        </div>
-                    ) : (
-                        <p className="text-sm text-muted-foreground">
-                            No score was returned.
-                        </p>
-                    )}
-
-                    {latest.knowledge.length > 0 ? (
-                        <p className="text-xs text-muted-foreground">
-                            Knowledge used:{' '}
-                            {latest.knowledge
-                                .map((article) => article.title)
-                                .join(', ')}
-                        </p>
-                    ) : null}
-
-                    {latest.extraction.length > 0 ? (
-                        <Form
-                            action={`/leads/${leadId}/analyses/${latest.id}/apply`}
-                            method="post"
-                            className="grid gap-3"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <p className="text-sm font-medium">
-                                        Extracted fields
-                                    </p>
-                                    <div className="grid gap-2">
-                                        {latest.extraction.map((field) => (
-                                            <label
-                                                key={field.key}
-                                                className="flex items-start gap-2 text-sm"
+                        {latest.extraction.length > 0 ? (
+                            <Form
+                                action={`/leads/${leadId}/analyses/${latest.id}/apply`}
+                                method="post"
+                                className="grid gap-3"
+                            >
+                                {({ errors, processing }) => (
+                                    <>
+                                        <p className="text-sm font-medium">
+                                            Extracted fields
+                                        </p>
+                                        <div className="grid gap-2">
+                                            {latest.extraction.map((field) => (
+                                                <label
+                                                    key={field.key}
+                                                    className="flex items-start gap-2 text-sm"
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        name="fields[]"
+                                                        value={field.key}
+                                                        className="mt-1"
+                                                    />
+                                                    <span>
+                                                        <span className="font-medium">
+                                                            {field.label}
+                                                        </span>
+                                                        <span className="block text-muted-foreground">
+                                                            {field.value}
+                                                        </span>
+                                                    </span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                        {errors.fields ? (
+                                            <p className="text-sm text-destructive">
+                                                {errors.fields}
+                                            </p>
+                                        ) : null}
+                                        <div>
+                                            <Button
+                                                type="submit"
+                                                variant="outline"
+                                                disabled={processing}
                                             >
-                                                <input
-                                                    type="checkbox"
-                                                    name="fields[]"
-                                                    value={field.key}
-                                                    className="mt-1"
-                                                />
-                                                <span>
-                                                    <span className="font-medium">
-                                                        {field.label}
-                                                    </span>
-                                                    <span className="block text-muted-foreground">
-                                                        {field.value}
-                                                    </span>
-                                                </span>
-                                            </label>
-                                        ))}
-                                    </div>
-                                    {errors.fields ? (
-                                        <p className="text-sm text-destructive">
-                                            {errors.fields}
-                                        </p>
-                                    ) : null}
-                                    <div>
-                                        <Button
-                                            type="submit"
-                                            variant="outline"
-                                            disabled={processing}
-                                        >
-                                            Apply selected fields
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
-                        </Form>
-                    ) : (
-                        <p className="text-sm text-muted-foreground">
-                            The model did not extract any lead fields.
-                        </p>
-                    )}
+                                                Apply selected fields
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
+                            </Form>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                The model did not extract any lead fields.
+                            </p>
+                        )}
 
-                    {latest.suggested_stage ? (
-                        <Form
-                            action={`/leads/${leadId}/analyses/${latest.id}/stage`}
-                            method="post"
-                            className="grid gap-2"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <p className="text-sm">
-                                        Suggested stage:{' '}
-                                        <span className="font-medium">
-                                            {latest.suggested_stage?.name}
-                                        </span>
-                                        {latest.stage_reason
-                                            ? ` — ${latest.stage_reason}`
-                                            : ''}
-                                    </p>
-                                    {errors.stage_id ? (
-                                        <p className="text-sm text-destructive">
-                                            {errors.stage_id}
+                        {latest.suggested_stage ? (
+                            <Form
+                                action={`/leads/${leadId}/analyses/${latest.id}/stage`}
+                                method="post"
+                                className="grid gap-2"
+                            >
+                                {({ errors, processing }) => (
+                                    <>
+                                        <p className="text-sm">
+                                            Suggested stage:{' '}
+                                            <span className="font-medium">
+                                                {latest.suggested_stage?.name}
+                                            </span>
+                                            {latest.stage_reason
+                                                ? ` — ${latest.stage_reason}`
+                                                : ''}
                                         </p>
-                                    ) : null}
-                                    <div>
-                                        <Button
-                                            type="submit"
-                                            variant="outline"
-                                            disabled={processing}
-                                        >
-                                            Apply suggested stage
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
-                        </Form>
-                    ) : latest.stage_rejected_reason ? (
-                        <p className="text-sm text-muted-foreground">
-                            Stage suggestion dropped:{' '}
-                            {latest.stage_rejected_reason}
-                        </p>
-                    ) : null}
+                                        {errors.stage_id ? (
+                                            <p className="text-sm text-destructive">
+                                                {errors.stage_id}
+                                            </p>
+                                        ) : null}
+                                        <div>
+                                            <Button
+                                                type="submit"
+                                                variant="outline"
+                                                disabled={processing}
+                                            >
+                                                Apply suggested stage
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
+                            </Form>
+                        ) : latest.stage_rejected_reason ? (
+                            <p className="text-sm text-muted-foreground">
+                                Stage suggestion dropped:{' '}
+                                {latest.stage_rejected_reason}
+                            </p>
+                        ) : null}
 
-                    {latest.draft ? (
-                        <DraftForm leadId={leadId} draft={latest.draft} />
-                    ) : (
-                        <p className="text-sm text-muted-foreground">
-                            No reply draft.
-                        </p>
-                    )}
-                </div>
-            ) : null}
-        </section>
+                        {latest.draft ? (
+                            <DraftForm leadId={leadId} draft={latest.draft} />
+                        ) : (
+                            <p className="text-sm text-muted-foreground">
+                                No reply draft.
+                            </p>
+                        )}
+                    </div>
+                ) : null}
+            </SurfaceBody>
+        </Surface>
     );
 }
 

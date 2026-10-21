@@ -1,6 +1,13 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { useEffect, useMemo, useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
+import {
+    Page,
+    PageHeader,
+    Surface,
+    SurfaceBody,
+    SurfaceHeader,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -159,83 +166,83 @@ export default function InvoiceShow({
     return (
         <>
             <Head title={invoice.number} />
-            <div className="flex flex-col gap-6 p-4 md:p-6">
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    <div>
-                        <p className="text-sm text-muted-foreground">
-                            {business.trading_name || business.legal_name}
-                        </p>
-                        <h1 className="text-xl font-semibold tracking-tight">
-                            {invoice.number}
-                        </h1>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                            <Badge>{invoice.status}</Badge>
-                            <Badge variant="outline">
-                                Due {invoice.due_date}
-                            </Badge>
-                            {invoice.paid_on ? (
-                                <Badge variant="outline">
-                                    Paid {invoice.paid_on}
-                                    {invoice.payment_method
-                                        ? ` · ${invoice.payment_method}`
-                                        : ''}
-                                </Badge>
+            <Page>
+                <PageHeader
+                    title={invoice.number}
+                    description={
+                        business.trading_name || business.legal_name
+                    }
+                    actions={
+                        <>
+                            <Button variant="outline" asChild>
+                                <a href={`/invoices/${invoice.id}/pdf`}>
+                                    Download PDF
+                                </a>
+                            </Button>
+                            <Button variant="outline" asChild>
+                                <a
+                                    href={share_url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    Open share page
+                                </a>
+                            </Button>
+                            <Button
+                                variant="outline"
+                                type="button"
+                                onClick={copyShare}
+                            >
+                                Copy share link
+                            </Button>
+                            {invoice.status !== 'paid' ? null : (
+                                <Form
+                                    action={`/invoices/${invoice.id}/mark-unpaid`}
+                                    method="post"
+                                >
+                                    <Button type="submit" variant="outline">
+                                        Mark unpaid
+                                    </Button>
+                                </Form>
+                            )}
+                            {invoice.status === 'draft' ? (
+                                <Form
+                                    action={`/invoices/${invoice.id}/mark-sent`}
+                                    method="post"
+                                >
+                                    <Button type="submit" variant="outline">
+                                        Mark sent / unpaid
+                                    </Button>
+                                </Form>
                             ) : null}
-                        </div>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                        <Button variant="outline" asChild>
-                            <a href={`/invoices/${invoice.id}/pdf`}>
-                                Download PDF
-                            </a>
-                        </Button>
-                        <Button variant="outline" asChild>
-                            <a
-                                href={share_url}
-                                target="_blank"
-                                rel="noreferrer"
-                            >
-                                Open share page
-                            </a>
-                        </Button>
-                        <Button
-                            variant="outline"
-                            type="button"
-                            onClick={copyShare}
-                        >
-                            Copy share link
-                        </Button>
-                        {invoice.status !== 'paid' ? null : (
-                            <Form
-                                action={`/invoices/${invoice.id}/mark-unpaid`}
-                                method="post"
-                            >
-                                <Button type="submit" variant="outline">
-                                    Mark unpaid
-                                </Button>
-                            </Form>
-                        )}
-                        {invoice.status === 'draft' ? (
-                            <Form
-                                action={`/invoices/${invoice.id}/mark-sent`}
-                                method="post"
-                            >
-                                <Button type="submit" variant="outline">
-                                    Mark sent / unpaid
-                                </Button>
-                            </Form>
-                        ) : null}
-                        <Button variant="ghost" asChild>
-                            <Link href="/invoices">All invoices</Link>
-                        </Button>
-                    </div>
+                            <Button variant="ghost" asChild>
+                                <Link href="/invoices">All invoices</Link>
+                            </Button>
+                        </>
+                    }
+                />
+
+                <div className="flex flex-wrap gap-2">
+                    <Badge>{invoice.status}</Badge>
+                    <Badge variant="outline">Due {invoice.due_date}</Badge>
+                    {invoice.paid_on ? (
+                        <Badge variant="outline">
+                            Paid {invoice.paid_on}
+                            {invoice.payment_method
+                                ? ` · ${invoice.payment_method}`
+                                : ''}
+                        </Badge>
+                    ) : null}
                 </div>
 
                 {invoice.status !== 'paid' ? (
+                    <Surface>
+                        <SurfaceHeader title="Record payment" />
+                        <SurfaceBody>
                     <Form
                         action={`/invoices/${invoice.id}/mark-paid`}
                         method="post"
-                        className="grid max-w-2xl gap-3 rounded-lg border p-4 sm:grid-cols-[1fr_1fr_auto]"
+                        className="grid max-w-2xl gap-3 sm:grid-cols-[1fr_1fr_auto]"
                     >
                         {({ errors, processing }) => (
                             <>
@@ -264,19 +271,22 @@ export default function InvoiceShow({
                             </>
                         )}
                     </Form>
+                        </SurfaceBody>
+                    </Surface>
                 ) : null}
 
                 <div className="grid gap-4 lg:grid-cols-2">
-                    <section className="rounded-lg border p-4 text-sm">
-                        <h2 className="font-medium">From</h2>
+                    <Surface>
+                        <SurfaceHeader title="From" />
+                        <SurfaceBody className="text-sm">
                         {business.logo_url ? (
                             <img
                                 src={business.logo_url}
                                 alt="Logo"
-                                className="mt-2 max-h-16"
+                                className="max-h-16"
                             />
                         ) : (
-                            <p className="mt-2 text-muted-foreground">
+                            <p className="text-muted-foreground">
                                 No logo yet.{' '}
                                 <Link
                                     href="/billing/profile"
@@ -299,10 +309,12 @@ export default function InvoiceShow({
                                 Tax ID: {business.tax_id}
                             </p>
                         ) : null}
-                    </section>
-                    <section className="rounded-lg border p-4 text-sm">
-                        <h2 className="font-medium">Bill to</h2>
-                        <p className="mt-2 font-medium">
+                        </SurfaceBody>
+                    </Surface>
+                    <Surface>
+                        <SurfaceHeader title="Bill to" />
+                        <SurfaceBody className="text-sm">
+                        <p className="font-medium">
                             {invoice.contact.full_name}
                         </p>
                         {invoice.contact.business_name ? (
@@ -321,26 +333,23 @@ export default function InvoiceShow({
                                 {invoice.contact.email}
                             </p>
                         ) : null}
-                    </section>
+                        </SurfaceBody>
+                    </Surface>
                 </div>
 
-                <section className="rounded-lg border p-4">
-                    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                            <h2 className="text-sm font-medium">
-                                AI invoice builder
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                Ask for a rewrite. Every run is stored so you
-                                can apply or regenerate later.
-                            </p>
-                        </div>
-                        {!llm_ready ? (
-                            <Button variant="outline" size="sm" asChild>
-                                <Link href="/ai">Configure LLM</Link>
-                            </Button>
-                        ) : null}
-                    </div>
+                <Surface>
+                    <SurfaceHeader
+                        title="AI invoice builder"
+                        description="Ask for a rewrite. Every run is stored so you can apply or regenerate later."
+                        action={
+                            !llm_ready ? (
+                                <Button variant="outline" size="sm" asChild>
+                                    <Link href="/ai">Configure LLM</Link>
+                                </Button>
+                            ) : null
+                        }
+                    />
+                    <SurfaceBody>
                     {editable ? (
                         <Form
                             action={`/invoices/${invoice.id}/generations`}
@@ -390,7 +399,7 @@ export default function InvoiceShow({
                                     </div>
                                     <p className="mt-1">{row.prompt}</p>
                                     {row.error ? (
-                                        <p className="mt-1 text-red-600">
+                                        <p className="mt-1 text-destructive">
                                             {row.error}
                                         </p>
                                     ) : null}
@@ -449,13 +458,17 @@ export default function InvoiceShow({
                             ))}
                         </ul>
                     ) : null}
-                </section>
+                    </SurfaceBody>
+                </Surface>
 
                 {editable ? (
+                    <Surface>
+                        <SurfaceHeader title="Edit invoice fields" />
+                        <SurfaceBody>
                     <Form
                         action={`/invoices/${invoice.id}`}
                         method="put"
-                        className="grid max-w-4xl gap-4 rounded-lg border p-4"
+                        className="grid max-w-4xl gap-4"
                     >
                         {({ errors, processing }) => (
                             <>
@@ -476,9 +489,6 @@ export default function InvoiceShow({
                                         })),
                                     )}
                                 />
-                                <h2 className="text-sm font-medium">
-                                    Edit invoice fields
-                                </h2>
                                 <div className="grid gap-3 sm:grid-cols-3">
                                     <TextField
                                         name="issue_date"
@@ -620,7 +630,7 @@ export default function InvoiceShow({
                                         </div>
                                     ))}
                                     {errors.items ? (
-                                        <p className="text-sm text-red-600">
+                                        <p className="text-sm text-destructive">
                                             {errors.items}
                                         </p>
                                     ) : null}
@@ -636,8 +646,11 @@ export default function InvoiceShow({
                             </>
                         )}
                     </Form>
+                        </SurfaceBody>
+                    </Surface>
                 ) : (
-                    <>
+                    <Surface>
+                        <SurfaceBody className="space-y-4">
                         <Table>
                             <TableHeader>
                                 <TableRow>
@@ -711,13 +724,14 @@ export default function InvoiceShow({
                                 Terms: {invoice.terms_and_conditions}
                             </p>
                         ) : null}
-                    </>
+                        </SurfaceBody>
+                    </Surface>
                 )}
 
                 <p className="break-all text-xs text-muted-foreground">
                     Share link: {share_url}
                 </p>
-            </div>
+            </Page>
         </>
     );
 }

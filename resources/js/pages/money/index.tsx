@@ -1,5 +1,10 @@
 import { Form, Head } from '@inertiajs/react';
 import type { InputHTMLAttributes, ReactNode } from 'react';
+import {
+    Page,
+    PageHeader,
+    surfaceClass,
+} from '@/components/crm/page-frame';
 import { Button } from '@/components/ui/button';
 
 type Account = {
@@ -48,9 +53,6 @@ type Recurring = {
     is_due_soon: boolean;
 };
 
-const surface =
-    'overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]';
-
 const control =
     'h-10 w-full rounded-md border border-input bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
 
@@ -87,17 +89,11 @@ export default function MoneyIndex({
     return (
         <>
             <Head title="Money" />
-            <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-6 p-4 md:gap-8 md:p-8">
-                {/* Page header */}
-                <div className="border-b border-border pb-5">
-                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                        Money
-                    </h1>
-                    <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-                        Track banks, who you owe, who owes you, and monthly
-                        recurring cash moves.
-                    </p>
-                </div>
+            <Page>
+                <PageHeader
+                    title="Money"
+                    description="Track banks, who you owe, who owes you, and monthly recurring cash moves."
+                />
 
                 <section className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
                     <Stat
@@ -494,7 +490,7 @@ export default function MoneyIndex({
                         </Form>
                     </Panel>
                 </section>
-            </div>
+            </Page>
         </>
     );
 }
@@ -666,7 +662,7 @@ function Panel({
               : 'bg-primary';
 
     return (
-        <div className={`${surface} ${className}`}>
+        <div className={`${surfaceClass} ${className}`}>
             <div className={`h-1.5 w-full ${bar}`} />
             <div className="border-b border-border bg-card px-5 py-4">
                 <h2 className="text-lg font-semibold tracking-tight text-foreground">

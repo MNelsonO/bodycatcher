@@ -6,6 +6,7 @@ enum ActivityEvent: string
 {
     case ContactCreated = 'contact_created';
     case LeadCreated = 'lead_created';
+    case ProductChanged = 'product_changed';
     case StageChanged = 'stage_changed';
     case MessageLogged = 'message_logged';
     case NoteAdded = 'note_added';

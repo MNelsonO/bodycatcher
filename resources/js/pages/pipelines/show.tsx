@@ -1,5 +1,12 @@
 import { Form, Head, router } from '@inertiajs/react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
+import {
+    Page,
+    PageHeader,
+    Surface,
+    SurfaceBody,
+    SurfaceHeader,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -16,30 +23,6 @@ type StageRow = {
     archived: boolean;
     targets: number[];
 };
-
-const surface =
-    'overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]';
-
-function PanelHead({
-    title,
-    description,
-}: {
-    title: string;
-    description?: string;
-}) {
-    return (
-        <div className="border-b border-border bg-card px-5 py-4">
-            <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                {title}
-            </h2>
-            {description ? (
-                <p className="mt-1 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-                    {description}
-                </p>
-            ) : null}
-        </div>
-    );
-}
 
 export default function PipelineShow({
     pipeline,
@@ -85,34 +68,37 @@ export default function PipelineShow({
     return (
         <>
             <Head title={pipeline.name} />
-            <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 p-4 md:gap-8 md:p-8">
-                {/* Page header */}
-                <div className="border-b border-border pb-5">
-                    <div className="flex flex-wrap items-center gap-3">
-                        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                            {pipeline.name}
-                        </h1>
-                        {pipeline.is_default ? <Badge>Default</Badge> : null}
-                        {pipeline.archived ? (
-                            <Badge variant="outline">Archived</Badge>
-                        ) : null}
-                    </div>
-                    <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
-                        {pipeline.archived ? 'Archived. ' : ''}
-                        {pipeline.is_default ? 'Default pipeline. ' : ''}
-                        Stages should read as a clear sales path: contact →
-                        qualify → demo → close. Purpose text shows agents what
-                        to do in each stage.
-                    </p>
-                </div>
+            <Page width="content">
+                <PageHeader
+                    title={pipeline.name}
+                    description={
+                        <>
+                            {pipeline.archived ? 'Archived. ' : ''}
+                            {pipeline.is_default ? 'Default pipeline. ' : ''}
+                            Stages should read as a clear sales path: contact →
+                            qualify → demo → close. Purpose text shows agents
+                            what to do in each stage.
+                        </>
+                    }
+                    actions={
+                        <>
+                            {pipeline.is_default ? (
+                                <Badge>Default</Badge>
+                            ) : null}
+                            {pipeline.archived ? (
+                                <Badge variant="outline">Archived</Badge>
+                            ) : null}
+                        </>
+                    }
+                />
 
-                {/* Pipeline details */}
-                <section className={surface}>
-                    <PanelHead title="Pipeline details" />
+                <Surface>
+                    <SurfaceHeader title="Pipeline details" />
+                    <SurfaceBody>
                     <Form
                         action={`/pipelines/${pipeline.id}`}
                         method="put"
-                        className="grid max-w-xl gap-4 bg-card p-5"
+                        className="grid max-w-xl gap-4"
                     >
                         {({ errors, processing }) => (
                             <>
@@ -137,6 +123,7 @@ export default function PipelineShow({
                             </>
                         )}
                     </Form>
+                    </SurfaceBody>
                     <div className="flex flex-wrap gap-2 border-t border-border bg-muted px-5 py-4">
                         {pipeline.archived ? null : (
                             <Form
@@ -157,15 +144,14 @@ export default function PipelineShow({
                             </Button>
                         </Form>
                     </div>
-                </section>
+                </Surface>
 
-                {/* Stages */}
-                <section className={surface}>
-                    <PanelHead
+                <Surface>
+                    <SurfaceHeader
                         title="Stages"
                         description="Reorder with Up and Down. Changes to a stage apply when you press Save on that stage."
                     />
-                    <div className="space-y-4 bg-card p-5">
+                    <SurfaceBody className="space-y-4">
                         {stages.length === 0 ? (
                             <p className="text-sm text-muted-foreground">
                                 No stages yet. Add the first one below.
@@ -344,16 +330,15 @@ export default function PipelineShow({
                                 </>
                             )}
                         </Form>
-                    </div>
-                </section>
+                    </SurfaceBody>
+                </Surface>
 
-                {/* Transitions */}
-                <section className={surface}>
-                    <PanelHead
+                <Surface>
+                    <SurfaceHeader
                         title="Permitted transitions"
                         description="A lead can only move along a checked path. Illegal moves are rejected and do not write history."
                     />
-                    <div className="bg-card p-5">
+                    <SurfaceBody>
                         {stages.length < 2 ? (
                             <p className="text-sm text-muted-foreground">
                                 Add at least two stages before setting
@@ -426,9 +411,9 @@ export default function PipelineShow({
                                 )}
                             </Form>
                         )}
-                    </div>
-                </section>
-            </div>
+                    </SurfaceBody>
+                </Surface>
+            </Page>
         </>
     );
 }

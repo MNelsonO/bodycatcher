@@ -2,6 +2,13 @@ import { Form, Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
+import {
+    Page,
+    PageHeader,
+    Surface,
+    SurfaceBody,
+    SurfaceHeader,
+} from '@/components/crm/page-frame';
 import { Button } from '@/components/ui/button';
 import type { Option, StageOption } from '@/types/crm';
 
@@ -11,9 +18,6 @@ type PipelineChoice = {
     is_default: boolean;
     stages: StageOption[];
 };
-
-const surface =
-    'overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]';
 
 function FormSection({
     title,
@@ -25,21 +29,12 @@ function FormSection({
     children: ReactNode;
 }) {
     return (
-        <section className={surface}>
-            <div className="border-b border-border bg-card px-5 py-4">
-                <h2 className="text-lg font-semibold tracking-tight text-foreground">
-                    {title}
-                </h2>
-                {description ? (
-                    <p className="mt-1 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
-                        {description}
-                    </p>
-                ) : null}
-            </div>
-            <div className="grid gap-4 bg-card p-5 md:grid-cols-2">
+        <Surface>
+            <SurfaceHeader title={title} description={description} />
+            <SurfaceBody className="grid gap-4 md:grid-cols-2">
                 {children}
-            </div>
-        </section>
+            </SurfaceBody>
+        </Surface>
     );
 }
 
@@ -75,17 +70,11 @@ export default function CreateLead({
     return (
         <>
             <Head title="Open a lead" />
-            <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-4 md:gap-8 md:p-8">
-                {/* Page header */}
-                <div className="border-b border-border pb-5">
-                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                        Open a lead
-                    </h1>
-                    <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
-                        One contact can have several leads. Two open leads for
-                        the same product are refused.
-                    </p>
-                </div>
+            <Page width="form">
+                <PageHeader
+                    title="Open a lead"
+                    description="One contact can have several leads. Two open leads for the same product are refused."
+                />
 
                 {contacts.length === 0 ||
                 products.length === 0 ||
@@ -271,7 +260,7 @@ export default function CreateLead({
                         )}
                     </Form>
                 )}
-            </div>
+            </Page>
         </>
     );
 }

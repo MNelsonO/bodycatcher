@@ -1,5 +1,25 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
+import {
+    BookOpen,
+    CheckCircle2,
+    CircleAlert,
+    HelpCircle,
+    MessageCircle,
+    Plus,
+    RefreshCw,
+    Search,
+    Settings2,
+    Trash2,
+    Zap,
+} from 'lucide-react';
+import type { ComponentType, ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
+import {
+    Page,
+    PageHeader,
+    surfaceClass,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { Option } from '@/types/crm';
@@ -62,6 +82,30 @@ type AutoReplyRule = {
     require_open_window: boolean;
 };
 
+type TabKey = 'questions' | 'knowledge' | 'replies' | 'sync' | 'config';
+
+const card = surfaceClass;
+
+function formatWhen(value: string | null): string | null {
+    if (!value) {
+        return null;
+    }
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+        ? value
+        : date.toLocaleString(undefined, {
+              dateStyle: 'medium',
+              timeStyle: 'short',
+          });
+}
+
+const matchLabels: Record<string, string> = {
+    contains: 'Contains',
+    exact: 'Exactly',
+    any: 'Any message',
+};
+
 export default function IntelligenceSettings({
     variables,
     configured,
@@ -85,6 +129,14 @@ export default function IntelligenceSettings({
     whatsapp_syncs?: WhatsAppSync[];
     knowledge_gaps?: KnowledgeGap[];
 }) {
+    const [tab, setTab] = useState<TabKey>(
+        knowledge_gaps.length > 0 ? 'questions' : 'knowledge',
+    );
+    const [query, setQuery] = useState('');
+    const [statusFilter, setStatusFilter] = useState<
+        'all' | 'active' | 'inactive'
+    >('all');
+
     const productOptions: Option[] = [
         { value: 'none', label: 'Any product' },
         ...products.map((product) => ({
@@ -102,571 +154,975 @@ export default function IntelligenceSettings({
         { value: 'session', label: 'Physical session' },
     ];
 
+    const configuredCount = variables.filter((v) => v.configured).length;
+    const activeRules = auto_reply_rules.filter((r) => r.is_active).length;
+
+    const filteredArticles = useMemo(() => {
+        const needle = query.trim().toLowerCase();
+
+        return articles.filter((article) => {
+            if (statusFilter === 'active' && !article.is_active) {
+                return false;
+            }
+            if (statusFilter === 'inactive' && article.is_active) {
+                return false;
+            }
+            if (!needle) {
+                return true;
+            }
+
+            return (
+                article.title.toLowerCase().includes(needle) ||
+                article.body.toLowerCase().includes(needle) ||
+                (article.product_name ?? '').toLowerCase().includes(needle)
+            );
+        });
+    }, [articles, query, statusFilter]);
+
+    const tabs: Array<{
+        key: TabKey;
+        label: string;
+        icon: ComponentType<{ className?: string }>;
+        count?: number;
+        alert?: boolean;
+    }> = [
+        {
+            key: 'questions',
+            label: 'Questions',
+            icon: HelpCircle,
+            count: knowledge_gaps.length,
+            alert: knowledge_gaps.length > 0,
+        },
+        {
+            key: 'knowledge',
+            label: 'Knowledge',
+            icon: BookOpen,
+            count: articles.length,
+        },
+        {
+            key: 'replies',
+            label: 'Auto-replies',
+            icon: Zap,
+            count: activeRules,
+        },
+        { key: 'sync', label: 'WhatsApp sync', icon: MessageCircle },
+        {
+            key: 'config',
+            label: 'Configuration',
+            icon: Settings2,
+            alert: !configured,
+        },
+    ];
+
     return (
         <>
             <Head title="Intelligence" />
-            <div className="flex flex-col gap-6 p-4 md:p-6">
-                <div>
-                    <h1 className="text-xl font-semibold tracking-tight">
-                        Intelligence
-                    </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Provider:{' '}
-                        <span className="font-mono text-xs">{provider}</span>.
-                        Pull knowledge from your WhatsApp Business / Meta agent
-                        inbox, raise unfamiliar questions, feed facts/lessons,
-                        and optionally run a live webhook assistant.
+            <Page width="content">
+                <PageHeader
+                    title="Intelligence"
+                    description="Teach the desk what it should know, review what it could not answer, and control when it replies on WhatsApp."
+                    actions={
+                        <>
+                            <Badge
+                                variant="outline"
+                                className="font-mono text-xs"
+                            >
+                                {provider}
+                            </Badge>
+                            <Badge
+                                variant={
+                                    configured ? 'default' : 'destructive'
+                                }
+                            >
+                                {configured
+                                    ? 'Provider ready'
+                                    : `${configuredCount}/${variables.length} configured`}
+                            </Badge>
+                        </>
+                    }
+                />
+
+                {!can_manage ? (
+                    <p
+                        role="note"
+                        className="rounded-lg border border-border bg-muted/60 px-4 py-3 text-sm text-muted-foreground"
+                    >
+                        You have view-only access. Only the owner can add or
+                        change notes, answers and auto-reply rules.
                     </p>
+                ) : null}
+
+                {/* Tabs */}
+                <div
+                    role="tablist"
+                    aria-label="Intelligence sections"
+                    className="-mx-4 flex gap-1 overflow-x-auto border-b border-border px-4 md:mx-0 md:px-0"
+                >
+                    {tabs.map((item) => {
+                        const Icon = item.icon;
+                        const selected = tab === item.key;
+
+                        return (
+                            <button
+                                key={item.key}
+                                type="button"
+                                role="tab"
+                                id={`tab-${item.key}`}
+                                aria-selected={selected}
+                                aria-controls={`panel-${item.key}`}
+                                onClick={() => setTab(item.key)}
+                                className={`-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
+                                    selected
+                                        ? 'border-primary text-foreground'
+                                        : 'border-transparent text-muted-foreground hover:text-foreground'
+                                }`}
+                            >
+                                <Icon className="size-4" />
+                                {item.label}
+                                {item.count !== undefined ? (
+                                    <span
+                                        className={`rounded-full px-1.5 py-0.5 text-xs font-semibold tabular-nums ${
+                                            item.alert
+                                                ? 'bg-destructive text-white'
+                                                : 'bg-muted text-muted-foreground'
+                                        }`}
+                                    >
+                                        {item.count}
+                                    </span>
+                                ) : item.alert ? (
+                                    <span className="size-2 rounded-full bg-destructive" />
+                                ) : null}
+                            </button>
+                        );
+                    })}
                 </div>
 
-                <section className="grid gap-4">
-                    <div>
-                        <h2 className="text-sm font-medium">
-                            Unfamiliar questions
-                        </h2>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Raised from live chats and downloaded inbox sync
-                            when the desk has no grounding. Feed a fact,
-                            lesson, or physical-session answer so it learns.
-                        </p>
-                    </div>
-                    {knowledge_gaps.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                            No open unfamiliar questions.
-                        </p>
-                    ) : (
-                        knowledge_gaps.map((gap) => (
-                            <article
-                                key={gap.id}
-                                className="rounded-lg border p-4"
-                            >
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Badge variant="outline">{gap.source}</Badge>
-                                    {gap.product_name ? (
-                                        <Badge variant="laundry">
-                                            {gap.product_name}
-                                        </Badge>
-                                    ) : null}
-                                    {gap.stage_name ? (
-                                        <Badge variant="outline">
-                                            {gap.stage_name}
-                                        </Badge>
-                                    ) : null}
-                                    {gap.lead_status ? (
-                                        <Badge variant="lead">
-                                            {gap.lead_status}
-                                        </Badge>
-                                    ) : null}
-                                </div>
-                                <p className="mt-2 font-medium">
-                                    {gap.contact_name
-                                        ? `${gap.contact_name}: `
-                                        : ''}
-                                    {gap.question}
-                                </p>
-                                {gap.context_snippet &&
-                                gap.context_snippet !== gap.question ? (
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        {gap.context_snippet}
-                                    </p>
-                                ) : null}
-                                {can_manage ? (
-                                    <Form
-                                        action={`/ai/gaps/${gap.id}/answer`}
-                                        method="post"
-                                        className="mt-3 grid gap-3 md:grid-cols-2"
-                                    >
-                                        {({ errors, processing }) => (
-                                            <>
-                                                <AreaField
-                                                    name="answer"
-                                                    label="Your fact / answer"
-                                                    required
-                                                    error={errors.answer}
-                                                />
-                                                <div className="grid gap-3">
-                                                    <SelectField
-                                                        name="category"
-                                                        label="Save as"
-                                                        options={
-                                                            categoryOptions
-                                                        }
-                                                        defaultValue="fact"
-                                                        error={errors.category}
-                                                    />
-                                                    <TextField
-                                                        name="title"
-                                                        label="Optional title"
-                                                        error={errors.title}
-                                                    />
-                                                    <Button
-                                                        type="submit"
-                                                        disabled={processing}
-                                                    >
-                                                        Save lesson
-                                                    </Button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </Form>
-                                ) : null}
-                            </article>
-                        ))
-                    )}
-                </section>
-
-                <section className="rounded-lg border p-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                            <h2 className="text-sm font-medium">
-                                WhatsApp / Meta knowledge pull
-                            </h2>
-                            <p className="mt-1 text-sm text-muted-foreground">
-                                Syncs Meta WhatsApp Business profile fields and
-                                mines frequent inbound questions your Meta
-                                agent / desk already collected into knowledge
-                                notes the assistant can reuse.
-                            </p>
-                        </div>
-                        {can_manage ? (
-                            <Form action="/ai/whatsapp-sync" method="post">
-                                {({ processing }) => (
-                                    <Button type="submit" disabled={processing}>
-                                        Pull WhatsApp knowledge
-                                    </Button>
-                                )}
-                            </Form>
-                        ) : null}
-                    </div>
-                    <ul className="mt-4 divide-y text-sm">
-                        {whatsapp_syncs.length === 0 ? (
-                            <li className="py-2 text-muted-foreground">
-                                No sync runs yet.
-                            </li>
+                {/* Questions ------------------------------------------------ */}
+                {tab === 'questions' ? (
+                    <Panel
+                        id="questions"
+                        title="Unfamiliar questions"
+                        hint="Raised from live chats and inbox sync when the desk had nothing to ground an answer on. Feed a fact, lesson or physical-session answer so it learns."
+                    >
+                        {knowledge_gaps.length === 0 ? (
+                            <Empty
+                                icon={CheckCircle2}
+                                title="Nothing to answer"
+                                body="No open unfamiliar questions. New ones appear here as chats come in."
+                            />
                         ) : (
-                            whatsapp_syncs.map((run) => (
-                                <li key={run.id} className="py-2">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <Badge variant="outline">
-                                            {run.status}
-                                        </Badge>
-                                        <span>
-                                            {run.articles_created} notes ·{' '}
-                                            {run.messages_scanned} messages
-                                        </span>
-                                    </div>
-                                    <p className="mt-1 text-muted-foreground">
-                                        {run.summary ?? run.error ?? '—'}
-                                    </p>
-                                </li>
-                            ))
-                        )}
-                    </ul>
-                </section>
-
-                <section className="rounded-lg border p-4">
-                    <h2 className="text-sm font-medium">
-                        Conditional auto-replies
-                    </h2>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                        Inbound WhatsApp is silent unless a rule matches.
-                        Template mode sends your wording. LLM mode only runs
-                        after a match when LLM_* is configured.
-                    </p>
-
-                    {can_manage ? (
-                        <Form
-                            action="/ai/auto-replies"
-                            method="post"
-                            resetOnSuccess
-                            className="mt-4 grid gap-3"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <TextField
-                                        name="name"
-                                        label="Rule name"
-                                        required
-                                        error={errors.name}
-                                    />
-                                    <SelectField
-                                        name="match_type"
-                                        label="When message"
-                                        defaultValue="contains"
-                                        options={[
-                                            {
-                                                value: 'contains',
-                                                label: 'Contains text',
-                                            },
-                                            {
-                                                value: 'exact',
-                                                label: 'Exact text',
-                                            },
-                                            {
-                                                value: 'any',
-                                                label: 'Any inbound text',
-                                            },
-                                        ]}
-                                        error={errors.match_type}
-                                    />
-                                    <TextField
-                                        name="match_value"
-                                        label="Match text"
-                                        hint="Leave empty only for “any”."
-                                        error={errors.match_value}
-                                    />
-                                    <SelectField
-                                        name="pipeline_stage_id"
-                                        label="Only in stage"
-                                        defaultValue="none"
-                                        options={[
-                                            {
-                                                value: 'none',
-                                                label: 'Any stage',
-                                            },
-                                            ...stages.map((stage) => ({
-                                                value: String(stage.id),
-                                                label: stage.name,
-                                            })),
-                                        ]}
-                                        error={errors.pipeline_stage_id}
-                                    />
-                                    <SelectField
-                                        name="reply_mode"
-                                        label="Reply with"
-                                        defaultValue="template"
-                                        options={[
-                                            {
-                                                value: 'template',
-                                                label: 'Fixed template',
-                                            },
-                                            {
-                                                value: 'llm',
-                                                label: 'Live LLM under this rule',
-                                            },
-                                        ]}
-                                        error={errors.reply_mode}
-                                    />
-                                    <AreaField
-                                        name="template_body"
-                                        label="Template body"
-                                        hint="{contact}, {business}, {message}"
-                                        error={errors.template_body}
-                                    />
-                                    <TextField
-                                        name="priority"
-                                        label="Priority"
-                                        type="number"
-                                        defaultValue={100}
-                                        hint="Lower runs first."
-                                        error={errors.priority}
-                                    />
-                                    <SelectField
-                                        name="is_active"
-                                        label="Status"
-                                        defaultValue="1"
-                                        options={activeOptions}
-                                        error={errors.is_active}
-                                    />
-                                    <SelectField
-                                        name="require_open_window"
-                                        label="Require 24h window"
-                                        defaultValue="1"
-                                        options={[
-                                            {
-                                                value: '1',
-                                                label: 'Yes',
-                                            },
-                                            {
-                                                value: '0',
-                                                label: 'No',
-                                            },
-                                        ]}
-                                        error={errors.require_open_window}
-                                    />
-                                    <Button
-                                        type="submit"
-                                        disabled={processing}
-                                    >
-                                        Save auto-reply rule
-                                    </Button>
-                                </>
-                            )}
-                        </Form>
-                    ) : (
-                        <p className="mt-3 text-sm text-muted-foreground">
-                            Only the owner can add auto-reply rules.
-                        </p>
-                    )}
-
-                    <ul className="mt-4 divide-y text-sm">
-                        {auto_reply_rules.length === 0 ? (
-                            <li className="py-2 text-muted-foreground">
-                                No rules yet. Without a rule, the desk never
-                                auto-replies.
-                            </li>
-                        ) : (
-                            auto_reply_rules.map((rule) => (
-                                <li
-                                    key={rule.id}
-                                    className="flex flex-col gap-2 py-3 sm:flex-row sm:items-start sm:justify-between"
-                                >
-                                    <div>
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <span className="font-medium">
-                                                {rule.name}
-                                            </span>
-                                            <Badge variant="outline">
-                                                {rule.is_active
-                                                    ? 'Active'
-                                                    : 'Off'}
-                                            </Badge>
-                                            <Badge variant="outline">
-                                                {rule.reply_mode}
-                                            </Badge>
-                                        </div>
-                                        <p className="mt-1 text-muted-foreground">
-                                            {rule.match_type}
-                                            {rule.match_value
-                                                ? `: ${rule.match_value}`
-                                                : ''}{' '}
-                                            · stage{' '}
-                                            {rule.stage_name ?? 'any'} ·
-                                            priority {rule.priority}
-                                        </p>
-                                        {rule.template_body ? (
-                                            <p className="mt-1 whitespace-pre-wrap text-xs text-muted-foreground">
-                                                {rule.template_body}
+                            <ul className="grid gap-4">
+                                {knowledge_gaps.map((gap) => (
+                                    <li key={gap.id} className={card}>
+                                        <div className="p-5">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <Badge variant="outline">
+                                                    {gap.source}
+                                                </Badge>
+                                                {gap.product_name ? (
+                                                    <Badge variant="laundry">
+                                                        {gap.product_name}
+                                                    </Badge>
+                                                ) : null}
+                                                {gap.stage_name ? (
+                                                    <Badge variant="outline">
+                                                        {gap.stage_name}
+                                                    </Badge>
+                                                ) : null}
+                                                {gap.lead_status ? (
+                                                    <Badge variant="lead">
+                                                        {gap.lead_status}
+                                                    </Badge>
+                                                ) : null}
+                                            </div>
+                                            <p className="mt-3 text-base font-medium leading-snug">
+                                                {gap.contact_name ? (
+                                                    <span className="text-muted-foreground">
+                                                        {gap.contact_name}:{' '}
+                                                    </span>
+                                                ) : null}
+                                                {gap.question}
                                             </p>
-                                        ) : null}
-                                    </div>
-                                    {can_manage ? (
-                                        <Form
-                                            action={`/ai/auto-replies/${rule.id}`}
-                                            method="delete"
-                                        >
-                                            {({ processing }) => (
-                                                <Button
-                                                    type="submit"
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    disabled={processing}
+                                            {gap.context_snippet &&
+                                            gap.context_snippet !==
+                                                gap.question ? (
+                                                <p className="mt-1.5 border-l-2 border-border pl-3 text-sm text-muted-foreground">
+                                                    {gap.context_snippet}
+                                                </p>
+                                            ) : null}
+                                            {gap.lead_id ? (
+                                                <Link
+                                                    href={`/leads/${gap.lead_id}`}
+                                                    className="mt-2 inline-block text-sm font-medium text-primary hover:underline"
                                                 >
-                                                    Remove
-                                                </Button>
-                                            )}
-                                        </Form>
-                                    ) : null}
-                                </li>
-                            ))
+                                                    Open lead →
+                                                </Link>
+                                            ) : null}
+                                        </div>
+
+                                        {can_manage ? (
+                                            <Form
+                                                action={`/ai/gaps/${gap.id}/answer`}
+                                                method="post"
+                                                className="grid gap-4 border-t border-border bg-muted/30 p-5 md:grid-cols-2"
+                                            >
+                                                {({ errors, processing }) => (
+                                                    <>
+                                                        <AreaField
+                                                            name="answer"
+                                                            label="Your fact / answer"
+                                                            required
+                                                            error={
+                                                                errors.answer
+                                                            }
+                                                        />
+                                                        <div className="grid content-start gap-3">
+                                                            <SelectField
+                                                                name="category"
+                                                                label="Save as"
+                                                                options={
+                                                                    categoryOptions
+                                                                }
+                                                                defaultValue="fact"
+                                                                error={
+                                                                    errors.category
+                                                                }
+                                                            />
+                                                            <TextField
+                                                                name="title"
+                                                                label="Optional title"
+                                                                error={
+                                                                    errors.title
+                                                                }
+                                                            />
+                                                            <Button
+                                                                type="submit"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                            >
+                                                                {processing
+                                                                    ? 'Saving…'
+                                                                    : 'Save lesson'}
+                                                            </Button>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </Form>
+                                        ) : null}
+                                    </li>
+                                ))}
+                            </ul>
                         )}
-                    </ul>
-                </section>
+                    </Panel>
+                ) : null}
 
-                <section className="rounded-lg border p-4">
-                    <h2 className="text-sm font-medium">Configuration</h2>
-                    <ul className="mt-3 divide-y text-sm">
-                        {variables.map((variable) => (
-                            <li
-                                key={variable.key}
-                                className="flex items-center justify-between gap-3 py-2"
+                {/* Knowledge ------------------------------------------------ */}
+                {tab === 'knowledge' ? (
+                    <Panel
+                        id="knowledge"
+                        title="Knowledge notes"
+                        hint="Active notes are matched by shared words, with a boost when tied to the lead's product. They are quoted into the prompt and never sent to WhatsApp."
+                    >
+                        {can_manage ? (
+                            <details
+                                className={card}
+                                open={articles.length === 0}
                             >
-                                <span className="font-mono text-xs">
-                                    {variable.key}
-                                </span>
-                                <Badge
-                                    variant={
-                                        variable.configured
-                                            ? 'default'
-                                            : 'outline'
-                                    }
+                                <summary className="flex cursor-pointer select-none items-center gap-2 px-5 py-4 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                    <Plus className="size-4 text-primary" />
+                                    Add a note
+                                </summary>
+                                <Form
+                                    action="/ai/articles"
+                                    method="post"
+                                    resetOnSuccess
+                                    className="grid gap-4 border-t border-border p-5 md:grid-cols-2"
                                 >
-                                    {variable.configured
-                                        ? 'Configured'
-                                        : 'Missing'}
-                                </Badge>
-                            </li>
-                        ))}
-                    </ul>
-                    <p className="mt-3 text-sm text-muted-foreground">
-                        {configured
-                            ? 'All three variables are set. A read still waits for you to apply fields or send a reply.'
-                            : 'Missing variables mean a read is stored as unavailable. The desk does not invent a summary or a score.'}
-                    </p>
-                    <p className="mt-2 text-xs text-muted-foreground">
-                        LLM_BASE_URL is the OpenAI-compatible root, for example
-                        the provider&apos;s /v1 path. The desk posts to
-                        /chat/completions on that root.
-                    </p>
-                </section>
-
-                <section className="grid gap-4">
-                    <div>
-                        <h2 className="text-sm font-medium">Knowledge</h2>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Active notes are retrieved by shared words, with a
-                            boost when the note is tied to the lead&apos;s
-                            product. They are quoted into the prompt. They are
-                            not sent to WhatsApp.
-                        </p>
-                    </div>
-
-                    {can_manage ? (
-                        <Form
-                            action="/ai/articles"
-                            method="post"
-                            resetOnSuccess
-                            className="grid gap-3 rounded-lg border p-4"
-                        >
-                            {({ errors, processing }) => (
-                                <>
-                                    <TextField
-                                        name="title"
-                                        label="Title"
-                                        required
-                                        error={errors.title}
-                                    />
-                                    <AreaField
-                                        name="body"
-                                        label="Note"
-                                        required
-                                        error={errors.body}
-                                    />
-                                    <SelectField
-                                        name="category"
-                                        label="Type"
-                                        options={categoryOptions}
-                                        defaultValue="fact"
-                                        error={errors.category}
-                                    />
-                                    <SelectField
-                                        name="product_id"
-                                        label="Product"
-                                        options={productOptions}
-                                        defaultValue="none"
-                                        error={errors.product_id}
-                                    />
-                                    <SelectField
-                                        name="is_active"
-                                        label="Status"
-                                        options={activeOptions}
-                                        defaultValue="1"
-                                        error={errors.is_active}
-                                    />
-                                    <div>
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                        >
-                                            Save note
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
-                        </Form>
-                    ) : (
-                        <p className="text-sm text-muted-foreground">
-                            An owner adds and edits knowledge notes.
-                        </p>
-                    )}
-
-                    {articles.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                            No knowledge notes yet.
-                        </p>
-                    ) : (
-                        articles.map((article) => (
-                            <article
-                                key={article.id}
-                                className="rounded-lg border p-4"
-                            >
-                                {can_manage ? (
-                                    <Form
-                                        action={`/ai/articles/${article.id}`}
-                                        method="put"
-                                        className="grid gap-3"
-                                    >
-                                        {({ errors, processing }) => (
-                                            <>
+                                    {({ errors, processing }) => (
+                                        <>
+                                            <div className="md:col-span-2">
                                                 <TextField
                                                     name="title"
                                                     label="Title"
                                                     required
-                                                    defaultValue={article.title}
                                                     error={errors.title}
                                                 />
+                                            </div>
+                                            <div className="md:col-span-2">
                                                 <AreaField
                                                     name="body"
                                                     label="Note"
                                                     required
-                                                    defaultValue={article.body}
                                                     error={errors.body}
                                                 />
-                                                <SelectField
-                                                    name="product_id"
-                                                    label="Product"
-                                                    options={productOptions}
-                                                    defaultValue={
-                                                        article.product_id
-                                                            ? String(
-                                                                  article.product_id,
-                                                              )
-                                                            : 'none'
-                                                    }
-                                                    error={errors.product_id}
-                                                />
-                                                <SelectField
-                                                    name="is_active"
-                                                    label="Status"
-                                                    options={activeOptions}
-                                                    defaultValue={
-                                                        article.is_active
-                                                            ? '1'
-                                                            : '0'
-                                                    }
-                                                    error={errors.is_active}
-                                                />
-                                                <div>
-                                                    <Button
-                                                        type="submit"
-                                                        variant="outline"
-                                                        disabled={processing}
-                                                    >
-                                                        Update note
-                                                    </Button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </Form>
-                                ) : (
-                                    <div className="grid gap-2 text-sm">
-                                        <div className="flex flex-wrap items-center gap-2">
-                                            <h3 className="font-medium">
-                                                {article.title}
+                                            </div>
+                                            <SelectField
+                                                name="category"
+                                                label="Type"
+                                                options={categoryOptions}
+                                                defaultValue="fact"
+                                                error={errors.category}
+                                            />
+                                            <SelectField
+                                                name="product_id"
+                                                label="Product"
+                                                options={productOptions}
+                                                defaultValue="none"
+                                                error={errors.product_id}
+                                            />
+                                            <SelectField
+                                                name="is_active"
+                                                label="Status"
+                                                options={activeOptions}
+                                                defaultValue="1"
+                                                error={errors.is_active}
+                                            />
+                                            <div className="flex items-end md:justify-end">
+                                                <Button
+                                                    type="submit"
+                                                    disabled={processing}
+                                                    className="w-full md:w-auto"
+                                                >
+                                                    {processing
+                                                        ? 'Saving…'
+                                                        : 'Save note'}
+                                                </Button>
+                                            </div>
+                                        </>
+                                    )}
+                                </Form>
+                            </details>
+                        ) : null}
+
+                        {articles.length > 0 ? (
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                                <div className="relative flex-1">
+                                    <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                                    <input
+                                        type="search"
+                                        value={query}
+                                        onChange={(e) =>
+                                            setQuery(e.target.value)
+                                        }
+                                        placeholder="Search notes by title, text or product"
+                                        aria-label="Search notes"
+                                        className="h-10 w-full rounded-md border border-input bg-card pr-3 pl-9 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    />
+                                </div>
+                                <div
+                                    role="group"
+                                    aria-label="Filter by status"
+                                    className="inline-flex rounded-md border border-border bg-card p-0.5 text-sm"
+                                >
+                                    {(
+                                        ['all', 'active', 'inactive'] as const
+                                    ).map((value) => (
+                                        <button
+                                            key={value}
+                                            type="button"
+                                            aria-pressed={statusFilter === value}
+                                            onClick={() =>
+                                                setStatusFilter(value)
+                                            }
+                                            className={`rounded px-3 py-1.5 font-medium capitalize outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                                                statusFilter === value
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'text-muted-foreground hover:text-foreground'
+                                            }`}
+                                        >
+                                            {value}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : null}
+
+                        {articles.length === 0 ? (
+                            <Empty
+                                icon={BookOpen}
+                                title="No knowledge notes yet"
+                                body={
+                                    can_manage
+                                        ? 'Add your first note above, or answer an unfamiliar question.'
+                                        : 'An owner adds and edits knowledge notes.'
+                                }
+                            />
+                        ) : filteredArticles.length === 0 ? (
+                            <Empty
+                                icon={Search}
+                                title="No notes match"
+                                body="Try a different search or status filter."
+                            />
+                        ) : (
+                            <ul className="grid gap-3">
+                                {filteredArticles.map((article) => (
+                                    <li key={article.id} className={card}>
+                                        <div className="p-5">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <h3 className="font-semibold">
+                                                    {article.title}
                                                 </h3>
-                                            <Badge variant="outline">
-                                                {article.source}
-                                            </Badge>
-                                            <Badge variant="outline">
-                                                {article.is_active
-                                                    ? 'Active'
-                                                    : 'Inactive'}
-                                            </Badge>
+                                                <StatusBadge
+                                                    active={article.is_active}
+                                                />
+                                                {article.category ? (
+                                                    <Badge
+                                                        variant="outline"
+                                                        className="capitalize"
+                                                    >
+                                                        {article.category}
+                                                    </Badge>
+                                                ) : null}
+                                                <Badge variant="outline">
+                                                    {article.source}
+                                                </Badge>
+                                            </div>
+                                            <p className="mt-2 line-clamp-3 text-sm whitespace-pre-wrap text-muted-foreground">
+                                                {article.body}
+                                            </p>
+                                            <p className="mt-2 text-xs text-muted-foreground">
+                                                {article.product_name ??
+                                                    'Any product'}
+                                                {article.synced_at
+                                                    ? ` · synced ${formatWhen(article.synced_at)}`
+                                                    : ''}
+                                            </p>
                                         </div>
-                                        <p className="whitespace-pre-wrap text-muted-foreground">
-                                            {article.body}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {article.product_name ??
-                                                'Any product'}
-                                        </p>
-                                    </div>
-                                )}
-                            </article>
-                        ))
-                    )}
-                </section>
-            </div>
+
+                                        {can_manage ? (
+                                            <details className="border-t border-border">
+                                                <summary className="cursor-pointer select-none px-5 py-3 text-sm font-medium text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                                    Edit note
+                                                </summary>
+                                                <Form
+                                                    action={`/ai/articles/${article.id}`}
+                                                    method="put"
+                                                    className="grid gap-4 border-t border-border bg-muted/30 p-5 md:grid-cols-2"
+                                                >
+                                                    {({
+                                                        errors,
+                                                        processing,
+                                                    }) => (
+                                                        <>
+                                                            <div className="md:col-span-2">
+                                                                <TextField
+                                                                    name="title"
+                                                                    label="Title"
+                                                                    required
+                                                                    defaultValue={
+                                                                        article.title
+                                                                    }
+                                                                    error={
+                                                                        errors.title
+                                                                    }
+                                                                />
+                                                            </div>
+                                                            <div className="md:col-span-2">
+                                                                <AreaField
+                                                                    name="body"
+                                                                    label="Note"
+                                                                    required
+                                                                    defaultValue={
+                                                                        article.body
+                                                                    }
+                                                                    error={
+                                                                        errors.body
+                                                                    }
+                                                                />
+                                                            </div>
+                                                            <SelectField
+                                                                name="product_id"
+                                                                label="Product"
+                                                                options={
+                                                                    productOptions
+                                                                }
+                                                                defaultValue={
+                                                                    article.product_id
+                                                                        ? String(
+                                                                              article.product_id,
+                                                                          )
+                                                                        : 'none'
+                                                                }
+                                                                error={
+                                                                    errors.product_id
+                                                                }
+                                                            />
+                                                            <SelectField
+                                                                name="is_active"
+                                                                label="Status"
+                                                                options={
+                                                                    activeOptions
+                                                                }
+                                                                defaultValue={
+                                                                    article.is_active
+                                                                        ? '1'
+                                                                        : '0'
+                                                                }
+                                                                error={
+                                                                    errors.is_active
+                                                                }
+                                                            />
+                                                            <div className="md:col-span-2">
+                                                                <Button
+                                                                    type="submit"
+                                                                    disabled={
+                                                                        processing
+                                                                    }
+                                                                >
+                                                                    {processing
+                                                                        ? 'Updating…'
+                                                                        : 'Update note'}
+                                                                </Button>
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </Form>
+                                            </details>
+                                        ) : null}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </Panel>
+                ) : null}
+
+                {/* Auto-replies --------------------------------------------- */}
+                {tab === 'replies' ? (
+                    <Panel
+                        id="replies"
+                        title="Conditional auto-replies"
+                        hint="Inbound WhatsApp stays silent unless a rule matches. Template mode sends your exact wording. LLM mode only runs after a match, and only when LLM_* is configured."
+                    >
+                        {can_manage ? (
+                            <details
+                                className={card}
+                                open={auto_reply_rules.length === 0}
+                            >
+                                <summary className="flex cursor-pointer select-none items-center gap-2 px-5 py-4 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                    <Plus className="size-4 text-primary" />
+                                    Add a rule
+                                </summary>
+                                <Form
+                                    action="/ai/auto-replies"
+                                    method="post"
+                                    resetOnSuccess
+                                    className="grid gap-4 border-t border-border p-5 md:grid-cols-2"
+                                >
+                                    {({ errors, processing }) => (
+                                        <>
+                                            <div className="md:col-span-2">
+                                                <TextField
+                                                    name="name"
+                                                    label="Rule name"
+                                                    required
+                                                    error={errors.name}
+                                                />
+                                            </div>
+                                            <SelectField
+                                                name="match_type"
+                                                label="When message"
+                                                defaultValue="contains"
+                                                options={[
+                                                    {
+                                                        value: 'contains',
+                                                        label: 'Contains text',
+                                                    },
+                                                    {
+                                                        value: 'exact',
+                                                        label: 'Exact text',
+                                                    },
+                                                    {
+                                                        value: 'any',
+                                                        label: 'Any inbound text',
+                                                    },
+                                                ]}
+                                                error={errors.match_type}
+                                            />
+                                            <TextField
+                                                name="match_value"
+                                                label="Match text"
+                                                hint="Leave empty only for “any”."
+                                                error={errors.match_value}
+                                            />
+                                            <SelectField
+                                                name="pipeline_stage_id"
+                                                label="Only in stage"
+                                                defaultValue="none"
+                                                options={[
+                                                    {
+                                                        value: 'none',
+                                                        label: 'Any stage',
+                                                    },
+                                                    ...stages.map((stage) => ({
+                                                        value: String(stage.id),
+                                                        label: stage.name,
+                                                    })),
+                                                ]}
+                                                error={
+                                                    errors.pipeline_stage_id
+                                                }
+                                            />
+                                            <SelectField
+                                                name="reply_mode"
+                                                label="Reply with"
+                                                defaultValue="template"
+                                                options={[
+                                                    {
+                                                        value: 'template',
+                                                        label: 'Fixed template',
+                                                    },
+                                                    {
+                                                        value: 'llm',
+                                                        label: 'Live LLM under this rule',
+                                                    },
+                                                ]}
+                                                error={errors.reply_mode}
+                                            />
+                                            <div className="md:col-span-2">
+                                                <AreaField
+                                                    name="template_body"
+                                                    label="Template body"
+                                                    hint="Placeholders: {contact}, {business}, {message}"
+                                                    error={
+                                                        errors.template_body
+                                                    }
+                                                />
+                                            </div>
+                                            <TextField
+                                                name="priority"
+                                                label="Priority"
+                                                type="number"
+                                                defaultValue={100}
+                                                hint="Lower runs first."
+                                                error={errors.priority}
+                                            />
+                                            <SelectField
+                                                name="is_active"
+                                                label="Status"
+                                                defaultValue="1"
+                                                options={activeOptions}
+                                                error={errors.is_active}
+                                            />
+                                            <SelectField
+                                                name="require_open_window"
+                                                label="Require 24h window"
+                                                defaultValue="1"
+                                                options={[
+                                                    { value: '1', label: 'Yes' },
+                                                    { value: '0', label: 'No' },
+                                                ]}
+                                                error={
+                                                    errors.require_open_window
+                                                }
+                                            />
+                                            <div className="flex items-end md:justify-end">
+                                                <Button
+                                                    type="submit"
+                                                    disabled={processing}
+                                                    className="w-full md:w-auto"
+                                                >
+                                                    {processing
+                                                        ? 'Saving…'
+                                                        : 'Save rule'}
+                                                </Button>
+                                            </div>
+                                        </>
+                                    )}
+                                </Form>
+                            </details>
+                        ) : null}
+
+                        {auto_reply_rules.length === 0 ? (
+                            <Empty
+                                icon={Zap}
+                                title="No rules yet"
+                                body="Without a rule, the desk never auto-replies."
+                            />
+                        ) : (
+                            <ul className="grid gap-3">
+                                {[...auto_reply_rules]
+                                    .sort((a, b) => a.priority - b.priority)
+                                    .map((rule) => (
+                                        <li
+                                            key={rule.id}
+                                            className={`${card} flex flex-col gap-3 p-5 sm:flex-row sm:items-start sm:justify-between ${
+                                                rule.is_active
+                                                    ? ''
+                                                    : 'opacity-70'
+                                            }`}
+                                        >
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+                                                        #{rule.priority}
+                                                    </span>
+                                                    <h3 className="font-semibold">
+                                                        {rule.name}
+                                                    </h3>
+                                                    <StatusBadge
+                                                        active={rule.is_active}
+                                                    />
+                                                    <Badge variant="outline">
+                                                        {rule.reply_mode ===
+                                                        'llm'
+                                                            ? 'LLM'
+                                                            : 'Template'}
+                                                    </Badge>
+                                                </div>
+                                                <p className="mt-1.5 text-sm text-muted-foreground">
+                                                    When message{' '}
+                                                    <strong className="font-medium text-foreground">
+                                                        {(
+                                                            matchLabels[
+                                                                rule.match_type
+                                                            ] ?? rule.match_type
+                                                        ).toLowerCase()}
+                                                    </strong>
+                                                    {rule.match_value
+                                                        ? ` “${rule.match_value}”`
+                                                        : ''}{' '}
+                                                    · stage{' '}
+                                                    {rule.stage_name ?? 'any'}
+                                                    {rule.require_open_window
+                                                        ? ' · 24h window only'
+                                                        : ''}
+                                                </p>
+                                                {rule.template_body ? (
+                                                    <p className="mt-2 rounded-md bg-muted/60 px-3 py-2 text-xs whitespace-pre-wrap text-muted-foreground">
+                                                        {rule.template_body}
+                                                    </p>
+                                                ) : null}
+                                            </div>
+                                            {can_manage ? (
+                                                <Form
+                                                    action={`/ai/auto-replies/${rule.id}`}
+                                                    method="delete"
+                                                    onBefore={() =>
+                                                        window.confirm(
+                                                            `Remove the rule “${rule.name}”?`,
+                                                        )
+                                                    }
+                                                >
+                                                    {({ processing }) => (
+                                                        <Button
+                                                            type="submit"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                            className="text-destructive hover:text-destructive"
+                                                        >
+                                                            <Trash2 className="size-4" />
+                                                            Remove
+                                                        </Button>
+                                                    )}
+                                                </Form>
+                                            ) : null}
+                                        </li>
+                                    ))}
+                            </ul>
+                        )}
+                    </Panel>
+                ) : null}
+
+                {/* WhatsApp sync -------------------------------------------- */}
+                {tab === 'sync' ? (
+                    <Panel
+                        id="sync"
+                        title="WhatsApp / Meta knowledge pull"
+                        hint="Syncs your Meta WhatsApp Business profile fields and mines frequent inbound questions your agent inbox already collected into notes the assistant can reuse."
+                        action={
+                            can_manage ? (
+                                <Form action="/ai/whatsapp-sync" method="post">
+                                    {({ processing }) => (
+                                        <Button
+                                            type="submit"
+                                            disabled={processing}
+                                        >
+                                            <RefreshCw
+                                                className={`size-4 ${processing ? 'animate-spin' : ''}`}
+                                            />
+                                            {processing
+                                                ? 'Pulling…'
+                                                : 'Pull knowledge'}
+                                        </Button>
+                                    )}
+                                </Form>
+                            ) : undefined
+                        }
+                    >
+                        {whatsapp_syncs.length === 0 ? (
+                            <Empty
+                                icon={MessageCircle}
+                                title="No sync runs yet"
+                                body="Run your first pull to import knowledge from WhatsApp."
+                            />
+                        ) : (
+                            <ul className={`${card} divide-y divide-border`}>
+                                {whatsapp_syncs.map((run) => {
+                                    const failed = Boolean(run.error);
+
+                                    return (
+                                        <li key={run.id} className="p-5">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <Badge
+                                                    variant={
+                                                        failed
+                                                            ? 'destructive'
+                                                            : 'outline'
+                                                    }
+                                                    className="capitalize"
+                                                >
+                                                    {run.status}
+                                                </Badge>
+                                                <span className="text-sm font-medium tabular-nums">
+                                                    {run.articles_created}{' '}
+                                                    notes ·{' '}
+                                                    {run.messages_scanned}{' '}
+                                                    messages
+                                                </span>
+                                                {run.completed_at ? (
+                                                    <span className="text-xs text-muted-foreground sm:ml-auto">
+                                                        {formatWhen(
+                                                            run.completed_at,
+                                                        )}
+                                                    </span>
+                                                ) : null}
+                                            </div>
+                                            <p
+                                                className={`mt-1.5 text-sm ${failed ? 'text-destructive' : 'text-muted-foreground'}`}
+                                            >
+                                                {run.summary ?? run.error ?? '—'}
+                                            </p>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        )}
+                    </Panel>
+                ) : null}
+
+                {/* Configuration -------------------------------------------- */}
+                {tab === 'config' ? (
+                    <Panel
+                        id="config"
+                        title="Configuration"
+                        hint={
+                            configured
+                                ? 'All variables are set. A read still waits for you to apply fields or send a reply.'
+                                : 'Missing variables mean a read is stored as unavailable. The desk does not invent a summary or a score.'
+                        }
+                    >
+                        <ul className={`${card} divide-y divide-border`}>
+                            {variables.map((variable) => (
+                                <li
+                                    key={variable.key}
+                                    className="flex items-center justify-between gap-3 px-5 py-3.5"
+                                >
+                                    <span className="flex items-center gap-2.5">
+                                        {variable.configured ? (
+                                            <CheckCircle2 className="size-4 text-success" />
+                                        ) : (
+                                            <CircleAlert className="size-4 text-destructive" />
+                                        )}
+                                        <span className="font-mono text-sm">
+                                            {variable.key}
+                                        </span>
+                                    </span>
+                                    <Badge
+                                        variant={
+                                            variable.configured
+                                                ? 'default'
+                                                : 'outline'
+                                        }
+                                    >
+                                        {variable.configured
+                                            ? 'Configured'
+                                            : 'Missing'}
+                                    </Badge>
+                                </li>
+                            ))}
+                        </ul>
+                        <p className="text-xs text-muted-foreground">
+                            LLM_BASE_URL is the OpenAI-compatible root, for
+                            example the provider&apos;s /v1 path. The desk posts
+                            to /chat/completions on that root.
+                        </p>
+                    </Panel>
+                ) : null}
+            </Page>
         </>
+    );
+}
+
+/* ------------------------------------------------------------------ */
+
+function Panel({
+    id,
+    title,
+    hint,
+    action,
+    children,
+}: {
+    id: TabKey;
+    title: string;
+    hint?: string;
+    action?: ReactNode;
+    children: ReactNode;
+}) {
+    return (
+        <section
+            role="tabpanel"
+            id={`panel-${id}`}
+            aria-labelledby={`tab-${id}`}
+            className="flex flex-col gap-4"
+        >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                    <h2 className="text-lg font-semibold tracking-tight">
+                        {title}
+                    </h2>
+                    {hint ? (
+                        <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+                            {hint}
+                        </p>
+                    ) : null}
+                </div>
+                {action}
+            </div>
+            {children}
+        </section>
+    );
+}
+
+function StatusBadge({ active }: { active: boolean }) {
+    return active ? (
+        <Badge className="bg-success/15 text-success hover:bg-success/15">
+            Active
+        </Badge>
+    ) : (
+        <Badge variant="outline">Off</Badge>
+    );
+}
+
+function Empty({
+    icon: Icon,
+    title,
+    body,
+}: {
+    icon: ComponentType<{ className?: string }>;
+    title: string;
+    body: string;
+}) {
+    return (
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-5 py-10 text-center">
+            <span className="rounded-full bg-muted p-3 text-muted-foreground">
+                <Icon className="size-5" />
+            </span>
+            <p className="font-semibold">{title}</p>
+            <p className="max-w-sm text-sm text-muted-foreground">{body}</p>
+        </div>
     );
 }

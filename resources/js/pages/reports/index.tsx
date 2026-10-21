@@ -1,5 +1,10 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import type { ReactNode } from 'react';
+import {
+    Page,
+    PageHeader,
+    surfaceClass,
+} from '@/components/crm/page-frame';
 import { Button } from '@/components/ui/button';
 
 type ProductRow = {
@@ -159,9 +164,6 @@ type Report = {
     timezone: string;
 };
 
-const surface =
-    'overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]';
-
 function money(currency: string, amount: number): string {
     return `${currency} ${amount.toLocaleString(undefined, {
         maximumFractionDigits: 0,
@@ -192,61 +194,59 @@ export default function ReportsIndex({ report }: { report: Report }) {
     return (
         <>
             <Head title="Reports" />
-            <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-6 p-4 md:gap-8 md:p-8">
-                {/* Page header + range */}
-                <div className="flex flex-col gap-5 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                            Business reports
-                        </h1>
-                        <p className="mt-2 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
+            <Page>
+                <PageHeader
+                    title="Business reports"
+                    description={
+                        <>
                             Detailed view across sales, billing, money,
                             messaging, AI, contacts, and spend. Range uses{' '}
                             {report.timezone}.
-                        </p>
-                    </div>
-
-                    <Form
-                        action="/reports"
-                        method="get"
-                        className="flex flex-wrap items-end gap-3"
-                    >
-                        {({ processing }) => (
-                            <>
-                                <label className="grid gap-1.5 text-sm">
-                                    <span className="font-medium text-muted-foreground">
-                                        From
-                                    </span>
-                                    <input
-                                        type="date"
-                                        name="from"
-                                        defaultValue={report.filters.from}
-                                        className="h-10 rounded-md border border-input bg-card px-3 text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                    />
-                                </label>
-                                <label className="grid gap-1.5 text-sm">
-                                    <span className="font-medium text-muted-foreground">
-                                        To
-                                    </span>
-                                    <input
-                                        type="date"
-                                        name="to"
-                                        defaultValue={report.filters.to}
-                                        className="h-10 rounded-md border border-input bg-card px-3 text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-                                    />
-                                </label>
-                                <Button type="submit" disabled={processing}>
-                                    Apply range
-                                </Button>
-                                <div className="flex gap-2">
-                                    <QuickRange days={7} label="7d" />
-                                    <QuickRange days={30} label="30d" />
-                                    <QuickRange days={90} label="90d" />
-                                </div>
-                            </>
-                        )}
-                    </Form>
-                </div>
+                        </>
+                    }
+                    actions={
+                        <Form
+                            action="/reports"
+                            method="get"
+                            className="flex flex-wrap items-end gap-3"
+                        >
+                            {({ processing }) => (
+                                <>
+                                    <label className="grid gap-1.5 text-sm">
+                                        <span className="font-medium text-muted-foreground">
+                                            From
+                                        </span>
+                                        <input
+                                            type="date"
+                                            name="from"
+                                            defaultValue={report.filters.from}
+                                            className="h-10 rounded-md border border-input bg-card px-3 text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                        />
+                                    </label>
+                                    <label className="grid gap-1.5 text-sm">
+                                        <span className="font-medium text-muted-foreground">
+                                            To
+                                        </span>
+                                        <input
+                                            type="date"
+                                            name="to"
+                                            defaultValue={report.filters.to}
+                                            className="h-10 rounded-md border border-input bg-card px-3 text-foreground focus-visible:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                        />
+                                    </label>
+                                    <Button type="submit" disabled={processing}>
+                                        Apply range
+                                    </Button>
+                                    <div className="flex gap-2">
+                                        <QuickRange days={7} label="7d" />
+                                        <QuickRange days={30} label="30d" />
+                                        <QuickRange days={90} label="90d" />
+                                    </div>
+                                </>
+                            )}
+                        </Form>
+                    }
+                />
 
                 {/* Section jump links */}
                 <nav className="flex flex-wrap gap-2 text-sm">
@@ -341,9 +341,10 @@ export default function ReportsIndex({ report }: { report: Report }) {
                             />
                         </SolidPanel>
                         <SolidPanel title="Demos in flight">
-                            <div className="grid grid-cols-2 gap-3">
-                                <MiniStat label="Demo booked" value={String(sectors.sales.demos.booked)} />
-                                <MiniStat label="Evaluating" value={String(sectors.sales.demos.evaluating)} />
+                            <div className="grid grid-cols-3 gap-3">
+                                <MiniStat label="Requested" value={String(sectors.sales.demos.requested)} />
+                                <MiniStat label="Scheduled" value={String(sectors.sales.demos.scheduled)} />
+                                <MiniStat label="Completed" value={String(sectors.sales.demos.completed)} />
                             </div>
                         </SolidPanel>
                     </div>
@@ -628,7 +629,7 @@ export default function ReportsIndex({ report }: { report: Report }) {
                         </ul>
                     )}
                 </Sector>
-            </div>
+            </Page>
         </>
     );
 }
@@ -645,7 +646,7 @@ function Sector({
     children: ReactNode;
 }) {
     return (
-        <section id={id} className={`scroll-mt-20 ${surface}`}>
+        <section id={id} className={`scroll-mt-20 ${surfaceClass}`}>
             <div className="border-b border-border bg-card px-5 py-4">
                 <h2 className="text-lg font-semibold tracking-tight text-foreground">
                     {title}

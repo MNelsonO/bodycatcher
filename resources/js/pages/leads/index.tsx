@@ -1,6 +1,13 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { MoreHorizontal } from 'lucide-react';
 import { SelectField, TextField } from '@/components/crm/fields';
+import {
+    Page,
+    PageHeader,
+    Surface,
+    SurfaceHeader,
+    surfaceClass,
+} from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -36,9 +43,6 @@ const followUpLabel: Record<string, string> = {
     overdue: 'Overdue',
     upcoming: 'Upcoming',
 };
-
-const surface =
-    'overflow-hidden rounded-xl border border-border bg-card shadow-[var(--shadow-card)]';
 
 export default function LeadsIndex({
     leads,
@@ -84,37 +88,31 @@ export default function LeadsIndex({
     return (
         <>
             <Head title="Leads" />
-            <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-6 p-4 md:gap-8 md:p-8">
-                {/* Page header */}
-                <div className="flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-                            Leads
-                        </h1>
-                        <p className="mt-2 max-w-[60ch] text-sm leading-relaxed text-muted-foreground">
+            <Page width="desk">
+                <PageHeader
+                    title="Leads"
+                    description={
+                        <>
                             <span className="font-semibold tabular-nums text-foreground">
                                 {leads.total}
                             </span>{' '}
                             in this view. A closed lead does not block a new
                             one.
-                        </p>
-                    </div>
-                    <Button asChild size="lg">
-                        <Link href="/leads/create">Open a lead</Link>
-                    </Button>
-                </div>
+                        </>
+                    }
+                    actions={
+                        <Button asChild size="lg">
+                            <Link href="/leads/create">Open a lead</Link>
+                        </Button>
+                    }
+                />
 
-                {/* Filters */}
-                <section className={surface}>
-                    <div className="border-b border-border bg-card px-5 py-3">
-                        <h2 className="text-sm font-semibold text-foreground">
-                            Filters
-                        </h2>
-                    </div>
+                <Surface>
+                    <SurfaceHeader title="Filters" />
                     <Form
                         action="/leads"
                         method="get"
-                        className="grid gap-4 bg-card p-5 md:grid-cols-6"
+                        className="grid gap-4 bg-card px-5 py-5 md:grid-cols-6"
                     >
                         {({ processing }) => (
                             <>
@@ -185,7 +183,7 @@ export default function LeadsIndex({
                             </>
                         )}
                     </Form>
-                </section>
+                </Surface>
 
                 {leads.data.length === 0 ? (
                     <div className="rounded-xl border border-dashed border-input bg-card px-6 py-12 text-center text-sm text-muted-foreground">
@@ -194,8 +192,7 @@ export default function LeadsIndex({
                     </div>
                 ) : (
                     <>
-                        {/* Desktop table */}
-                        <div className={`hidden md:block ${surface}`}>
+                        <div className={`hidden md:block ${surfaceClass}`}>
                             <Table>
                                 <TableHeader className="bg-secondary">
                                     <TableRow>
@@ -283,13 +280,12 @@ export default function LeadsIndex({
                             </Table>
                         </div>
 
-                        {/* Mobile cards */}
                         <div className="grid gap-4 md:hidden">
                             {leads.data.map((lead) => (
                                 <Link
                                     key={lead.id}
                                     href={`/leads/${lead.id}`}
-                                    className="block rounded-xl border border-border bg-card p-4 shadow-[var(--shadow-card)] transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                                    className={`block p-4 transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${surfaceClass}`}
                                 >
                                     <div className="font-semibold text-primary">
                                         {lead.contact_name}
@@ -312,7 +308,7 @@ export default function LeadsIndex({
                         <Pager paginator={leads} />
                     </>
                 )}
-            </div>
+            </Page>
         </>
     );
 }
@@ -340,7 +336,9 @@ function Pager<T>({ paginator }: { paginator: Paginator<T> }) {
     }
 
     return (
-        <div className="flex items-center justify-between rounded-xl border border-border bg-card px-5 py-3 text-sm shadow-[var(--shadow-card)]">
+        <div
+            className={`flex items-center justify-between px-5 py-3 text-sm ${surfaceClass}`}
+        >
             <span className="text-muted-foreground">
                 Page {paginator.current_page} of {paginator.last_page}
             </span>

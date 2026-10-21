@@ -86,8 +86,21 @@ class LeadPageData
             'marked_label' => $lead->marked_label,
             'conversation_topic' => $lead->conversation?->topic,
             'conversation_topic_summary' => $lead->conversation?->topic_summary,
+            'intent' => $this->intent($lead),
             'lost_reason' => $lead->lost_reason,
             'created_at_label' => $this->clock->formatDateTime($lead->created_at),
+            'contact_is_new' => $this->contactIsNew($lead),
+            'conversation_is_new' => $this->conversationIsNew($lead),
+            'message_count' => $lead->conversation?->messages->count() ?? 0,
+            'pipeline_stages' => $lead->pipeline->stages()
+                ->whereNull('archived_at')
+                ->orderBy('position')
+                ->get()
+                ->map(fn ($stage): array => [
+                    'id' => $stage->id,
+                    'name' => $stage->name,
+                    'kind' => $stage->kind->value,
+                ])->all(),
             'contact' => [
                 'id' => $lead->contact->id,
                 'full_name' => $lead->contact->full_name,
@@ -193,6 +206,10 @@ class LeadPageData
         return match ($row->event) {
             ActivityEvent::ContactCreated => 'Contact created',
             ActivityEvent::LeadCreated => 'Lead created',
+            ActivityEvent::ProductChanged => 'Product changed'
+                .(isset($properties['from_product'], $properties['to_product'])
+                    ? ': '.$properties['from_product'].' → '.$properties['to_product']
+                    : ''),
             ActivityEvent::StageChanged => 'Stage changed'
                 .(isset($properties['from_stage'], $properties['to_stage'])
                     ? ': '.$properties['from_stage'].' → '.$properties['to_stage']
@@ -448,5 +465,63 @@ class LeadPageData
         }
 
         return $rows;
+    }
+
+    private function intent(Lead $lead): ?string
+    {
+        $topic = trim((string) ($lead->conversation?->topic_summary ?: $lead->conversation?->topic));
+        $problem = trim((string) $lead->business_problem);
+        $next = trim((string) $lead->next_action);
+
+        foreach ([$topic, $problem, $next] as $candidate) {
+            if ($candidate !== '') {
+                return $candidate;
+            }
+        }
+
+        $firstInbound = $lead->conversation?->messages
+            ->first(fn (Message $message): bool => $message->direction->value === 'inbound');
+
+        if ($firstInbound !== null) {
+            $body = trim((string) $firstInbound->body);
+
+            if ($body !== '') {
+                return mb_substr($body, 0, 280);
+            }
+        }
+
+        return null;
+    }
+
+    private function contactIsNew(Lead $lead): bool
+    {
+        $contactCreated = $lead->contact->created_at;
+        $leadCreated = $lead->created_at;
+
+        if ($contactCreated === null || $leadCreated === null) {
+            return false;
+        }
+
+        // Same desk session / inbound open: contact minted with this lead.
+        return abs($contactCreated->diffInMinutes($leadCreated)) <= 60;
+    }
+
+    private function conversationIsNew(Lead $lead): bool
+    {
+        $messageCount = $lead->conversation?->messages->count() ?? 0;
+
+        if ($messageCount <= 1) {
+            return true;
+        }
+
+        $conversationCreated = $lead->conversation?->created_at;
+        $leadCreated = $lead->created_at;
+
+        if ($conversationCreated === null || $leadCreated === null) {
+            return $messageCount <= 2;
+        }
+
+        return abs($conversationCreated->diffInMinutes($leadCreated)) <= 60
+            && $messageCount <= 3;
     }
 }

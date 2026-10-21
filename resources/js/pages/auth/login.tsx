@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import { CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
@@ -38,8 +39,8 @@ export default function Login({ status, canResetPassword }: Props) {
         setHydrated(true);
     }, []);
 
-    const showingKnown = Boolean(remembered && !switchAccount);
-    const activeEmail = showingKnown ? remembered!.email : email;
+    const known = remembered && !switchAccount ? remembered : null;
+    const activeEmail = known ? known.email : email.trim();
 
     return (
         <>
@@ -49,47 +50,41 @@ export default function Login({ status, canResetPassword }: Props) {
                 {status ? (
                     <div
                         role="status"
-                        className="rounded-lg border border-success bg-success-soft px-4 py-3 text-sm font-medium text-success"
+                        className="flex items-start gap-2.5 rounded-lg border border-success bg-success-soft px-4 py-3 text-sm font-medium text-success"
                     >
-                        {status}
+                        <CheckCircle2 className="mt-0.5 size-4 shrink-0" />
+                        <span>{status}</span>
                     </div>
                 ) : null}
 
-                {hydrated && showingKnown ? (
-                    <div className="rounded-xl border border-border bg-secondary p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground">
-                                {initialsFor(
-                                    remembered!.name,
-                                    remembered!.email,
-                                )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <p className="truncate text-base font-semibold text-foreground">
-                                    Welcome back, {firstNameFor(remembered!)}
-                                </p>
-                                <p className="truncate text-sm text-muted-foreground">
-                                    {remembered!.email}
-                                </p>
-                            </div>
+                {!hydrated ? <LoginSkeleton /> : null}
+
+                {hydrated && known ? (
+                    <div className="flex items-center gap-3 rounded-xl border border-border bg-secondary p-4">
+                        <div
+                            aria-hidden
+                            className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-semibold text-primary-foreground"
+                        >
+                            {initialsFor(known.name, known.email)}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <p className="truncate text-base font-semibold text-foreground">
+                                Welcome back, {firstNameFor(known)}
+                            </p>
+                            <p className="truncate text-sm text-muted-foreground">
+                                {known.email}
+                            </p>
                         </div>
                         <button
                             type="button"
-                            className="mt-3 rounded-sm text-sm font-medium text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            className="shrink-0 rounded-sm text-sm font-medium text-primary hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                             onClick={() => {
                                 setSwitchAccount(true);
-                                setEmail(remembered!.email);
+                                setEmail('');
                             }}
                         >
-                            Not you? Use another account
+                            Switch
                         </button>
-                    </div>
-                ) : null}
-
-                {hydrated && !showingKnown ? (
-                    <div className="rounded-xl border border-border bg-secondary px-4 py-3 text-sm leading-relaxed text-secondary-foreground">
-                        Sign in once and we’ll remember your desk account on
-                        this device — next time you only enter the password.
                     </div>
                 ) : null}
 
@@ -99,19 +94,26 @@ export default function Login({ status, canResetPassword }: Props) {
                         resetOnSuccess={['password']}
                         className="flex flex-col gap-5"
                         onSuccess={() => {
-                            writeRememberedUser({
-                                email: activeEmail,
-                                name: remembered?.name || '',
-                            });
+                            // Only remember the account once it has actually
+                            // authenticated, never on a failed attempt.
+                            if (activeEmail) {
+                                writeRememberedUser({
+                                    email: activeEmail,
+                                    name:
+                                        known && known.email === activeEmail
+                                            ? known.name || ''
+                                            : '',
+                                });
+                            }
                         }}
                     >
                         {({ processing, errors }) => (
                             <>
-                                {showingKnown ? (
+                                {known ? (
                                     <input
                                         type="hidden"
                                         name="email"
-                                        value={remembered!.email}
+                                        value={known.email}
                                     />
                                 ) : (
                                     <div className="grid gap-2">
@@ -119,7 +121,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                             htmlFor="email"
                                             className="text-sm font-medium"
                                         >
-                                            Email
+                                            Email address
                                         </Label>
                                         <Input
                                             id="email"
@@ -127,10 +129,15 @@ export default function Login({ status, canResetPassword }: Props) {
                                             name="email"
                                             required
                                             autoFocus
-                                            tabIndex={1}
                                             autoComplete="username"
+                                            inputMode="email"
+                                            autoCapitalize="none"
+                                            spellCheck={false}
                                             placeholder="you@company.com"
                                             className="h-11 bg-card"
+                                            aria-invalid={
+                                                errors.email ? true : undefined
+                                            }
                                             value={email}
                                             onChange={(event) =>
                                                 setEmail(event.target.value)
@@ -141,83 +148,104 @@ export default function Login({ status, canResetPassword }: Props) {
                                 )}
 
                                 <div className="grid gap-2">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <Label
-                                            htmlFor="password"
-                                            className="text-sm font-medium"
-                                        >
-                                            Password
-                                        </Label>
-                                        {canResetPassword ? (
-                                            <TextLink
-                                                href={request()}
-                                                className="text-sm font-medium text-primary"
-                                                tabIndex={5}
-                                            >
-                                                Forgot password?
-                                            </TextLink>
-                                        ) : null}
-                                    </div>
+                                    <Label
+                                        htmlFor="password"
+                                        className="text-sm font-medium"
+                                    >
+                                        Password
+                                    </Label>
                                     <PasswordInput
                                         id="password"
                                         name="password"
                                         required
-                                        autoFocus={showingKnown}
-                                        tabIndex={2}
+                                        autoFocus={Boolean(known)}
                                         autoComplete="current-password"
                                         placeholder="Enter your password"
                                         className="h-11 bg-card"
+                                        aria-invalid={
+                                            errors.password ? true : undefined
+                                        }
                                     />
                                     <InputError message={errors.password} />
+                                    {/* Known-user flow has no email field, so
+                                        surface email errors here too. */}
+                                    {known ? (
+                                        <InputError message={errors.email} />
+                                    ) : null}
                                 </div>
 
-                                <div className="flex items-center gap-2.5">
-                                    <Checkbox
-                                        id="remember"
-                                        name="remember"
-                                        defaultChecked
-                                        tabIndex={3}
-                                    />
-                                    <Label
-                                        htmlFor="remember"
-                                        className="text-sm font-normal text-muted-foreground"
-                                    >
-                                        Keep me signed in on this device
-                                    </Label>
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2.5">
+                                        <Checkbox
+                                            id="remember"
+                                            name="remember"
+                                            defaultChecked
+                                        />
+                                        <Label
+                                            htmlFor="remember"
+                                            className="text-sm font-normal text-muted-foreground"
+                                        >
+                                            Keep me signed in
+                                        </Label>
+                                    </div>
+                                    {canResetPassword ? (
+                                        <TextLink
+                                            href={request()}
+                                            className="text-sm font-medium text-primary"
+                                        >
+                                            Forgot password?
+                                        </TextLink>
+                                    ) : null}
                                 </div>
 
                                 <Button
                                     type="submit"
                                     className="h-11 w-full text-base font-semibold"
-                                    tabIndex={4}
                                     disabled={processing}
                                     data-test="login-button"
-                                    onClick={() => {
-                                        if (activeEmail) {
-                                            writeRememberedUser({
-                                                email: activeEmail,
-                                                name: remembered?.name || '',
-                                            });
-                                        }
-                                    }}
                                 >
-                                    {processing && <Spinner />}
-                                    {showingKnown
-                                        ? `Continue as ${firstNameFor(remembered!)}`
-                                        : 'Sign in'}
+                                    {processing ? <Spinner /> : null}
+                                    {processing
+                                        ? 'Signing in…'
+                                        : known
+                                          ? `Continue as ${firstNameFor(known)}`
+                                          : 'Sign in'}
                                 </Button>
                             </>
                         )}
                     </Form>
-                ) : (
-                    <div className="h-48 animate-pulse rounded-xl bg-muted" />
-                )}
+                ) : null}
+
+                <div className="flex items-start gap-2.5 border-t border-border pt-5 text-xs leading-relaxed text-muted-foreground">
+                    <ShieldCheck className="mt-0.5 size-4 shrink-0" />
+                    <p>
+                        Your email is remembered on this device only to speed up
+                        sign-in. Your password is never stored. Trouble getting
+                        in? Ask your administrator to reset your access.
+                    </p>
+                </div>
             </div>
         </>
     );
 }
 
+function LoginSkeleton() {
+    return (
+        <div className="flex flex-col gap-5" aria-hidden>
+            <div className="grid gap-2">
+                <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+                <div className="h-11 animate-pulse rounded-md bg-muted" />
+            </div>
+            <div className="grid gap-2">
+                <div className="h-4 w-20 animate-pulse rounded bg-muted" />
+                <div className="h-11 animate-pulse rounded-md bg-muted" />
+            </div>
+            <div className="h-11 animate-pulse rounded-md bg-muted" />
+        </div>
+    );
+}
+
 Login.layout = {
-    title: 'Sign in',
+    title: 'Sign in to Kemet Tech',
     description: 'Use your desk account to open the sales desk.',
 };

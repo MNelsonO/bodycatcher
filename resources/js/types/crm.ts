@@ -88,8 +88,13 @@ export type LeadDetail = {
     marked_label: string | null;
     conversation_topic: string | null;
     conversation_topic_summary: string | null;
+    intent: string | null;
     lost_reason: string | null;
     created_at_label: string | null;
+    contact_is_new: boolean;
+    conversation_is_new: boolean;
+    message_count: number;
+    pipeline_stages: StageOption[];
     contact: ContactSummary;
     product: { id: number; name: string };
     pipeline: { id: number; name: string };
