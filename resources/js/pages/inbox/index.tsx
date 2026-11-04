@@ -7,6 +7,7 @@ import {
     CheckCheck,
     Clock,
     ExternalLink,
+    History,
     Loader2,
     MessageSquarePlus,
     NotebookPen,
@@ -406,6 +407,18 @@ function ThreadView({
                     </p>
                 </div>
                 <WindowBadge thread={thread} />
+                <ImportChatDialog
+                    thread={thread}
+                    trigger={
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="hidden lg:inline-flex"
+                        >
+                            <History /> Import chat
+                        </Button>
+                    }
+                />
                 <BookDialog
                     leadId={thread.lead.id}
                     title={`Call with ${thread.contact.full_name}`}
@@ -431,6 +444,23 @@ function ThreadView({
                 ref={scroller}
                 className="min-h-0 flex-1 overflow-y-auto bg-[radial-gradient(circle_at_1px_1px,var(--color-border)_1px,transparent_0)] [background-size:22px_22px] px-3 py-4 sm:px-6"
             >
+                {thread.messages.every((m) => m.direction === 'inbound') &&
+                thread.messages.length > 0 ? (
+                    <div className="mx-auto mb-4 flex max-w-xl items-center justify-between gap-3 rounded-lg border border-cta/30 bg-cta-soft px-3 py-2 text-xs">
+                        <span>
+                            Only the client&apos;s side is here. Import the
+                            WhatsApp chat export to add your replies.
+                        </span>
+                        <ImportChatDialog
+                            thread={thread}
+                            trigger={
+                                <Button size="sm" className="h-7 shrink-0">
+                                    <History /> Import chat
+                                </Button>
+                            }
+                        />
+                    </div>
+                ) : null}
                 {thread.hidden_earlier > 0 ? (
                     <p className="mb-4 text-center text-xs text-muted-foreground">
                         {thread.hidden_earlier} earlier messages are on the{' '}
@@ -1656,6 +1686,273 @@ function RenameContact({ thread }: { thread: InboxThread }) {
                         </>
                     )}
                 </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+type ImportPreview = {
+    senders: string[];
+    suggested_owner: string | null;
+    messages: number;
+    date_order: 'dmy' | 'mdy';
+    date_order_ambiguous: boolean;
+    first_label: string | null;
+    last_label: string | null;
+};
+
+function xsrfToken(): string {
+    const match = document.cookie
+        .split('; ')
+        .find((part) => part.startsWith('XSRF-TOKEN='));
+
+    return match ? decodeURIComponent(match.split('=')[1]) : '';
+}
+
+function ImportChatDialog({
+    thread,
+    trigger,
+}: {
+    thread: InboxThread;
+    trigger: React.ReactNode;
+}) {
+    const [open, setOpen] = useState(false);
+    const [file, setFile] = useState<File | null>(null);
+    const [preview, setPreview] = useState<ImportPreview | null>(null);
+    const [owner, setOwner] = useState('');
+    const [order, setOrder] = useState<'dmy' | 'mdy' | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [busy, setBusy] = useState(false);
+
+    const reset = () => {
+        setFile(null);
+        setPreview(null);
+        setOwner('');
+        setOrder(null);
+        setError(null);
+        setBusy(false);
+    };
+
+    const choose = async (
+        picked: File | null,
+        forcedOrder: 'dmy' | 'mdy' | null = null,
+    ) => {
+        const keepOwner = forcedOrder !== null ? owner : '';
+        reset();
+
+        if (!picked) {
+            return;
+        }
+
+        setFile(picked);
+        setBusy(true);
+
+        const data = new FormData();
+        data.append('file', picked);
+
+        if (forcedOrder) {
+            data.append('date_order', forcedOrder);
+        }
+
+        try {
+            const response = await fetch(`/inbox/${thread.id}/import/preview`, {
+                method: 'POST',
+                body: data,
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-XSRF-TOKEN': xsrfToken(),
+                },
+                credentials: 'same-origin',
+            });
+            const json = await response.json();
+
+            if (!response.ok) {
+                setError(
+                    json?.errors?.file?.[0] ??
+                        json?.message ??
+                        'That file could not be read.',
+                );
+            } else {
+                const result = json as ImportPreview;
+                setPreview(result);
+                setOrder(result.date_order);
+                setOwner(keepOwner || (result.suggested_owner ?? ''));
+            }
+        } catch {
+            setError('That file could not be read.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const submit = () => {
+        if (!file || owner === '') {
+            return;
+        }
+
+        setBusy(true);
+        router.post(
+            `/inbox/${thread.id}/import`,
+            { file, owner_name: owner, date_order: order ?? '' },
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setOpen(false);
+                    reset();
+                },
+                onError: (errors) => {
+                    setError(
+                        errors.file ?? errors.owner_name ?? 'Import failed.',
+                    );
+                    setBusy(false);
+                },
+            },
+        );
+    };
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={(next) => {
+                setOpen(next);
+
+                if (!next) {
+                    reset();
+                }
+            }}
+        >
+            <DialogTrigger asChild>{trigger}</DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Import WhatsApp chat history</DialogTitle>
+                    <DialogDescription>
+                        Adds both sides of your past chat with{' '}
+                        {thread.contact.full_name}, with the original times.
+                        Messages already here are skipped and nothing is sent.
+                    </DialogDescription>
+                </DialogHeader>
+                <ol className="grid gap-1 rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                    <li>
+                        1. In WhatsApp, open the chat with{' '}
+                        <span className="font-medium text-foreground">
+                            {thread.contact.full_name}
+                        </span>
+                        .
+                    </li>
+                    <li>
+                        2. Android: ⋮ → More → Export chat. iPhone: tap the name
+                        → Export chat.
+                    </li>
+                    <li>
+                        3. Choose{' '}
+                        <span className="font-medium text-foreground">
+                            Without media
+                        </span>
+                        , save the file, and upload it here (.txt or .zip).
+                    </li>
+                </ol>
+                <input
+                    type="file"
+                    accept=".txt,.zip,text/plain,application/zip"
+                    onChange={(event) =>
+                        void choose(event.target.files?.[0] ?? null)
+                    }
+                    className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-cta file:px-3 file:py-1.5 file:text-sm file:text-cta-foreground"
+                />
+                {busy && !preview ? (
+                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <Loader2 className="size-3.5 animate-spin" /> Reading
+                        the chat…
+                    </p>
+                ) : null}
+                {preview ? (
+                    <div className="grid gap-2">
+                        <p className="text-sm">
+                            Found{' '}
+                            <span className="font-semibold">
+                                {preview.messages}
+                            </span>{' '}
+                            messages
+                            {preview.first_label
+                                ? `, ${preview.first_label} → ${preview.last_label}`
+                                : ''}
+                            .
+                        </p>
+                        {preview.date_order_ambiguous ? (
+                            <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
+                                <span>
+                                    Read with the{' '}
+                                    {preview.date_order === 'dmy'
+                                        ? 'day first (03/11 = 3 Nov)'
+                                        : 'month first (03/11 = 11 Mar)'}
+                                    . Dates wrong?
+                                </span>
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-6 px-2 text-xs"
+                                    disabled={busy}
+                                    onClick={() =>
+                                        void choose(
+                                            file,
+                                            preview.date_order === 'dmy'
+                                                ? 'mdy'
+                                                : 'dmy',
+                                        )
+                                    }
+                                >
+                                    Switch day/month
+                                </Button>
+                            </div>
+                        ) : null}
+                        <p className="text-sm">Which name is you?</p>
+                        <div className="grid gap-1.5">
+                            {preview.senders.map((sender) => (
+                                <label
+                                    key={sender}
+                                    className={cn(
+                                        'flex cursor-pointer items-center gap-2 rounded-md border px-3 py-2 text-sm',
+                                        owner === sender &&
+                                            'border-primary bg-secondary',
+                                    )}
+                                >
+                                    <input
+                                        type="radio"
+                                        name="owner_pick"
+                                        value={sender}
+                                        checked={owner === sender}
+                                        onChange={() => setOwner(sender)}
+                                        className="accent-primary"
+                                    />
+                                    {sender}
+                                    {owner === sender ? (
+                                        <span className="ml-auto text-xs text-primary">
+                                            Me
+                                        </span>
+                                    ) : null}
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                ) : null}
+                {error ? <InputError message={error} /> : null}
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        onClick={submit}
+                        disabled={!file || owner === '' || busy}
+                    >
+                        {busy && preview ? (
+                            <Loader2 className="animate-spin" />
+                        ) : (
+                            <History />
+                        )}
+                        Import messages
+                    </Button>
+                </DialogFooter>
             </DialogContent>
         </Dialog>
     );

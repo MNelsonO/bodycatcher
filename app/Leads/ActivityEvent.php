@@ -34,4 +34,5 @@ enum ActivityEvent: string
     case FollowUpRefused = 'follow_up_refused';
     case FollowUpCompleted = 'follow_up_completed';
     case MessageScheduled = 'message_scheduled';
+    case ChatImported = 'chat_imported';
 }

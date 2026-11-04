@@ -274,6 +274,10 @@ class LeadPageData
                     ? ': '.$properties['reason']
                     : ''),
             ActivityEvent::FollowUpCompleted => 'Follow-up marked done',
+            ActivityEvent::ChatImported => 'WhatsApp chat history imported'
+                .(isset($properties['imported']) && is_numeric($properties['imported'])
+                    ? ': '.$properties['imported'].' messages'
+                    : ''),
             ActivityEvent::MessageScheduled => 'WhatsApp message scheduled'
                 .(isset($properties['due']) && is_string($properties['due'])
                     ? ' for '.$properties['due']

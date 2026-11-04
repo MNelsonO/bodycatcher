@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Contacts\Contact;
+use App\Conversations\Actions\ImportWhatsAppChat;
 use App\Conversations\Actions\LogMessage;
 use App\Conversations\Actions\ScheduleMessage;
 use App\Conversations\Actions\StartConversation;
@@ -16,10 +17,12 @@ use App\Settings\DisplayClock;
 use App\Settings\Product;
 use App\WhatsApp\SendOutcomeToast;
 use App\WhatsApp\Services\SendWhatsAppMessage;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -146,6 +149,79 @@ class InboxController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Saved. WhatsApp will not overwrite this name.']);
 
         return redirect()->route('inbox.show', $conversation);
+    }
+
+    public function importPreview(Request $request, Conversation $conversation, ImportWhatsAppChat $import): JsonResponse
+    {
+        $this->authorize('update', $conversation->lead);
+        $text = $this->chatText($request, $import);
+        $order = $request->string('date_order')->toString() ?: null;
+        $parsed = $import->parse($text, $order);
+        $senders = $import->senders($text);
+        $contact = $conversation->contact;
+
+        $matchesContact = function (string $sender) use ($contact): bool {
+            $name = mb_strtolower(trim($sender));
+            $digits = preg_replace('/\D+/', '', $sender) ?? '';
+            $phone = preg_replace('/\D+/', '', (string) $contact->primary_phone) ?? '';
+
+            return $name === mb_strtolower(trim((string) $contact->full_name))
+                || ($digits !== '' && strlen($digits) >= 9 && str_ends_with($phone, substr($digits, -9)));
+        };
+
+        $theirs = array_values(array_filter($senders, $matchesContact));
+        $suggested = count($senders) === 2 && count($theirs) === 1
+            ? array_values(array_diff($senders, $theirs))[0]
+            : null;
+
+        $clock = app(DisplayClock::class);
+        $first = $parsed['rows'][0]['sent_at'] ?? null;
+        $last = $parsed['rows'] === [] ? null : $parsed['rows'][array_key_last($parsed['rows'])]['sent_at'];
+
+        return response()->json([
+            'senders' => $senders,
+            'suggested_owner' => $suggested,
+            'messages' => count($parsed['rows']),
+            'date_order' => $parsed['order'],
+            'date_order_ambiguous' => $parsed['ambiguous'],
+            'first_label' => $clock->formatDateTime($first),
+            'last_label' => $clock->formatDateTime($last),
+        ]);
+    }
+
+    public function import(Request $request, Conversation $conversation, ImportWhatsAppChat $import): RedirectResponse
+    {
+        $this->authorize('update', $conversation->lead);
+        $request->validate([
+            'owner_name' => ['required', 'string', 'max:120'],
+            'date_order' => ['nullable', 'in:dmy,mdy'],
+        ]);
+
+        /** @var User $actor */
+        $actor = $request->user();
+        $result = $import->handle($conversation, $this->chatText($request, $import), $request->string('owner_name')->toString(), $actor, $request->string('date_order')->toString() ?: null);
+
+        Inertia::flash('toast', [
+            'type' => $result['imported'] > 0 ? 'success' : 'info',
+            'message' => $result['imported'] > 0
+                ? sprintf('Imported %d messages (%d yours, %d theirs). %d were already here.', $result['imported'], $result['mine'], $result['theirs'], $result['skipped'])
+                : 'Every message in that file is already in this chat.',
+        ]);
+
+        return redirect()->route('inbox.show', $conversation);
+    }
+
+    private function chatText(Request $request, ImportWhatsAppChat $import): string
+    {
+        $request->validate(['file' => ['required', 'file', 'max:20480']]);
+        $file = $request->file('file');
+        $extension = mb_strtolower((string) $file?->getClientOriginalExtension());
+
+        if (! in_array($extension, ['txt', 'zip'], true)) {
+            throw ValidationException::withMessages(['file' => 'Upload the .txt (Android) or .zip (iPhone) file from WhatsApp "Export chat".']);
+        }
+
+        return $import->readFile((string) $file?->getRealPath(), $extension);
     }
 
     private function page(Request $request, InboxData $inbox, ?Conversation $conversation): Response

@@ -59,6 +59,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('inbox/{conversation}/messages', [InboxController::class, 'message'])->name('inbox.messages.store');
     Route::post('inbox/{conversation}/schedule', [InboxController::class, 'schedule'])->name('inbox.schedule');
     Route::put('inbox/{conversation}/contact', [InboxController::class, 'rename'])->name('inbox.contact.update');
+    Route::post('inbox/{conversation}/import/preview', [InboxController::class, 'importPreview'])->name('inbox.import.preview');
+    Route::post('inbox/{conversation}/import', [InboxController::class, 'import'])->name('inbox.import');
 
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::get('contacts/create', [ContactController::class, 'create'])->name('contacts.create');
