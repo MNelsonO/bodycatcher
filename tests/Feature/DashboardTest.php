@@ -127,3 +127,20 @@ it('lists chats waiting on a reply, not ones already answered', function () {
     $this->get(route('dashboard'))
         ->assertInertia(fn (AssertableInertia $page) => $page->has('waiting', 0));
 });
+
+it('reports replies sent today and the typical reply time', function () {
+    $lead = whatsappOpenLead();
+    $conversation = $lead->conversation()->firstOrFail();
+    whatsappInbound($lead, now()->subMinutes(50));
+    Message::query()->create([
+        'conversation_id' => $conversation->id,
+        'direction' => 'outbound', 'channel' => 'whatsapp', 'origin' => 'manual', 'status' => 'sent',
+        'body' => 'On it', 'sent_at' => now()->subMinutes(30),
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->where('reply_stats.median_minutes', 20)
+            ->where('reply_stats.answered', 1)
+            ->where('waiting_count', 0));
+});

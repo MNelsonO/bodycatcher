@@ -11,7 +11,6 @@ use App\Settings\DisplayClock;
 use App\Settings\Product;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class CommandCentreBoard
@@ -277,6 +276,19 @@ class CommandCentreBoard
     /**
      * @param  Builder<Lead>  $query
      */
+    /**
+     * Open hot leads: a hot stage, or a latest AI score of 70 or more.
+     *
+     * @return Builder<Lead>
+     */
+    public function hotLeads(): Builder
+    {
+        $query = Lead::query()->whereNull('closed_at');
+        $this->constrainHot($query);
+
+        return $query;
+    }
+
     private function constrainHot(Builder $query): void
     {
         $query->where(function (Builder $hot): void {

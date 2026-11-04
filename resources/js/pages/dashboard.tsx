@@ -10,6 +10,7 @@ import {
     Plus,
     SlidersHorizontal,
     Sparkles,
+    Timer,
     Users,
     Wallet,
 } from 'lucide-react';
@@ -125,6 +126,22 @@ function scoreClass(score: number | null | undefined): string {
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
 
+function formatMinutes(minutes: number | null): string {
+    if (minutes === null) {
+        return '—';
+    }
+
+    if (minutes < 60) {
+        return `${minutes} min`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+
+    return hours < 24
+        ? `${hours}h ${minutes % 60}m`
+        : `${Math.round(hours / 24)}d`;
+}
+
 type WaitingRow = {
     id: number;
     contact_name: string;
@@ -148,8 +165,24 @@ export default function Dashboard({
     waiting = [],
     agenda = [],
     whatsapp_link,
+    waiting_count = 0,
+    going_cold = [],
+    reply_stats,
 }: {
     metrics: DashboardMetrics;
+    waiting_count?: number;
+    going_cold?: Array<{
+        id: number;
+        conversation_id: number | null;
+        contact_name: string;
+        stage: string;
+        silent_days: number | null;
+    }>;
+    reply_stats?: {
+        replies_today: number;
+        median_minutes: number | null;
+        answered: number;
+    };
     waiting?: WaitingRow[];
     agenda?: AgendaRow[];
     whatsapp_link?: { driver: string; state: string };
@@ -237,23 +270,25 @@ export default function Dashboard({
                 </header>
 
                 {/* Focus ----------------------------------------------------- */}
-                <div
-                    role="status"
-                    className={`flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl px-5 py-3.5 ${bannerTone[speak.tone]}`}
-                >
-                    <BannerIcon className="size-5 shrink-0" />
-                    <p className="min-w-0 flex-1 text-base leading-snug font-semibold">
-                        {speak.line}
-                    </p>
-                    {speak.href && speak.cta ? (
-                        <Link
-                            href={speak.href}
-                            className="rounded-lg bg-white/20 px-3.5 py-1.5 text-sm font-semibold text-current transition-colors outline-none hover:bg-white/30 hover:text-current focus-visible:ring-2 focus-visible:ring-white"
-                        >
-                            {speak.cta} →
-                        </Link>
-                    ) : null}
-                </div>
+                {speak.href === '/leads?follow_up=overdue' ? null : (
+                    <div
+                        role="status"
+                        className={`flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl px-5 py-3.5 ${bannerTone[speak.tone]}`}
+                    >
+                        <BannerIcon className="size-5 shrink-0" />
+                        <p className="min-w-0 flex-1 text-base leading-snug font-semibold">
+                            {speak.line}
+                        </p>
+                        {speak.href && speak.cta ? (
+                            <Link
+                                href={speak.href}
+                                className="rounded-lg bg-white/20 px-3.5 py-1.5 text-sm font-semibold text-current transition-colors outline-none hover:bg-white/30 hover:text-current focus-visible:ring-2 focus-visible:ring-white"
+                            >
+                                {speak.cta} →
+                            </Link>
+                        ) : null}
+                    </div>
+                )}
 
                 {/* Key numbers ----------------------------------------------- */}
                 <section
@@ -262,7 +297,7 @@ export default function Dashboard({
                 >
                     <PriorityLink
                         href="/leads?follow_up=overdue"
-                        label="Overdue"
+                        label="Overdue follow-ups"
                         value={metrics.overdue_follow_ups}
                         icon={AlertTriangle}
                         urgent={metrics.overdue_follow_ups > 0}
@@ -274,16 +309,26 @@ export default function Dashboard({
                         icon={CalendarClock}
                     />
                     <PriorityLink
-                        href="/inbox?filter=unread"
-                        label="Unread chats"
-                        value={unread}
+                        href="#waiting"
+                        label="Waiting on you"
+                        value={waiting_count}
                         icon={Inbox}
+                        urgent={waiting.some((row) => row.minutes >= 240)}
                     />
                     <PriorityLink
                         href="/inbox"
-                        label="WhatsApp in today"
-                        value={metrics.whatsapp.inbound_today}
+                        label="Replies sent today"
+                        value={reply_stats?.replies_today ?? 0}
                         icon={MessageCircle}
+                    />
+                    <PriorityLink
+                        href="/inbox"
+                        label="Typical reply time · 7d"
+                        value={reply_stats?.median_minutes ?? 0}
+                        display={formatMinutes(
+                            reply_stats?.median_minutes ?? null,
+                        )}
+                        icon={Timer}
                     />
                     <PriorityLink
                         href="/leads"
@@ -291,21 +336,14 @@ export default function Dashboard({
                         value={metrics.open_leads}
                         icon={Users}
                     />
-                    <PriorityLink
-                        href="/invoices"
-                        label="Collected"
-                        value={metrics.orders.bought_revenue}
-                        display={money(
-                            metrics.orders.currency,
-                            metrics.orders.bought_revenue,
-                        )}
-                        icon={Wallet}
-                    />
                 </section>
 
                 {/* Waiting on you + Today ----------------------------------- */}
                 <section className="grid gap-6 xl:grid-cols-12">
-                    <div className={`${surfaceClass} xl:col-span-7`}>
+                    <div
+                        id="waiting"
+                        className={`${surfaceClass} scroll-mt-6 xl:col-span-7`}
+                    >
                         <SectionTitle
                             title="Waiting on you"
                             hint="Clients who wrote last and have no reply yet, longest wait first."
@@ -362,57 +400,104 @@ export default function Dashboard({
                         )}
                     </div>
 
-                    <div
-                        className={`${surfaceClass} flex flex-col xl:col-span-5`}
-                    >
-                        <SectionTitle
-                            title="Today"
-                            hint="Your calendar for today."
-                            action={
-                                <Button variant="ghost" size="sm" asChild>
-                                    <Link href="/calendar">Calendar</Link>
-                                </Button>
-                            }
-                        />
-                        {agenda.length === 0 ? (
-                            <EmptyState
-                                icon={CalendarDays}
-                                title="Nothing booked today"
-                                body="Book calls and visits from a chat or the calendar."
+                    <div className="flex flex-col gap-6 xl:col-span-5">
+                        <div className={surfaceClass}>
+                            <SectionTitle
+                                title="Today"
+                                hint={
+                                    agenda.length === 0
+                                        ? 'Nothing booked.'
+                                        : `${agenda.length} on your calendar.`
+                                }
+                                action={
+                                    <Button variant="ghost" size="sm" asChild>
+                                        <Link href="/calendar">Calendar</Link>
+                                    </Button>
+                                }
                             />
-                        ) : (
-                            <ul className="divide-y divide-border">
-                                {agenda.map((item) => (
-                                    <li
-                                        key={item.id}
-                                        className="flex items-start gap-3 px-5 py-3"
-                                    >
-                                        <span className="w-12 shrink-0 text-sm font-semibold text-primary tabular-nums">
-                                            {item.time ?? 'All day'}
-                                        </span>
-                                        <span className="min-w-0">
-                                            <span className="block truncate text-sm font-medium">
-                                                {item.title}
+                            {agenda.length > 0 ? (
+                                <ul className="divide-y divide-border">
+                                    {agenda.map((item) => (
+                                        <li
+                                            key={item.id}
+                                            className="flex items-start gap-3 px-5 py-2.5"
+                                        >
+                                            <span className="w-12 shrink-0 text-sm font-semibold text-primary tabular-nums">
+                                                {item.time ?? 'All day'}
                                             </span>
-                                            <span className="block truncate text-xs text-muted-foreground capitalize">
-                                                {item.type}
-                                                {item.location
-                                                    ? ` · ${item.location}`
-                                                    : ''}
+                                            <span className="min-w-0">
+                                                <span className="block truncate text-sm font-medium">
+                                                    {item.title}
+                                                </span>
+                                                <span className="block truncate text-xs text-muted-foreground capitalize">
+                                                    {item.type}
+                                                    {item.location
+                                                        ? ` · ${item.location}`
+                                                        : ''}
+                                                </span>
                                             </span>
-                                        </span>
-                                        {item.lead_id ? (
+                                            {item.lead_id ? (
+                                                <Link
+                                                    href={`/leads/${item.lead_id}`}
+                                                    className="ml-auto shrink-0 text-xs"
+                                                >
+                                                    Lead
+                                                </Link>
+                                            ) : null}
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : null}
+                        </div>
+
+                        <div className={`${surfaceClass} flex-1`}>
+                            <SectionTitle
+                                title="Hot leads going cold"
+                                hint="Buying-stage or high-scoring leads with no chat for 3+ days."
+                                badge={
+                                    going_cold.length > 0
+                                        ? String(going_cold.length)
+                                        : undefined
+                                }
+                            />
+                            {going_cold.length === 0 ? (
+                                <EmptyState
+                                    icon={Flame}
+                                    title="No hot lead is going cold"
+                                    body="Every hot lead has been in touch within 3 days."
+                                />
+                            ) : (
+                                <ul className="divide-y divide-border">
+                                    {going_cold.map((lead) => (
+                                        <li key={lead.id}>
                                             <Link
-                                                href={`/leads/${item.lead_id}`}
-                                                className="ml-auto shrink-0 text-xs"
+                                                href={
+                                                    lead.conversation_id
+                                                        ? `/inbox/${lead.conversation_id}`
+                                                        : `/leads/${lead.id}`
+                                                }
+                                                className="flex items-center gap-3 px-5 py-2.5 text-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
                                             >
-                                                Lead
+                                                <Flame className="size-4 shrink-0 text-cta" />
+                                                <span className="min-w-0 flex-1">
+                                                    <span className="block truncate text-sm font-medium">
+                                                        {lead.contact_name}
+                                                    </span>
+                                                    <span className="block truncate text-xs text-muted-foreground">
+                                                        {lead.stage}
+                                                    </span>
+                                                </span>
+                                                <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                                                    {lead.silent_days === null
+                                                        ? 'never chatted'
+                                                        : `${lead.silent_days}d quiet`}
+                                                </span>
                                             </Link>
-                                        ) : null}
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
                     </div>
                 </section>
 
@@ -1009,8 +1094,10 @@ function PriorityLink({
     urgent?: boolean;
     display?: string;
 }) {
+    const Tag = href.startsWith('#') ? 'a' : Link;
+
     return (
-        <Link
+        <Tag
             href={href}
             className={`flex min-h-24 flex-col justify-between gap-3 rounded-xl border px-4 py-3.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 urgent
@@ -1029,7 +1116,7 @@ function PriorityLink({
             >
                 {display ?? value}
             </p>
-        </Link>
+        </Tag>
     );
 }
 
