@@ -203,7 +203,7 @@ function ConversationList({
                             className={cn(
                                 'rounded-full px-3 py-1 text-xs font-medium whitespace-nowrap transition-colors',
                                 filters.filter === option.value
-                                    ? 'bg-primary text-primary-foreground'
+                                    ? 'bg-laundry text-white'
                                     : 'bg-muted text-muted-foreground hover:text-foreground',
                             )}
                         >
@@ -266,7 +266,7 @@ function ConversationRow({
                 href={href}
                 preserveScroll
                 className={cn(
-                    'flex items-start gap-3 border-b px-3 py-3 transition-colors hover:bg-muted/60',
+                    'flex items-start gap-3 border-b px-3 py-3 text-foreground transition-colors hover:bg-muted/60 hover:text-foreground',
                     active && 'bg-muted',
                 )}
             >
@@ -289,7 +289,7 @@ function ConversationRow({
                             className={cn(
                                 'shrink-0 text-[11px] tabular-nums',
                                 unread
-                                    ? 'font-medium text-emerald-600 dark:text-emerald-400'
+                                    ? 'font-medium text-laundry'
                                     : 'text-muted-foreground',
                             )}
                         >
@@ -314,7 +314,7 @@ function ConversationRow({
                             {preview}
                         </p>
                         {unread ? (
-                            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-emerald-600 px-1.5 text-[11px] font-semibold text-white">
+                            <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-laundry px-1.5 text-[11px] font-semibold text-white">
                                 {row.unread_count}
                             </span>
                         ) : null}
@@ -807,9 +807,7 @@ function Composer({ thread }: { thread: InboxThread }) {
                             className={cn(
                                 'rounded-full px-3 py-1 text-xs font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40',
                                 mode === option.value
-                                    ? option.value === 'whatsapp'
-                                        ? 'bg-emerald-600 text-white'
-                                        : 'bg-primary text-primary-foreground'
+                                    ? 'bg-laundry text-white'
                                     : 'bg-muted text-muted-foreground hover:text-foreground',
                             )}
                         >
@@ -911,11 +909,7 @@ function Composer({ thread }: { thread: InboxThread }) {
                     <Button
                         type="submit"
                         size="icon"
-                        className={cn(
-                            'size-11 shrink-0',
-                            mode === 'whatsapp' &&
-                                'bg-emerald-600 hover:bg-emerald-700',
-                        )}
+                        className="size-11 shrink-0"
                         disabled={
                             form.processing || form.data.body.trim() === ''
                         }
@@ -1083,10 +1077,7 @@ function NewChatDialog({
             }}
         >
             <DialogTrigger asChild>
-                <Button
-                    size="sm"
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                >
+                <Button size="sm">
                     <MessageSquarePlus /> New chat
                 </Button>
             </DialogTrigger>

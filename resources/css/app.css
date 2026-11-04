@@ -36,8 +36,8 @@
     --radius-xl: 1rem;
 
     /* Solid shadows only, no transparency tricks on surfaces */
-    --shadow-card: 0 1px 2px #dbe4f5, 0 4px 12px #e8eefb;
-    --shadow-pop: 0 8px 24px #cfdbf3;
+    --shadow-card: 0 1px 2px #dfeae3, 0 4px 12px #ebf3ee;
+    --shadow-pop: 0 8px 24px #d3e4d9;
 
     --color-background: var(--background);
     --color-foreground: var(--foreground);
@@ -51,6 +51,11 @@
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
     --color-primary-hover: var(--primary-hover);
+
+    --color-cta: var(--cta);
+    --color-cta-hover: var(--cta-hover);
+    --color-cta-foreground: var(--cta-foreground);
+    --color-cta-soft: var(--cta-soft);
 
     --color-secondary: var(--secondary);
     --color-secondary-foreground: var(--secondary-foreground);
@@ -99,61 +104,67 @@
 }
 
 /*
- * Laundry OS desk palette (fresh theme)
- * Dominant: white surfaces + one confident blue.
+ * Kemet desk palette
+ * White surfaces, brand green (--primary: sidebar, links, badges, bars,
+ * active states) and orange (--cta) for every button and call to action. "blue" class names are kept for
+ * compatibility and now render the brand green.
  * Status only: green (won/paid), red (lost/overdue), slate (neutral lead).
  * Every surface is a solid colour: no alpha, no color-mix with transparent.
  */
 :root {
-    --laundry-blue: #1d4ed8;
-    --laundry-blue-soft: #e3ecff;
+    --laundry-blue: #0f7a4a;
+    --laundry-blue-soft: #e3f3ea;
     --laundry-white: #ffffff;
-    --laundry-ink: #0b1b3a;
-    --laundry-mist: #f3f7ff;
+    --laundry-ink: #10251a;
+    --laundry-mist: #f5faf7;
 
     --success: #15803d;
     --success-foreground: #ffffff;
     --success-soft: #dcfce7;
 
-    --lead: #475569;
+    --lead: #4b5d54;
     --lead-foreground: #ffffff;
-    --lead-soft: #e5eaf2;
+    --lead-soft: #e8eeea;
 
-    --background: #f3f7ff;
+    --background: #f5faf7;
     --foreground: var(--laundry-ink);
     --card: #ffffff;
     --card-foreground: var(--laundry-ink);
     --popover: #ffffff;
     --popover-foreground: var(--laundry-ink);
-    --primary: #1d4ed8;
-    --primary-hover: #1e40af;
+    --primary: #0f7a4a;
+    --primary-hover: #0b5d38;
     --primary-foreground: #ffffff;
-    --secondary: #e3ecff;
-    --secondary-foreground: #1e40af;
-    --muted: #edf2fb;
-    --muted-foreground: #5b6b86;
-    --accent: #e3ecff;
-    --accent-foreground: #1e40af;
+    --cta: #cc4a0d;
+    --cta-hover: #a83c0a;
+    --cta-foreground: #ffffff;
+    --cta-soft: #fff1e7;
+    --secondary: #e3f3ea;
+    --secondary-foreground: #0b5d38;
+    --muted: #eef5f1;
+    --muted-foreground: #55675d;
+    --accent: #e3f3ea;
+    --accent-foreground: #0b5d38;
     --destructive: #dc2626;
     --destructive-foreground: #ffffff;
-    --border: #d6e0f3;
-    --input: #c9d6ee;
-    --ring: #7aa2f7;
-    --chart-1: #1d4ed8;
-    --chart-2: #15803d;
+    --border: #d7e6dd;
+    --input: #c4d9cc;
+    --ring: #f08a4b;
+    --chart-1: #0f7a4a;
+    --chart-2: #cc4a0d;
     --chart-3: #dc2626;
-    --chart-4: #475569;
-    --chart-5: #38bdf8;
+    --chart-4: #4b5d54;
+    --chart-5: #f59e0b;
     --radius: 0.75rem;
 
-    --sidebar: #ffffff;
-    --sidebar-foreground: var(--laundry-ink);
-    --sidebar-primary: #1d4ed8;
+    --sidebar: #0b4f30;
+    --sidebar-foreground: #ecf8f1;
+    --sidebar-primary: #cc4a0d;
     --sidebar-primary-foreground: #ffffff;
-    --sidebar-accent: #e3ecff;
-    --sidebar-accent-foreground: #1e40af;
-    --sidebar-border: #d6e0f3;
-    --sidebar-ring: #7aa2f7;
+    --sidebar-accent: #13693f;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #0e5c38;
+    --sidebar-ring: #f08a4b;
 
     /* Layout rhythm */
     --space-page-x: 1.5rem;
@@ -165,54 +176,58 @@
 }
 
 .dark {
-    --laundry-blue: #6ea8fe;
-    --laundry-blue-soft: #1b2f52;
-    --laundry-white: #0f1a2e;
-    --laundry-ink: #e6edf8;
-    --laundry-mist: #0a1324;
+    --laundry-blue: #34c27a;
+    --laundry-blue-soft: #123524;
+    --laundry-white: #0f1f17;
+    --laundry-ink: #e7f4ec;
+    --laundry-mist: #09140f;
 
     --success: #4ade80;
     --success-foreground: #052e16;
     --success-soft: #14532d;
 
-    --lead: #94a3b8;
+    --lead: #9fb3a8;
     --lead-foreground: #0f172a;
-    --lead-soft: #2b3a52;
+    --lead-soft: #24362c;
 
-    --background: #0a1324;
-    --foreground: #e6edf8;
-    --card: #111e36;
-    --card-foreground: #e6edf8;
-    --popover: #111e36;
-    --popover-foreground: #e6edf8;
-    --primary: #6ea8fe;
-    --primary-hover: #8dbcff;
-    --primary-foreground: #08111f;
-    --secondary: #1b2f52;
-    --secondary-foreground: #cfe0ff;
-    --muted: #17253f;
-    --muted-foreground: #9db0cc;
-    --accent: #1b2f52;
-    --accent-foreground: #cfe0ff;
+    --background: #09140f;
+    --foreground: #e7f4ec;
+    --card: #0f1f17;
+    --card-foreground: #e7f4ec;
+    --popover: #0f1f17;
+    --popover-foreground: #e7f4ec;
+    --primary: #34c27a;
+    --primary-hover: #5fd497;
+    --primary-foreground: #052e16;
+    --cta: #fb923c;
+    --cta-hover: #fdba74;
+    --cta-foreground: #1a0d04;
+    --cta-soft: #3a1f0c;
+    --secondary: #123524;
+    --secondary-foreground: #c9ecd8;
+    --muted: #13261c;
+    --muted-foreground: #9cb8a8;
+    --accent: #123524;
+    --accent-foreground: #c9ecd8;
     --destructive: #f87171;
     --destructive-foreground: #450a0a;
-    --border: #22335a;
-    --input: #2a3d66;
-    --ring: #4f86e8;
-    --chart-1: #6ea8fe;
-    --chart-2: #4ade80;
+    --border: #1f3b2c;
+    --input: #284a37;
+    --ring: #fb923c;
+    --chart-1: #34c27a;
+    --chart-2: #fb923c;
     --chart-3: #f87171;
-    --chart-4: #94a3b8;
-    --chart-5: #38bdf8;
+    --chart-4: #9fb3a8;
+    --chart-5: #fbbf24;
 
-    --sidebar: #0d192e;
-    --sidebar-foreground: #e6edf8;
-    --sidebar-primary: #6ea8fe;
-    --sidebar-primary-foreground: #08111f;
-    --sidebar-accent: #1b2f52;
-    --sidebar-accent-foreground: #cfe0ff;
-    --sidebar-border: #22335a;
-    --sidebar-ring: #4f86e8;
+    --sidebar: #08291a;
+    --sidebar-foreground: #e7f4ec;
+    --sidebar-primary: #fb923c;
+    --sidebar-primary-foreground: #1a0d04;
+    --sidebar-accent: #123d27;
+    --sidebar-accent-foreground: #ffffff;
+    --sidebar-border: #123524;
+    --sidebar-ring: #fb923c;
 }
 
 @layer base {
@@ -226,7 +241,7 @@
     }
 
     body {
-        @apply bg-background text-foreground font-sans antialiased;
+        @apply bg-background font-sans text-foreground antialiased;
         min-height: 100vh;
         font-size: var(--text-base);
         line-height: 1.6;
@@ -276,6 +291,11 @@
 
     a:hover {
         color: var(--primary-hover);
+    }
+
+    [data-sidebar] a,
+    [data-sidebar] a:hover {
+        color: inherit;
     }
 
     :focus-visible {
@@ -378,9 +398,9 @@
 
     /* Blue hero panel for the one thing that should stand out */
     .surface-blue {
-        background: var(--primary);
-        color: var(--primary-foreground);
-        border: 1px solid var(--primary-hover);
+        background: var(--laundry-blue);
+        color: #ffffff;
+        border: 1px solid var(--sidebar-border);
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-pop);
         padding: var(--space-card);
@@ -489,12 +509,12 @@
     }
 
     .btn-primary {
-        background: var(--primary);
-        color: var(--primary-foreground);
+        background: var(--cta);
+        color: var(--cta-foreground);
     }
 
     .btn-primary:hover {
-        background: var(--primary-hover);
+        background: var(--cta-hover);
     }
 
     .btn-outline {
@@ -551,7 +571,7 @@
     /* Solid tone helpers (no transparency) */
     .tone-blue {
         background: var(--laundry-blue);
-        color: var(--primary-foreground);
+        color: #ffffff;
     }
 
     .tone-blue-soft {
@@ -562,8 +582,8 @@
 
     .tone-white {
         background: var(--card);
-        color: var(--primary);
-        border: 1px solid var(--primary);
+        color: var(--laundry-blue);
+        border: 1px solid var(--laundry-blue);
     }
 
     .tone-green {
@@ -617,13 +637,13 @@
 
     .pill-blue {
         background: var(--laundry-blue);
-        color: var(--primary-foreground);
+        color: #ffffff;
     }
 
     .pill-white {
         background: var(--card);
-        color: var(--primary);
-        border: 1px solid var(--primary);
+        color: var(--laundry-blue);
+        border: 1px solid var(--laundry-blue);
     }
 
     .pill-green {

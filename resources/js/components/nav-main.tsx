@@ -34,7 +34,7 @@ export function NavMain({ items }: { items: NavItem[] }) {
                             </Link>
                         </SidebarMenuButton>
                         {item.badge ? (
-                            <SidebarMenuBadge className="rounded-full bg-emerald-600 text-white peer-hover/menu-button:text-white peer-data-[active=true]/menu-button:text-white">
+                            <SidebarMenuBadge className="rounded-full bg-cta text-cta-foreground peer-hover/menu-button:text-cta-foreground peer-data-[active=true]/menu-button:text-cta-foreground">
                                 {item.badge > 99 ? '99+' : item.badge}
                             </SidebarMenuBadge>
                         ) : null}

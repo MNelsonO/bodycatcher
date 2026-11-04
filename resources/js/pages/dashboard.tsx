@@ -171,13 +171,13 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                             className={`flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl px-5 py-4 ${bannerTone[speak.tone]}`}
                         >
                             <BannerIcon className="size-6 shrink-0" />
-                            <p className="min-w-0 flex-1 text-base font-semibold leading-snug md:text-lg">
+                            <p className="min-w-0 flex-1 text-base leading-snug font-semibold md:text-lg">
                                 {speak.line}
                             </p>
                             {speak.href && speak.cta ? (
                                 <Link
                                     href={speak.href}
-                                    className="rounded-lg bg-white/20 px-3.5 py-2 text-sm font-semibold outline-none transition-colors hover:bg-white/30 focus-visible:ring-2 focus-visible:ring-white"
+                                    className="rounded-lg bg-white/20 px-3.5 py-2 text-sm font-semibold text-current transition-colors outline-none hover:bg-white/30 hover:text-current focus-visible:ring-2 focus-visible:ring-white"
                                 >
                                     {speak.cta} →
                                 </Link>
@@ -241,7 +241,9 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                         )}
                     </div>
 
-                    <div className={`${surfaceClass} flex flex-col lg:col-span-2`}>
+                    <div
+                        className={`${surfaceClass} flex flex-col lg:col-span-2`}
+                    >
                         <SectionTitle
                             title="Pipeline"
                             hint="Leads by stage. Select a stage to filter."
@@ -282,7 +284,7 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                             aria-current={
                                                 selected ? 'true' : undefined
                                             }
-                                            className={`block rounded-lg px-3 py-2 outline-none transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring ${
+                                            className={`block rounded-lg px-3 py-2 transition-colors outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring ${
                                                 selected ? 'bg-muted' : ''
                                             }`}
                                         >
@@ -290,7 +292,7 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                                 <span className="font-medium text-foreground">
                                                     {row.stage_name}
                                                 </span>
-                                                <span className="tabular-nums text-muted-foreground">
+                                                <span className="text-muted-foreground tabular-nums">
                                                     <strong className="font-semibold text-foreground">
                                                         {row.total}
                                                     </strong>{' '}
@@ -411,7 +413,7 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                         board.filters.to !== ''
                                     }
                                 >
-                                    <summary className="cursor-pointer select-none text-sm font-medium text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                    <summary className="cursor-pointer text-sm font-medium text-primary outline-none select-none focus-visible:ring-2 focus-visible:ring-ring">
                                         More filters
                                     </summary>
                                     <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -474,9 +476,7 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                             type="submit"
                                             disabled={processing}
                                         >
-                                            {processing
-                                                ? 'Applying…'
-                                                : 'Apply'}
+                                            {processing ? 'Applying…' : 'Apply'}
                                         </Button>
                                     </div>
                                 </div>
@@ -545,7 +545,8 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                                     '—'}
                                             </p>
                                             <p className="mt-1 text-xs text-muted-foreground">
-                                                {lead.follow_up_label ?? 'No follow-up'}
+                                                {lead.follow_up_label ??
+                                                    'No follow-up'}
                                                 {lead.next_talk_label
                                                     ? ` · talk ${lead.next_talk_label}`
                                                     : ''}
@@ -558,21 +559,36 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                             {/* Desktop: table */}
                             <div className="hidden overflow-x-auto md:block">
                                 <table className="w-full min-w-[820px] text-left text-sm">
-                                    <thead className="sticky top-0 border-b border-border bg-card text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                    <thead className="sticky top-0 border-b border-border bg-card text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                                         <tr>
-                                            <th scope="col" className="px-5 py-3">
+                                            <th
+                                                scope="col"
+                                                className="px-5 py-3"
+                                            >
                                                 Lead
                                             </th>
-                                            <th scope="col" className="px-5 py-3">
+                                            <th
+                                                scope="col"
+                                                className="px-5 py-3"
+                                            >
                                                 System
                                             </th>
-                                            <th scope="col" className="px-5 py-3">
+                                            <th
+                                                scope="col"
+                                                className="px-5 py-3"
+                                            >
                                                 Stage
                                             </th>
-                                            <th scope="col" className="px-5 py-3">
+                                            <th
+                                                scope="col"
+                                                className="px-5 py-3"
+                                            >
                                                 Intent
                                             </th>
-                                            <th scope="col" className="px-5 py-3">
+                                            <th
+                                                scope="col"
+                                                className="px-5 py-3"
+                                            >
                                                 Next
                                             </th>
                                             <th
@@ -637,7 +653,7 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                             title={`Leads · ${chartDays}d`}
                             hint="Opened vs won"
                         />
-                        <div className="px-5 pb-5 pt-4">
+                        <div className="px-5 pt-4 pb-5">
                             <TwinBarChart
                                 name="Leads opened versus won"
                                 data={metrics.charts.leads_7d}
@@ -719,7 +735,7 @@ function SectionTitle({
                         {title}
                     </h2>
                     {badge ? (
-                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold tabular-nums text-muted-foreground">
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-semibold text-muted-foreground tabular-nums">
                             {badge}
                         </span>
                     ) : null}
@@ -771,7 +787,7 @@ function PriorityLink({
     return (
         <Link
             href={href}
-            className={`flex flex-col justify-between gap-3 rounded-xl border px-4 py-4 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
+            className={`flex flex-col justify-between gap-3 rounded-xl border px-4 py-4 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 urgent
                     ? 'border-destructive bg-destructive text-white hover:bg-destructive/90'
                     : 'border-border bg-card text-foreground shadow-[var(--shadow-card)] hover:bg-muted'
@@ -783,7 +799,7 @@ function PriorityLink({
                 <Icon className="size-4" />
                 {label}
             </div>
-            <p className="text-3xl font-semibold leading-none tabular-nums">
+            <p className="text-3xl leading-none font-semibold tabular-nums">
                 {value}
             </p>
         </Link>
@@ -910,13 +926,13 @@ function FollowUpItem({ row }: { row: FollowUpRow }) {
         <li>
             <Link
                 href={`/leads/${row.id}`}
-                className={`block border-l-4 px-5 py-4 outline-none transition-colors hover:bg-muted/50 focus-visible:bg-muted/50 ${
+                className={`block border-l-4 px-5 py-4 transition-colors outline-none hover:bg-muted/50 focus-visible:bg-muted/50 ${
                     overdue ? 'border-l-destructive' : 'border-l-transparent'
                 }`}
             >
                 <div className="flex flex-wrap items-center gap-2">
                     {typeof row.rank === 'number' && row.rank > 0 ? (
-                        <span className="text-xs font-semibold tabular-nums text-muted-foreground">
+                        <span className="text-xs font-semibold text-muted-foreground tabular-nums">
                             #{row.rank}
                         </span>
                     ) : null}
@@ -982,7 +998,7 @@ function Legend({ items }: { items: { color: string; label: string }[] }) {
 
 function BarValue({ value }: { value: number }) {
     return (
-        <span className="h-3.5 text-[10px] font-semibold leading-none tabular-nums text-muted-foreground">
+        <span className="h-3.5 text-[10px] leading-none font-semibold text-muted-foreground tabular-nums">
             {value > 0 ? value : ''}
         </span>
     );

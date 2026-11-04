@@ -320,7 +320,7 @@ function ImportNamesDialog() {
                                 name="file"
                                 accept=".vcf,.csv,text/vcard,text/csv"
                                 required
-                                className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:text-primary-foreground"
+                                className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-cta file:px-3 file:py-1.5 file:text-sm file:text-cta-foreground"
                             />
                             <InputError message={errors.file} />
                             {progress ? (

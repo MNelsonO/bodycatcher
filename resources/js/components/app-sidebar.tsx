@@ -82,7 +82,7 @@ export function AppSidebar() {
             </SidebarContent>
 
             <SidebarFooter>
-                <p className="px-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+                <p className="px-2 text-xs text-sidebar-foreground/70 group-data-[collapsible=icon]:hidden">
                     Times in {displayTimezone}
                 </p>
                 <NavUser />
