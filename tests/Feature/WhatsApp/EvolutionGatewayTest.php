@@ -1,6 +1,7 @@
 <?php
 
 use App\Contacts\Contact;
+use App\Conversations\Conversation;
 use App\Conversations\Message;
 use App\Leads\Lead;
 use App\WhatsApp\EvolutionWhatsAppClient;
@@ -126,4 +127,25 @@ it('reports the gateway as not installed when no key is set', function () {
     $this->actingAs(crmSalesUser());
 
     $this->getJson('/whatsapp/gateway')->assertOk()->assertJsonPath('state', 'unconfigured');
+});
+
+it('matches an unresolved privacy id to the contact created under that id', function () {
+    whatsappOpenLead();
+    $lidContact = Contact::factory()->create(['full_name' => 'Privacy Person', 'primary_phone' => '+190391773040704']);
+    $lidLead = Lead::query()->create([
+        'contact_id' => $lidContact->id,
+        'product_id' => Lead::query()->value('product_id'),
+        'pipeline_id' => Lead::query()->value('pipeline_id'),
+        'current_stage_id' => Lead::query()->value('current_stage_id'),
+        'decision_maker_status' => 'unknown',
+    ]);
+    Conversation::query()->create(['lead_id' => $lidLead->id, 'contact_id' => $lidContact->id]);
+
+    $this->postJson('/webhooks/evolution/secret-token', evolutionUpsert(['messages' => [[
+        'key' => ['remoteJid' => '190391773040704@lid', 'fromMe' => true, 'id' => 'LID-H1'],
+        'message' => ['conversation' => 'Reply to a privacy id'],
+        'messageTimestamp' => now()->subDay()->timestamp,
+    ]]], 'messages.set'))->assertOk();
+
+    expect(Message::query()->where('provider_message_id', 'LID-H1')->value('conversation_id'))->toBe($lidLead->conversation->id);
 });

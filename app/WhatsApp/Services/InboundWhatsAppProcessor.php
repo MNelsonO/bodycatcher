@@ -49,6 +49,16 @@ class InboundWhatsAppProcessor
     }
 
     /**
+     * Re-applies an already stored payload (used to replay synced history).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    public function replay(array $payload): void
+    {
+        DB::transaction(fn () => $this->handlePayload($payload));
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      */
     private function handlePayload(array $payload): void

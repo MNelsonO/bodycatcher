@@ -244,7 +244,13 @@ class InboundPayloadNormalizer
 
         $digits = $this->digits($this->jid($remote));
 
-        return $digits !== '' ? $digits : null;
+        if ($digits === '') {
+            return null;
+        }
+
+        // An unresolved privacy id: keep it as "+<id>", the form contacts
+        // created from such chats already use, so it matches the same contact.
+        return str_ends_with($remote, '@lid') ? '+'.$digits : $digits;
     }
 
     /**
