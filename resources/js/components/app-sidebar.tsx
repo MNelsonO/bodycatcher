@@ -5,6 +5,7 @@ import {
     ChartPie,
     FileText,
     Inbox,
+    KanbanSquare,
     Landmark,
     LayoutGrid,
     ListTodo,
@@ -34,7 +35,7 @@ export function AppSidebar() {
     const { auth, displayTimezone, inboxUnread } = usePage().props;
     const owner = auth.user.role === 'owner';
 
-    const mainNavItems: NavItem[] = [
+    const workItems: NavItem[] = [
         { title: 'Command centre', href: '/dashboard', icon: LayoutGrid },
         {
             title: 'Inbox',
@@ -45,20 +46,26 @@ export function AppSidebar() {
         { title: 'Leads', href: '/leads', icon: Rows3 },
         { title: 'Contacts', href: '/contacts', icon: UserRound },
         { title: 'Calendar', href: '/calendar', icon: CalendarDays },
+        { title: 'Follow-ups', href: '/follow-ups', icon: ListTodo },
+    ];
+
+    const moneyItems: NavItem[] = [
         { title: 'Invoices', href: '/invoices', icon: FileText },
         { title: 'Expenses', href: '/expenses', icon: Wallet },
         { title: 'Money', href: '/money', icon: Landmark },
         { title: 'Reports', href: '/reports', icon: ChartPie },
-        { title: 'Integrations', href: '/integrations', icon: ChartColumn },
+    ];
+
+    const setupItems: NavItem[] = [
         { title: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
         { title: 'Intelligence', href: '/ai', icon: Sparkles },
-        { title: 'Follow-ups', href: '/follow-ups', icon: ListTodo },
+        { title: 'Integrations', href: '/integrations', icon: ChartColumn },
     ];
 
     if (owner) {
-        mainNavItems.push(
+        setupItems.push(
             { title: 'Products', href: '/products', icon: Package },
-            { title: 'Pipelines', href: '/pipelines', icon: Rows3 },
+            { title: 'Pipelines', href: '/pipelines', icon: KanbanSquare },
             { title: 'Users', href: '/users', icon: Users },
         );
     }
@@ -77,8 +84,10 @@ export function AppSidebar() {
                 </SidebarMenu>
             </SidebarHeader>
 
-            <SidebarContent>
-                <NavMain items={mainNavItems} />
+            <SidebarContent className="gap-1 py-1">
+                <NavMain items={workItems} label="Work" />
+                <NavMain items={moneyItems} label="Money" />
+                <NavMain items={setupItems} label="Setup" />
             </SidebarContent>
 
             <SidebarFooter>

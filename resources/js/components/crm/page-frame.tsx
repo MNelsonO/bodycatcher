@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -28,7 +29,7 @@ export function Page({ children, className, width = 'desk' }: PageProps) {
     return (
         <div
             className={cn(
-                'mx-auto flex w-full flex-col gap-6 p-4 md:gap-8 md:p-8',
+                'mx-auto flex w-full flex-col gap-5 p-4 md:gap-6 md:p-6 xl:p-8',
                 widthClass[width],
                 className,
             )}
@@ -41,42 +42,71 @@ export function Page({ children, className, width = 'desk' }: PageProps) {
 type PageHeaderProps = {
     title: string;
     description?: ReactNode;
-    /** Brand / section eyebrow, e.g. "Kemet Tech · Sales desk" */
+    /** Small label above the title. Defaults to the sidebar section. */
     eyebrow?: string;
     actions?: ReactNode;
     className?: string;
 };
 
+const SECTIONS: Array<[string, string]> = [
+    ['/leads', 'Work · Leads'],
+    ['/contacts', 'Work · Contacts'],
+    ['/calendar', 'Work · Calendar'],
+    ['/follow-ups', 'Work · Follow-ups'],
+    ['/inbox', 'Work · Inbox'],
+    ['/invoices', 'Money · Invoices'],
+    ['/billing', 'Money · Billing'],
+    ['/expenses', 'Money · Expenses'],
+    ['/money', 'Money · Accounts'],
+    ['/reports', 'Money · Reports'],
+    ['/whatsapp', 'Setup · WhatsApp'],
+    ['/ai', 'Setup · Intelligence'],
+    ['/integrations', 'Setup · Integrations'],
+    ['/products', 'Setup · Products'],
+    ['/pipelines', 'Setup · Pipelines'],
+    ['/users', 'Setup · Users'],
+];
+
+function sectionFor(url: string): string {
+    const path = url.split('?')[0];
+    const match = SECTIONS.find(([prefix]) => path.startsWith(prefix));
+
+    return match ? match[1] : '';
+}
+
 export function PageHeader({
     title,
     description,
-    eyebrow = 'Kemet Tech · Sales desk',
+    eyebrow,
     actions,
     className,
 }: PageHeaderProps) {
+    const { url } = usePage();
+    const label = eyebrow ?? sectionFor(url);
+
     return (
         <header
             className={cn(
-                'flex flex-col gap-4 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between',
+                'flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between',
                 className,
             )}
         >
             <div className="min-w-0">
-                {eyebrow ? (
-                    <p className="text-sm font-medium text-primary">{eyebrow}</p>
+                {label ? (
+                    <p className="text-xs font-semibold tracking-wider text-primary uppercase">
+                        {label}
+                    </p>
                 ) : null}
                 <h1
                     className={cn(
-                        'font-semibold tracking-tight text-foreground',
-                        eyebrow
-                            ? 'mt-1.5 text-3xl md:text-4xl'
-                            : 'text-2xl md:text-3xl',
+                        'truncate text-2xl font-semibold tracking-tight text-foreground md:text-[1.75rem]',
+                        label ? 'mt-1' : '',
                     )}
                 >
                     {title}
                 </h1>
                 {description ? (
-                    <p className="mt-1.5 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
+                    <p className="mt-1 max-w-[70ch] text-sm leading-relaxed text-muted-foreground">
                         {description}
                     </p>
                 ) : null}
@@ -128,13 +158,13 @@ export function SurfaceHeader({
     return (
         <div
             className={cn(
-                'flex items-start justify-between gap-3 border-b border-border bg-card px-5 py-4',
+                'flex items-center justify-between gap-3 border-b border-border bg-card px-5 py-3.5',
                 className,
             )}
         >
             <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                    <h2 className="text-base font-semibold tracking-tight text-foreground">
                         {title}
                     </h2>
                     {badge}
@@ -156,7 +186,5 @@ type SurfaceBodyProps = {
 };
 
 export function SurfaceBody({ children, className }: SurfaceBodyProps) {
-    return (
-        <div className={cn('bg-card px-5 py-5', className)}>{children}</div>
-    );
+    return <div className={cn('bg-card px-5 py-5', className)}>{children}</div>;
 }

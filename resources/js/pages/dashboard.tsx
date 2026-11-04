@@ -1,14 +1,19 @@
-import { Form, Head, Link } from '@inertiajs/react';
+import { Form, Head, Link, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     CalendarClock,
+    CalendarDays,
     CheckCircle2,
     Flame,
+    Inbox,
     MessageCircle,
     Plus,
+    SlidersHorizontal,
     Sparkles,
     Users,
+    Wallet,
 } from 'lucide-react';
+import { useState } from 'react';
 import type { ComponentType, ReactNode } from 'react';
 import { SelectField, TextField } from '@/components/crm/fields';
 import { Page, surfaceClass } from '@/components/crm/page-frame';
@@ -59,7 +64,7 @@ function speakToday(metrics: DashboardMetrics): {
         return {
             line: `${metrics.whatsapp.inbound_today} WhatsApp inbound today — reply and qualify.`,
             tone: 'blue',
-            href: '/whatsapp',
+            href: '/inbox',
             cta: 'Open inbox',
         };
     }
@@ -147,93 +152,145 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
               )
             : null;
 
+    const unread = Number(usePage().props.inboxUnread ?? 0);
+    const [boardOpen, setBoardOpen] = useState(activeFilters > 0);
+    const visibleLeads = boardOpen ? board.leads : board.leads.slice(0, 6);
+
     return (
         <>
             <Head title="Command centre" />
             <Page>
-                {/* 1. Today ------------------------------------------------ */}
-                <header className="grid gap-6 lg:grid-cols-[1.3fr_1fr] lg:items-stretch">
-                    <div className="flex flex-col justify-between gap-5">
-                        <div>
-                            <p className="text-sm font-medium text-primary">
-                                Kemet Tech · Sales desk
-                            </p>
-                            <h1 className="mt-1.5 text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-                                Command centre
-                            </h1>
-                            <p className="mt-1.5 text-sm text-muted-foreground">
-                                {metrics.today} · {metrics.timezone}
-                            </p>
-                        </div>
-
-                        <div
-                            role="status"
-                            className={`flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl px-5 py-4 ${bannerTone[speak.tone]}`}
-                        >
-                            <BannerIcon className="size-6 shrink-0" />
-                            <p className="min-w-0 flex-1 text-base leading-snug font-semibold md:text-lg">
-                                {speak.line}
-                            </p>
-                            {speak.href && speak.cta ? (
-                                <Link
-                                    href={speak.href}
-                                    className="rounded-lg bg-white/20 px-3.5 py-2 text-sm font-semibold text-current transition-colors outline-none hover:bg-white/30 hover:text-current focus-visible:ring-2 focus-visible:ring-white"
-                                >
-                                    {speak.cta} →
-                                </Link>
-                            ) : null}
-                        </div>
+                {/* Header ---------------------------------------------------- */}
+                <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                    <div>
+                        <p className="text-sm font-medium text-primary">
+                            {metrics.today} · {metrics.timezone}
+                        </p>
+                        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
+                            Command centre
+                        </h1>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                        <PriorityLink
-                            href="/leads?follow_up=overdue"
-                            label="Overdue"
-                            value={metrics.overdue_follow_ups}
-                            icon={AlertTriangle}
-                            urgent={metrics.overdue_follow_ups > 0}
-                        />
-                        <PriorityLink
-                            href="/leads?follow_up=due_today"
-                            label="Due today"
-                            value={metrics.follow_ups_due_today}
-                            icon={CalendarClock}
-                        />
-                        <PriorityLink
-                            href="/whatsapp"
-                            label="WhatsApp in today"
-                            value={metrics.whatsapp.inbound_today}
-                            icon={MessageCircle}
-                        />
-                        <PriorityLink
-                            href="/leads"
-                            label="Open leads"
-                            value={metrics.open_leads}
-                            icon={Users}
-                        />
+                    <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" asChild>
+                            <Link href="/inbox">
+                                <Inbox className="size-4" />
+                                Inbox
+                                {unread > 0 ? (
+                                    <span className="ml-1 rounded-full bg-cta px-1.5 text-xs font-semibold text-cta-foreground tabular-nums">
+                                        {unread}
+                                    </span>
+                                ) : null}
+                            </Link>
+                        </Button>
+                        <Button variant="outline" asChild>
+                            <Link href="/calendar">
+                                <CalendarDays className="size-4" />
+                                Calendar
+                            </Link>
+                        </Button>
+                        <Button asChild>
+                            <Link href="/leads/create">
+                                <Plus className="size-4" />
+                                New lead
+                            </Link>
+                        </Button>
                     </div>
                 </header>
 
-                {/* 2. Work now + Pipeline ---------------------------------- */}
-                <section className="grid gap-6 lg:grid-cols-5">
-                    <div className={`${surfaceClass} lg:col-span-3`}>
+                {/* Focus ----------------------------------------------------- */}
+                <div
+                    role="status"
+                    className={`flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl px-5 py-3.5 ${bannerTone[speak.tone]}`}
+                >
+                    <BannerIcon className="size-5 shrink-0" />
+                    <p className="min-w-0 flex-1 text-base leading-snug font-semibold">
+                        {speak.line}
+                    </p>
+                    {speak.href && speak.cta ? (
+                        <Link
+                            href={speak.href}
+                            className="rounded-lg bg-white/20 px-3.5 py-1.5 text-sm font-semibold text-current transition-colors outline-none hover:bg-white/30 hover:text-current focus-visible:ring-2 focus-visible:ring-white"
+                        >
+                            {speak.cta} →
+                        </Link>
+                    ) : null}
+                </div>
+
+                {/* Key numbers ----------------------------------------------- */}
+                <section
+                    aria-label="Key numbers"
+                    className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6"
+                >
+                    <PriorityLink
+                        href="/leads?follow_up=overdue"
+                        label="Overdue"
+                        value={metrics.overdue_follow_ups}
+                        icon={AlertTriangle}
+                        urgent={metrics.overdue_follow_ups > 0}
+                    />
+                    <PriorityLink
+                        href="/leads?follow_up=due_today"
+                        label="Due today"
+                        value={metrics.follow_ups_due_today}
+                        icon={CalendarClock}
+                    />
+                    <PriorityLink
+                        href="/inbox?filter=unread"
+                        label="Unread chats"
+                        value={unread}
+                        icon={Inbox}
+                    />
+                    <PriorityLink
+                        href="/inbox"
+                        label="WhatsApp in today"
+                        value={metrics.whatsapp.inbound_today}
+                        icon={MessageCircle}
+                    />
+                    <PriorityLink
+                        href="/leads"
+                        label="Open leads"
+                        value={metrics.open_leads}
+                        icon={Users}
+                    />
+                    <PriorityLink
+                        href="/invoices"
+                        label="Collected"
+                        value={metrics.orders.bought_revenue}
+                        display={money(
+                            metrics.orders.currency,
+                            metrics.orders.bought_revenue,
+                        )}
+                        icon={Wallet}
+                    />
+                </section>
+
+                {/* Work now + Pipeline --------------------------------------- */}
+                <section className="grid gap-6 xl:grid-cols-12">
+                    <div className={`${surfaceClass} xl:col-span-8`}>
                         <SectionTitle
                             title="Work now"
-                            hint="Ranked follow-ups and talks. Highest priority first."
+                            hint="Follow-ups and talks, highest priority first."
                             badge={
                                 metrics.follow_up_rows.length > 0
                                     ? String(metrics.follow_up_rows.length)
                                     : undefined
+                            }
+                            action={
+                                <Button variant="ghost" size="sm" asChild>
+                                    <Link href="/follow-ups">
+                                        All follow-ups
+                                    </Link>
+                                </Button>
                             }
                         />
                         {metrics.follow_up_rows.length === 0 ? (
                             <EmptyState
                                 icon={CheckCircle2}
                                 title="You're clear"
-                                body="Nothing due and nothing overdue. Use the lead board below for inbound chats."
+                                body="Nothing due and nothing overdue. New chats are in the Inbox."
                             />
                         ) : (
-                            <ul className="divide-y divide-border">
+                            <ul className="max-h-[28rem] divide-y divide-border overflow-y-auto">
                                 {metrics.follow_up_rows.map((row) => (
                                     <FollowUpItem key={row.id} row={row} />
                                 ))}
@@ -242,13 +299,13 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                     </div>
 
                     <div
-                        className={`${surfaceClass} flex flex-col lg:col-span-2`}
+                        className={`${surfaceClass} flex flex-col xl:col-span-4`}
                     >
                         <SectionTitle
                             title="Pipeline"
-                            hint="Leads by stage. Select a stage to filter."
+                            hint="Select a stage to filter the lead board."
                         />
-                        <div className="flex-1 space-y-1 px-2 py-3">
+                        <div className="flex-1 space-y-0.5 px-2 py-2">
                             {metrics.leads_by_stage.length === 0 ? (
                                 <p className="px-3 py-2 text-sm text-muted-foreground">
                                     No leads in the funnel yet.
@@ -281,15 +338,16 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                         <Link
                                             key={row.stage_id}
                                             href={`/dashboard?stage_id=${row.stage_id}`}
+                                            preserveScroll
                                             aria-current={
                                                 selected ? 'true' : undefined
                                             }
-                                            className={`block rounded-lg px-3 py-2 transition-colors outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring ${
+                                            className={`block rounded-lg px-3 py-1.5 text-foreground transition-colors outline-none hover:bg-muted/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring ${
                                                 selected ? 'bg-muted' : ''
                                             }`}
                                         >
-                                            <div className="mb-1.5 flex items-baseline justify-between gap-3 text-sm">
-                                                <span className="font-medium text-foreground">
+                                            <div className="mb-1 flex items-baseline justify-between gap-3 text-sm">
+                                                <span className="font-medium">
                                                     {row.stage_name}
                                                 </span>
                                                 <span className="text-muted-foreground tabular-nums">
@@ -299,7 +357,7 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                                     · {share}%
                                                 </span>
                                             </div>
-                                            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                                            <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
                                                 <div
                                                     className={`h-full rounded-full transition-[width] ${bar}`}
                                                     style={{
@@ -333,292 +391,17 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                     </div>
                 </section>
 
-                {/* 3. Lead board ------------------------------------------- */}
-                <section className={surfaceClass}>
-                    <SectionTitle
-                        title="Lead board"
-                        hint="Filter the desk, then open a lead to reply."
-                        action={
-                            <Button asChild size="sm">
-                                <Link href="/leads/create">
-                                    <Plus className="size-4" />
-                                    New lead
-                                </Link>
-                            </Button>
-                        }
-                    />
-
-                    <Form
-                        action="/dashboard"
-                        method="get"
-                        className="grid gap-3 border-b border-border px-5 py-4 md:grid-cols-2 xl:grid-cols-4"
-                    >
-                        {({ processing }) => (
-                            <>
-                                <TextField
-                                    name="q"
-                                    label="Search"
-                                    defaultValue={board.filters.q}
-                                    hint="Name or intent"
-                                />
-                                <SelectField
-                                    name="kind"
-                                    label="Status"
-                                    options={board.options.kinds}
-                                    defaultValue={
-                                        board.filters.kind !== ''
-                                            ? board.filters.kind
-                                            : '__all__'
-                                    }
-                                />
-                                <SelectField
-                                    name="stage_id"
-                                    label="Stage"
-                                    options={[
-                                        {
-                                            value: '__all__',
-                                            label: 'All stages',
-                                        },
-                                        ...board.options.stages,
-                                    ]}
-                                    defaultValue={
-                                        board.filters.stage_id !== ''
-                                            ? board.filters.stage_id
-                                            : '__all__'
-                                    }
-                                />
-                                <SelectField
-                                    name="product_id"
-                                    label="System"
-                                    options={[
-                                        {
-                                            value: '__all__',
-                                            label: 'All systems',
-                                        },
-                                        ...board.options.products,
-                                    ]}
-                                    defaultValue={
-                                        board.filters.product_id !== ''
-                                            ? board.filters.product_id
-                                            : '__all__'
-                                    }
-                                />
-
-                                <details
-                                    className="group md:col-span-2 xl:col-span-4"
-                                    open={
-                                        board.filters.follow_up !== '' ||
-                                        board.filters.timeline !== '' ||
-                                        board.filters.from !== '' ||
-                                        board.filters.to !== ''
-                                    }
-                                >
-                                    <summary className="cursor-pointer text-sm font-medium text-primary outline-none select-none focus-visible:ring-2 focus-visible:ring-ring">
-                                        More filters
-                                    </summary>
-                                    <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                                        <SelectField
-                                            name="follow_up"
-                                            label="Follow-up"
-                                            options={board.options.follow_ups}
-                                            defaultValue={
-                                                board.filters.follow_up !== ''
-                                                    ? board.filters.follow_up
-                                                    : '__all__'
-                                            }
-                                        />
-                                        <SelectField
-                                            name="timeline"
-                                            label="Timeline"
-                                            options={board.options.timelines}
-                                            defaultValue={
-                                                board.filters.timeline !== ''
-                                                    ? board.filters.timeline
-                                                    : '__all__'
-                                            }
-                                        />
-                                        <TextField
-                                            name="from"
-                                            label="From"
-                                            type="date"
-                                            defaultValue={board.filters.from}
-                                        />
-                                        <TextField
-                                            name="to"
-                                            label="To"
-                                            type="date"
-                                            defaultValue={board.filters.to}
-                                        />
-                                    </div>
-                                </details>
-
-                                <div className="flex flex-wrap items-center gap-3 md:col-span-2 xl:col-span-4">
-                                    <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
-                                        <input
-                                            type="checkbox"
-                                            name="hot"
-                                            value="1"
-                                            defaultChecked={board.filters.hot}
-                                            className="size-4 rounded border-input accent-primary"
-                                        />
-                                        <Flame className="size-4 text-destructive" />
-                                        Hot only
-                                    </label>
-                                    <div className="ml-auto flex gap-2">
-                                        {activeFilters > 0 ? (
-                                            <Button variant="ghost" asChild>
-                                                <Link href="/dashboard">
-                                                    Clear ({activeFilters})
-                                                </Link>
-                                            </Button>
-                                        ) : null}
-                                        <Button
-                                            type="submit"
-                                            disabled={processing}
-                                        >
-                                            {processing ? 'Applying…' : 'Apply'}
-                                        </Button>
-                                    </div>
-                                </div>
-                            </>
-                        )}
-                    </Form>
-
-                    <div className="flex flex-wrap gap-x-6 gap-y-1 border-b border-border bg-muted/60 px-5 py-3 text-sm">
-                        <SummaryStat
-                            value={board.summary.matched}
-                            label="matched"
-                        />
-                        <SummaryStat value={board.summary.open} label="open" />
-                        <SummaryStat value={board.summary.hot} label="hot" />
-                        <span className="text-muted-foreground sm:ml-auto">
-                            {board.range.label}
-                            {board.range.from
-                                ? ` · ${board.range.from} → ${board.range.to}`
-                                : ''}
-                        </span>
-                    </div>
-
-                    {board.leads.length === 0 ? (
-                        <EmptyState
-                            icon={Users}
-                            title="No leads match"
-                            body="Widen the status, stage or timeline, or clear the filters."
-                        />
-                    ) : (
-                        <>
-                            {/* Mobile: cards */}
-                            <ul className="divide-y divide-border md:hidden">
-                                {board.leads.map((lead) => (
-                                    <li key={lead.id}>
-                                        <Link
-                                            href={`/leads/${lead.id}`}
-                                            className="block px-5 py-4 transition-colors hover:bg-muted/50"
-                                        >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="min-w-0">
-                                                    <p className="truncate font-semibold text-primary">
-                                                        {lead.contact_name}
-                                                    </p>
-                                                    {lead.business_name ? (
-                                                        <p className="truncate text-xs text-muted-foreground">
-                                                            {lead.business_name}
-                                                        </p>
-                                                    ) : null}
-                                                </div>
-                                                <ScoreChip
-                                                    score={lead.ai_score}
-                                                />
-                                            </div>
-                                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                                                {lead.hot ? <HotBadge /> : null}
-                                                <Badge variant="outline">
-                                                    {lead.stage_name}
-                                                </Badge>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {lead.product_name}
-                                                </span>
-                                            </div>
-                                            <p className="mt-2 line-clamp-2 text-sm">
-                                                {lead.intent ??
-                                                    lead.next_action ??
-                                                    '—'}
-                                            </p>
-                                            <p className="mt-1 text-xs text-muted-foreground">
-                                                {lead.follow_up_label ??
-                                                    'No follow-up'}
-                                                {lead.next_talk_label
-                                                    ? ` · talk ${lead.next_talk_label}`
-                                                    : ''}
-                                            </p>
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-
-                            {/* Desktop: table */}
-                            <div className="hidden overflow-x-auto md:block">
-                                <table className="w-full min-w-[820px] text-left text-sm">
-                                    <thead className="sticky top-0 border-b border-border bg-card text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                                        <tr>
-                                            <th
-                                                scope="col"
-                                                className="px-5 py-3"
-                                            >
-                                                Lead
-                                            </th>
-                                            <th
-                                                scope="col"
-                                                className="px-5 py-3"
-                                            >
-                                                System
-                                            </th>
-                                            <th
-                                                scope="col"
-                                                className="px-5 py-3"
-                                            >
-                                                Stage
-                                            </th>
-                                            <th
-                                                scope="col"
-                                                className="px-5 py-3"
-                                            >
-                                                Intent
-                                            </th>
-                                            <th
-                                                scope="col"
-                                                className="px-5 py-3"
-                                            >
-                                                Next
-                                            </th>
-                                            <th
-                                                scope="col"
-                                                className="px-5 py-3 text-right"
-                                            >
-                                                Score
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-border">
-                                        {board.leads.map((lead) => (
-                                            <LeadTableRow
-                                                key={lead.id}
-                                                lead={lead}
-                                            />
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </>
-                    )}
-                </section>
-
-                {/* 4. Pulse ------------------------------------------------ */}
-                <section className="grid gap-6 lg:grid-cols-3">
+                {/* Activity -------------------------------------------------- */}
+                <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                     <div className={surfaceClass}>
                         <SectionTitle
                             title="WhatsApp"
                             hint={`Messages · last ${chartDays} days`}
+                            action={
+                                <Button variant="ghost" size="sm" asChild>
+                                    <Link href="/inbox">Inbox</Link>
+                                </Button>
+                            }
                         />
                         <dl className="divide-y divide-border px-5">
                             <PulseRow
@@ -641,7 +424,7 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                 aKey="inbound"
                                 bKey="outbound"
                                 aColor="var(--laundry-blue)"
-                                bColor="var(--lead)"
+                                bColor="var(--cta)"
                                 aLabel="In"
                                 bLabel="Out"
                             />
@@ -652,6 +435,11 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                         <SectionTitle
                             title={`Leads · ${chartDays}d`}
                             hint="Opened vs won"
+                            action={
+                                <Button variant="ghost" size="sm" asChild>
+                                    <Link href="/reports">Reports</Link>
+                                </Button>
+                            }
                         />
                         <div className="px-5 pt-4 pb-5">
                             <TwinBarChart
@@ -660,15 +448,25 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                                 aKey="opened"
                                 bKey="won"
                                 aColor="var(--laundry-blue)"
-                                bColor="var(--success)"
+                                bColor="var(--cta)"
                                 aLabel="Opened"
                                 bLabel="Won"
                             />
                         </div>
                     </div>
 
-                    <div className={surfaceClass}>
-                        <SectionTitle title="Money" hint="Invoices & spend" />
+                    <div
+                        className={`${surfaceClass} md:col-span-2 xl:col-span-1`}
+                    >
+                        <SectionTitle
+                            title="Money"
+                            hint="Invoices & spend"
+                            action={
+                                <Button variant="ghost" size="sm" asChild>
+                                    <Link href="/invoices">Invoices</Link>
+                                </Button>
+                            }
+                        />
                         <dl className="divide-y divide-border px-5">
                             <PulseRow
                                 label="Collected"
@@ -707,6 +505,279 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                         </div>
                     </div>
                 </section>
+
+                {/* Lead board ------------------------------------------------ */}
+                <section className={surfaceClass}>
+                    <SectionTitle
+                        title="Lead board"
+                        hint={`${board.summary.matched} matched · ${board.summary.open} open · ${board.summary.hot} hot · ${board.range.label}`}
+                        action={
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        setBoardOpen((open) => !open)
+                                    }
+                                    aria-expanded={boardOpen}
+                                >
+                                    <SlidersHorizontal className="size-4" />
+                                    {boardOpen
+                                        ? 'Hide filters'
+                                        : activeFilters > 0
+                                          ? `Filters (${activeFilters})`
+                                          : 'Filter & show all'}
+                                </Button>
+                                <Button size="sm" asChild>
+                                    <Link href="/leads">All leads</Link>
+                                </Button>
+                            </div>
+                        }
+                    />
+
+                    {boardOpen ? (
+                        <Form
+                            action="/dashboard"
+                            method="get"
+                            options={{ preserveScroll: true }}
+                            className="grid gap-3 border-b border-border bg-muted/40 px-5 py-4 md:grid-cols-2 xl:grid-cols-4"
+                        >
+                            {({ processing }) => (
+                                <>
+                                    <TextField
+                                        name="q"
+                                        label="Search"
+                                        defaultValue={board.filters.q}
+                                        hint="Name or intent"
+                                    />
+                                    <SelectField
+                                        name="kind"
+                                        label="Status"
+                                        options={board.options.kinds}
+                                        defaultValue={
+                                            board.filters.kind !== ''
+                                                ? board.filters.kind
+                                                : '__all__'
+                                        }
+                                    />
+                                    <SelectField
+                                        name="stage_id"
+                                        label="Stage"
+                                        options={[
+                                            {
+                                                value: '__all__',
+                                                label: 'All stages',
+                                            },
+                                            ...board.options.stages,
+                                        ]}
+                                        defaultValue={
+                                            board.filters.stage_id !== ''
+                                                ? board.filters.stage_id
+                                                : '__all__'
+                                        }
+                                    />
+                                    <SelectField
+                                        name="product_id"
+                                        label="System"
+                                        options={[
+                                            {
+                                                value: '__all__',
+                                                label: 'All systems',
+                                            },
+                                            ...board.options.products,
+                                        ]}
+                                        defaultValue={
+                                            board.filters.product_id !== ''
+                                                ? board.filters.product_id
+                                                : '__all__'
+                                        }
+                                    />
+                                    <SelectField
+                                        name="follow_up"
+                                        label="Follow-up"
+                                        options={board.options.follow_ups}
+                                        defaultValue={
+                                            board.filters.follow_up !== ''
+                                                ? board.filters.follow_up
+                                                : '__all__'
+                                        }
+                                    />
+                                    <SelectField
+                                        name="timeline"
+                                        label="Timeline"
+                                        options={board.options.timelines}
+                                        defaultValue={
+                                            board.filters.timeline !== ''
+                                                ? board.filters.timeline
+                                                : '__all__'
+                                        }
+                                    />
+                                    <TextField
+                                        name="from"
+                                        label="From"
+                                        type="date"
+                                        defaultValue={board.filters.from}
+                                    />
+                                    <TextField
+                                        name="to"
+                                        label="To"
+                                        type="date"
+                                        defaultValue={board.filters.to}
+                                    />
+                                    <div className="flex flex-wrap items-center gap-3 md:col-span-2 xl:col-span-4">
+                                        <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
+                                            <input
+                                                type="checkbox"
+                                                name="hot"
+                                                value="1"
+                                                defaultChecked={
+                                                    board.filters.hot
+                                                }
+                                                className="size-4 rounded border-input accent-primary"
+                                            />
+                                            <Flame className="size-4 text-destructive" />
+                                            Hot only
+                                        </label>
+                                        <div className="ml-auto flex gap-2">
+                                            {activeFilters > 0 ? (
+                                                <Button variant="ghost" asChild>
+                                                    <Link href="/dashboard">
+                                                        Clear ({activeFilters})
+                                                    </Link>
+                                                </Button>
+                                            ) : null}
+                                            <Button
+                                                type="submit"
+                                                disabled={processing}
+                                            >
+                                                {processing
+                                                    ? 'Applying…'
+                                                    : 'Apply'}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </Form>
+                    ) : null}
+
+                    {board.leads.length === 0 ? (
+                        <EmptyState
+                            icon={Users}
+                            title="No leads match"
+                            body="Widen the status, stage or timeline, or clear the filters."
+                        />
+                    ) : (
+                        <>
+                            {/* Mobile: cards */}
+                            <ul className="divide-y divide-border md:hidden">
+                                {visibleLeads.map((lead) => (
+                                    <li key={lead.id}>
+                                        <Link
+                                            href={`/leads/${lead.id}`}
+                                            className="block px-5 py-4 text-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                                        >
+                                            <div className="flex items-start justify-between gap-3">
+                                                <div className="min-w-0">
+                                                    <p className="truncate font-semibold text-primary">
+                                                        {lead.contact_name}
+                                                    </p>
+                                                    {lead.business_name ? (
+                                                        <p className="truncate text-xs text-muted-foreground">
+                                                            {lead.business_name}
+                                                        </p>
+                                                    ) : null}
+                                                </div>
+                                                <ScoreChip
+                                                    score={lead.ai_score}
+                                                />
+                                            </div>
+                                            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                                                {lead.hot ? <HotBadge /> : null}
+                                                <Badge variant="outline">
+                                                    {lead.stage_name}
+                                                </Badge>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {lead.product_name}
+                                                </span>
+                                            </div>
+                                            <p className="mt-2 line-clamp-2 text-sm">
+                                                {lead.intent ??
+                                                    lead.next_action ??
+                                                    '—'}
+                                            </p>
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+
+                            {/* Desktop: table */}
+                            <div className="hidden overflow-x-auto md:block">
+                                <table className="w-full min-w-[820px] text-left text-sm">
+                                    <thead className="border-b border-border bg-muted/40 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                        <tr>
+                                            <th
+                                                scope="col"
+                                                className="px-5 py-2.5"
+                                            >
+                                                Lead
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-5 py-2.5"
+                                            >
+                                                System
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-5 py-2.5"
+                                            >
+                                                Stage
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-5 py-2.5"
+                                            >
+                                                Intent
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-5 py-2.5"
+                                            >
+                                                Next
+                                            </th>
+                                            <th
+                                                scope="col"
+                                                className="px-5 py-2.5 text-right"
+                                            >
+                                                Score
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {visibleLeads.map((lead) => (
+                                            <LeadTableRow
+                                                key={lead.id}
+                                                lead={lead}
+                                            />
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {!boardOpen &&
+                            board.leads.length > visibleLeads.length ? (
+                                <button
+                                    type="button"
+                                    onClick={() => setBoardOpen(true)}
+                                    className="w-full border-t border-border px-5 py-3 text-sm font-medium text-primary hover:bg-muted/50"
+                                >
+                                    Show all {board.leads.length} leads
+                                </button>
+                            ) : null}
+                        </>
+                    )}
+                </section>
             </Page>
         </>
     );
@@ -728,10 +799,10 @@ function SectionTitle({
     badge?: string;
 }) {
     return (
-        <div className="flex items-start justify-between gap-3 border-b border-border px-5 py-4">
-            <div>
+        <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5">
+            <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-semibold tracking-tight text-foreground">
+                    <h2 className="text-base font-semibold tracking-tight text-foreground">
                         {title}
                     </h2>
                     {badge ? (
@@ -777,20 +848,22 @@ function PriorityLink({
     value,
     icon: Icon,
     urgent = false,
+    display,
 }: {
     href: string;
     label: string;
     value: number;
     icon: ComponentType<{ className?: string }>;
     urgent?: boolean;
+    display?: string;
 }) {
     return (
         <Link
             href={href}
-            className={`flex flex-col justify-between gap-3 rounded-xl border px-4 py-4 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+            className={`flex min-h-24 flex-col justify-between gap-3 rounded-xl border px-4 py-3.5 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                 urgent
-                    ? 'border-destructive bg-destructive text-white hover:bg-destructive/90'
-                    : 'border-border bg-card text-foreground shadow-[var(--shadow-card)] hover:bg-muted'
+                    ? 'border-destructive bg-destructive text-white hover:bg-destructive/90 hover:text-white'
+                    : 'border-border bg-card text-foreground shadow-[var(--shadow-card)] hover:border-primary/40 hover:bg-muted hover:text-foreground'
             }`}
         >
             <div
@@ -799,8 +872,10 @@ function PriorityLink({
                 <Icon className="size-4" />
                 {label}
             </div>
-            <p className="text-3xl leading-none font-semibold tabular-nums">
-                {value}
+            <p
+                className={`leading-none font-semibold tabular-nums ${display ? 'truncate text-xl' : 'text-3xl'}`}
+            >
+                {display ?? value}
             </p>
         </Link>
     );
