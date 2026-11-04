@@ -18,7 +18,7 @@ class InboundPayloadNormalizer
 
         if ($this->isStatusOrGroup($payload, $data)) {
             // Status posts and group messages are not chats with a client.
-            return $this->withRaw($this->wrap('', 'ignored-'.hash('sha256', json_encode($payload) ?: ''), 'text', '', now()->timestamp, ''), $payload);
+            return $this->withRaw($this->wrap('', 'ignored-'.hash('sha256', json_encode($payload) ?: ''), 'text', '', (int) now()->timestamp, ''), $payload);
         }
         $from = $this->digits($this->jid((string) ($data['from'] ?? $payload['from'] ?? '')));
         $message = is_array($data['message'] ?? null) ? $data['message'] : [];
@@ -82,6 +82,10 @@ class InboundPayloadNormalizer
             $jids[] = (string) ($skdm['groupId'] ?? 'status@broadcast');
         }
 
+        if ($this->isStatusMessage($message) || $this->isSystemMessage($message)) {
+            return true;
+        }
+
         foreach ($jids as $jid) {
             if (str_starts_with($jid, 'status@') || str_ends_with($jid, '@broadcast') || str_ends_with($jid, '@g.us') || str_ends_with($jid, '@newsletter')) {
                 return true;
@@ -89,6 +93,41 @@ class InboundPayloadNormalizer
         }
 
         return false;
+    }
+
+    /**
+     * WhatsApp marks Status posts with contextInfo.statusSourceType on the
+     * media or text, even when no sender-key message is attached.
+     *
+     * @param  array<string, mixed>  $message
+     */
+    public function isStatusMessage(array $message): bool
+    {
+        foreach ($message as $part) {
+            if (is_array($part) && is_array($part['contextInfo'] ?? null) && array_key_exists('statusSourceType', $part['contextInfo'])) {
+                return true;
+            }
+        }
+
+        return is_array($message['messageContextInfo'] ?? null) && array_key_exists('statusSourceType', $message['messageContextInfo']);
+    }
+
+    /**
+     * Invisible system traffic: edits, deletions, reactions, key shares,
+     * disappearing-message settings. Nothing a person wrote.
+     *
+     * @param  array<string, mixed>  $message
+     */
+    public function isSystemMessage(array $message): bool
+    {
+        $content = array_diff(array_keys($message), ['messageContextInfo', 'senderKeyDistributionMessage']);
+
+        if ($content === []) {
+            return $message !== [];
+        }
+
+        return array_intersect($content, ['protocolMessage', 'reactionMessage', 'editedMessage', 'pollUpdateMessage', 'keepInChatMessage', 'encReactionMessage', 'deviceSentMessage']) !== []
+            && count($content) === count(array_intersect($content, ['protocolMessage', 'reactionMessage', 'editedMessage', 'pollUpdateMessage', 'keepInChatMessage', 'encReactionMessage', 'deviceSentMessage']));
     }
 
     /**
@@ -206,6 +245,10 @@ class InboundPayloadNormalizer
 
             $id = is_string($key['id'] ?? null) ? $key['id'] : '';
             $message = is_array($item['message'] ?? null) ? $item['message'] : [];
+
+            if ($this->isStatusMessage($message) || $this->isSystemMessage($message)) {
+                continue;
+            }
             $text = $this->textFrom($message, $item);
             $type = $text !== '' ? 'text' : 'unknown';
 

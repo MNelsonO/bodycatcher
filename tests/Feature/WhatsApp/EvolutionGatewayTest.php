@@ -189,3 +189,42 @@ it('stores a client photo without a caption as [media], not a blank message', fu
 
     expect(Message::query()->where('provider_message_id', 'PHOTO-1')->value('body'))->toBe('[media]');
 });
+
+it('ignores a captioned Status image that has no sender-key marker', function () {
+    whatsappOpenLead();
+    config(['whatsapp.driver' => 'flaresend']);
+    $leads = Lead::query()->count();
+
+    $this->postJson('/webhooks/flaresend', [
+        'event' => 'message_received',
+        'data' => [
+            'from' => '254799333444@s.whatsapp.net',
+            'id' => 'STATUS-IMG',
+            'message' => [
+                'imageMessage' => ['caption' => 'Kumbe man u walian', 'mimetype' => 'image/jpeg', 'contextInfo' => ['statusSourceType' => 'IMAGE', 'forwardingScore' => 1]],
+                'messageContextInfo' => ['deviceListMetadata' => []],
+            ],
+            'timestamp' => now()->timestamp,
+        ],
+    ])->assertOk();
+
+    expect(Message::query()->where('body', 'like', 'Kumbe%')->exists())->toBeFalse()
+        ->and(Lead::query()->count())->toBe($leads);
+});
+
+it('ignores invisible protocol messages such as edits and deletions', function () {
+    $lead = whatsappOpenLead();
+    config(['whatsapp.driver' => 'flaresend']);
+
+    $this->postJson('/webhooks/flaresend', [
+        'event' => 'message_received',
+        'data' => [
+            'from' => '254722100201@s.whatsapp.net',
+            'id' => 'PROTO-1',
+            'message' => ['protocolMessage' => ['type' => 'REVOKE'], 'messageContextInfo' => []],
+            'timestamp' => now()->timestamp,
+        ],
+    ])->assertOk();
+
+    expect(Message::query()->where('provider_message_id', 'PROTO-1')->exists())->toBeFalse();
+});
