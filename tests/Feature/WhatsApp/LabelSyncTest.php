@@ -49,3 +49,37 @@ it('does not treat "New customer" as a closed deal', function () {
 
     expect(app(LabelSync::class)->actionFor($label))->toBeNull();
 });
+
+it('keeps a label for an unknown privacy id and attaches it when a live message reveals the number', function () {
+    $lead = whatsappOpenLead();
+
+    $this->postJson('/webhooks/evolution/secret-token', ['event' => 'labels.edit', 'data' => ['id' => '28', 'name' => 'Demo booked']])->assertOk();
+    $this->postJson('/webhooks/evolution/secret-token', ['event' => 'labels.association', 'data' => ['type' => 'add', 'chatId' => '190391773040704@lid', 'labelId' => '28']])->assertOk();
+
+    expect(DB::table('whatsapp_pending_labels')->where('chat_id', '+190391773040704')->exists())->toBeTrue()
+        ->and(DB::table('contact_whatsapp_label')->count())->toBe(0);
+
+    $this->postJson('/webhooks/evolution/secret-token', [
+        'event' => 'messages.upsert',
+        'data' => [
+            'key' => ['remoteJid' => '190391773040704@lid', 'remoteJidAlt' => '254722100201@s.whatsapp.net', 'fromMe' => false, 'id' => 'LIVE-LID-1'],
+            'message' => ['conversation' => 'Habari'],
+            'messageTimestamp' => now()->timestamp,
+        ],
+    ])->assertOk();
+
+    expect(DB::table('contact_whatsapp_label')->where('contact_id', $lead->contact_id)->where('label_id', '28')->exists())->toBeTrue()
+        ->and(DB::table('whatsapp_pending_labels')->count())->toBe(0)
+        ->and(DB::table('contact_phones')->where('contact_id', $lead->contact_id)->where('phone', '+190391773040704')->exists())->toBeTrue();
+});
+
+it('moves the lead to the stage named like the label when the move is allowed', function () {
+    $lead = whatsappOpenLead();
+    $stage = PipelineStage::factory()->create(['pipeline_id' => $lead->pipeline_id, 'name' => 'Demo booked', 'kind' => 'active', 'position' => 9]);
+    PipelineStageTransition::query()->create(['pipeline_id' => $lead->pipeline_id, 'from_stage_id' => $lead->current_stage_id, 'to_stage_id' => $stage->id]);
+
+    $this->postJson('/webhooks/evolution/secret-token', ['event' => 'labels.edit', 'data' => ['id' => '28', 'name' => 'Demo booked']])->assertOk();
+    $this->postJson('/webhooks/evolution/secret-token', ['event' => 'labels.association', 'data' => ['type' => 'add', 'chatId' => '254722100201@s.whatsapp.net', 'labelId' => '28']])->assertOk();
+
+    expect($lead->refresh()->current_stage_id)->toBe($stage->id);
+});

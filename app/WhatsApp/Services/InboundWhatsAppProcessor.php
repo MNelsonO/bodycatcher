@@ -17,6 +17,8 @@ use App\FollowUps\Services\CancelFollowUpsOnReply;
 use App\Leads\Actions\RecordActivity;
 use App\Leads\ActivityEvent;
 use App\Leads\Jobs\CaptureChatFollowUpJob;
+use App\Leads\Lead;
+use App\WhatsApp\Labels\LabelSync;
 use App\WhatsApp\OptOutKeywords;
 use App\WhatsApp\WebhookEvent;
 use Illuminate\Support\Carbon;
@@ -30,6 +32,7 @@ class InboundWhatsAppProcessor
         private RecordActivity $activity,
         private CancelFollowUpsOnReply $cancellations,
         private CaptureChatContactName $captureName,
+        private LabelSync $labels,
     ) {}
 
     public function process(int $eventId): void
@@ -165,6 +168,7 @@ class InboundWhatsAppProcessor
         $sentAt = is_numeric($timestamp) ? Carbon::createFromTimestamp((int) $timestamp) : now();
 
         $lead = $this->resolver->resolve($from, $this->profileName($profiles, $from));
+        $this->learnPrivacyId($message, $lead);
         $conversation = $lead->conversation ?? Conversation::query()->create([
             'lead_id' => $lead->id,
             'contact_id' => $lead->contact_id,
@@ -294,6 +298,7 @@ class InboundWhatsAppProcessor
         $sentAt = is_numeric($timestamp) ? Carbon::createFromTimestamp((int) $timestamp) : now();
 
         $lead = $this->resolver->resolve($to, null);
+        $this->learnPrivacyId($message, $lead);
         $conversation = $lead->conversation ?? Conversation::query()->create([
             'lead_id' => $lead->id,
             'contact_id' => $lead->contact_id,
@@ -430,5 +435,17 @@ class InboundWhatsAppProcessor
             'mime_type' => $mime,
             'caption' => $caption,
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $message
+     */
+    private function learnPrivacyId(array $message, Lead $lead): void
+    {
+        $privacyId = $message['kemet_lid'] ?? null;
+
+        if (is_string($privacyId) && $privacyId !== '') {
+            $this->labels->learnPrivacyId($lead->contact_id, $privacyId);
+        }
     }
 }

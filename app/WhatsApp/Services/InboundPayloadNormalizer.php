@@ -261,6 +261,7 @@ class InboundPayloadNormalizer
                 $type = 'text';
             }
 
+            $privacyId = $this->evolutionPrivacyId($key, $item, $jid);
             $fromMe = ($key['fromMe'] ?? false) === true || $event === 'send.message';
             $timestamp = $this->timestamp($item['messageTimestamp'] ?? null);
             $row = ['from' => $jid, 'id' => $id, 'timestamp' => (string) $timestamp, 'type' => $type, 'text' => ['body' => $text]];
@@ -277,6 +278,10 @@ class InboundPayloadNormalizer
 
             if ($history) {
                 $row['kemet_history'] = true;
+            }
+
+            if ($privacyId !== null) {
+                $row['kemet_lid'] = $privacyId;
             }
 
             $messages[] = $row;
@@ -301,6 +306,26 @@ class InboundPayloadNormalizer
                 ]],
             ]],
         ], $history ? ['event' => $payload['event'] ?? null, 'count' => count($messages)] : $payload);
+    }
+
+    /**
+     * When a message names both the privacy id and the phone number, return
+     * the privacy id ("+<id>") so the desk can learn the pairing.
+     *
+     * @param  array<string, mixed>  $key
+     * @param  array<string, mixed>  $item
+     */
+    private function evolutionPrivacyId(array $key, array $item, string $resolved): ?string
+    {
+        foreach ([$key['remoteJid'] ?? null, $key['remoteJidAlt'] ?? null, $key['senderLid'] ?? null, $item['senderLid'] ?? null] as $jid) {
+            if (is_string($jid) && str_ends_with($jid, '@lid')) {
+                $digits = $this->digits($this->jid($jid));
+
+                return $digits !== '' && ! str_starts_with($resolved, '+') ? '+'.$digits : null;
+            }
+        }
+
+        return null;
     }
 
     /**

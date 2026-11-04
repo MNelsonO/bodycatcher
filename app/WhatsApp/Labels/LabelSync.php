@@ -66,6 +66,18 @@ class LabelSync
         $lead = $this->resolver->existing($chat);
 
         if ($lead === null) {
+            // Keep it until a live message tells us who this chat is.
+            if ($add) {
+                DB::table('whatsapp_pending_labels')->insertOrIgnore([
+                    'chat_id' => $chat,
+                    'label_id' => $labelId,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            } else {
+                DB::table('whatsapp_pending_labels')->where('chat_id', $chat)->where('label_id', $labelId)->delete();
+            }
+
             return 'unknown-chat';
         }
 
@@ -98,6 +110,43 @@ class LabelSync
         }
 
         return $add ? 'linked' : 'unlinked';
+    }
+
+    /**
+     * A live message showed that a privacy id belongs to a known contact:
+     * remember the id on the contact and attach any labels waiting for it.
+     */
+    public function learnPrivacyId(int $contactId, string $privacyId): int
+    {
+        if ($privacyId === '' || ! str_starts_with($privacyId, '+')) {
+            return 0;
+        }
+
+        $owner = DB::table('contact_phones')->where('phone', $privacyId)->value('contact_id');
+
+        if ($owner === null) {
+            DB::table('contact_phones')->insert([
+                'contact_id' => $contactId,
+                'phone' => $privacyId,
+                'is_primary' => false,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } elseif ((int) $owner !== $contactId) {
+            return 0; // already another contact's id; a person can merge them
+        }
+
+        $attached = 0;
+
+        foreach (DB::table('whatsapp_pending_labels')->where('chat_id', $privacyId)->get() as $pending) {
+            if ($this->associate($privacyId, $pending->label_id, true) === 'linked') {
+                $attached++;
+            }
+
+            DB::table('whatsapp_pending_labels')->where('id', $pending->id)->delete();
+        }
+
+        return $attached;
     }
 
     /**
@@ -156,6 +205,25 @@ class LabelSync
 
                 if ($lead->next_follow_up_on === null || $lead->next_follow_up_on->toDateString() < $today) {
                     $this->followUps->handle($lead, $lead->next_action ?: 'Follow up (WhatsApp label "'.$label->name.'")', $today, $actor, 'whatsapp_label');
+
+                    return true;
+                }
+
+                return false;
+            }
+
+            if ($action === null) {
+                // Pipeline-style labels ("Qualified", "Demo booked"…) move the
+                // lead to the stage of the same name when that move is allowed.
+                $wanted = mb_strtolower(trim($label->name));
+                $target = $lead->currentStage->outgoingTransitions()
+                    ->with('toStage')
+                    ->get()
+                    ->map(fn ($transition) => $transition->toStage)
+                    ->first(fn (?PipelineStage $stage) => $stage !== null && $stage->archived_at === null && mb_strtolower(trim($stage->name)) === $wanted);
+
+                if ($target !== null && $target->kind !== StageKind::Lost) {
+                    $this->transitions->transition($lead, $target, $actor, 'WhatsApp label: '.$label->name);
 
                     return true;
                 }

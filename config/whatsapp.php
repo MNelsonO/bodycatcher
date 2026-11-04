@@ -49,7 +49,7 @@ return [
     'label_rules' => [
         ['match' => ['follow up', 'follow-up', 'followup', 'call back'], 'action' => 'follow_up'],
         ['match' => ['order complete', 'completed', 'paid', 'won', 'closed deal'], 'action' => 'won'],
-        ['match' => ['lost', 'not interested', 'dead'], 'action' => 'lost'],
+        ['match' => ['lost', 'not interested', 'dead', 'got elsewhere'], 'action' => 'lost'],
     ],
 
     'evolution' => [
