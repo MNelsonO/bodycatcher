@@ -149,3 +149,43 @@ it('matches an unresolved privacy id to the contact created under that id', func
 
     expect(Message::query()->where('provider_message_id', 'LID-H1')->value('conversation_id'))->toBe($lidLead->conversation->id);
 });
+
+it('ignores a FlareSend status post that arrives as if the poster sent it', function () {
+    whatsappOpenLead();
+    config(['whatsapp.driver' => 'flaresend']);
+    $leads = Lead::query()->count();
+
+    $this->postJson('/webhooks/flaresend', [
+        'event' => 'message_received',
+        'data' => [
+            'from' => '254799111222@s.whatsapp.net',
+            'id' => 'STATUS-1',
+            'message' => [
+                'senderKeyDistributionMessage' => ['groupId' => 'status@broadcast', 'axolotlSenderKeyDistributionMessage' => 'x'],
+                'videoMessage' => ['caption' => 'Patriotic', 'mimetype' => 'video/mp4'],
+            ],
+            'timestamp' => now()->timestamp,
+        ],
+    ])->assertOk();
+
+    expect(Message::query()->where('body', 'Patriotic')->exists())->toBeFalse()
+        ->and(Lead::query()->count())->toBe($leads)
+        ->and(Contact::query()->where('primary_phone', '+254799111222')->exists())->toBeFalse();
+});
+
+it('stores a client photo without a caption as [media], not a blank message', function () {
+    $lead = whatsappOpenLead();
+    config(['whatsapp.driver' => 'flaresend']);
+
+    $this->postJson('/webhooks/flaresend', [
+        'event' => 'message_received',
+        'data' => [
+            'from' => '254722100201@s.whatsapp.net',
+            'id' => 'PHOTO-1',
+            'message' => ['imageMessage' => ['mimetype' => 'image/jpeg']],
+            'timestamp' => now()->timestamp,
+        ],
+    ])->assertOk();
+
+    expect(Message::query()->where('provider_message_id', 'PHOTO-1')->value('body'))->toBe('[media]');
+});

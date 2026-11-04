@@ -20,6 +20,7 @@ use App\Models\User;
 use App\Security\Role;
 use App\Settings\DisplayClock;
 use App\WhatsApp\Services\MessagingGuard;
+use App\WhatsApp\Services\SendSafety;
 use App\WhatsApp\Services\SendWhatsAppMessage;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Carbon;
@@ -36,6 +37,7 @@ class FollowUpEngine
         private CancelFollowUpsOnReply $cancellations,
         private RecordActivity $activity,
         private ComposeContextualFollowUp $composer,
+        private SendSafety $safety,
     ) {}
 
     public function run(): void
@@ -271,6 +273,16 @@ class FollowUpEngine
 
         if ($actor === null) {
             $this->hold($task, $lead, 'No desk user is available to record the send.');
+
+            return;
+        }
+
+        // Safe sending: over a pace limit the task waits for the next run
+        // instead of being refused.
+        $wait = $this->safety->reason($lead, $manual ? MessageOrigin::Manual : MessageOrigin::Automatic, $task->body);
+
+        if ($wait !== null) {
+            $this->hold($task, $lead, $wait);
 
             return;
         }

@@ -60,6 +60,7 @@ export default function WhatsAppSettings({
     opt_out_keywords,
     can_manage,
     gateway,
+    safety,
 }: {
     driver: string;
     variables: Variable[];
@@ -73,6 +74,7 @@ export default function WhatsAppSettings({
     opt_out_keywords: string[];
     can_manage: boolean;
     gateway: { configured: boolean; active: boolean };
+    safety: SafetyUsage;
 }) {
     return (
         <>
@@ -95,6 +97,7 @@ export default function WhatsAppSettings({
                 />
 
                 <GatewayPanel gateway={gateway} canManage={can_manage} />
+                <SafetyPanel safety={safety} />
 
                 <Panel title="Configuration">
                     <ul className="divide-y divide-border">
@@ -488,6 +491,89 @@ function GatewayPanel({
                         ) : null}
                     </div>
                 )}
+            </SurfaceBody>
+        </Surface>
+    );
+}
+
+type SafetyUsage = {
+    applies: boolean;
+    automatic_today: number;
+    automatic_last_hour: number;
+    new_chats_today: number;
+    limits: {
+        auto_per_hour: number;
+        auto_per_day: number;
+        manual_new_chats_per_day: number;
+        auto_min_gap_seconds: number;
+    };
+};
+
+function SafetyMeter({
+    label,
+    used,
+    limit,
+}: {
+    label: string;
+    used: number;
+    limit: number;
+}) {
+    const share =
+        limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+
+    return (
+        <div className="grid gap-1">
+            <div className="flex items-baseline justify-between text-xs">
+                <span className="text-muted-foreground">{label}</span>
+                <span className="font-medium tabular-nums">
+                    {used} / {limit}
+                </span>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                <div
+                    className={
+                        share >= 80 ? 'h-full bg-cta' : 'h-full bg-primary'
+                    }
+                    style={{ width: `${share}%` }}
+                />
+            </div>
+        </div>
+    );
+}
+
+function SafetyPanel({ safety }: { safety: SafetyUsage }) {
+    return (
+        <Surface>
+            <SurfaceHeader
+                title="Safe sending"
+                description="Keeps your number from looking like a bot. Automatic messages only go to people who wrote to you first, are spaced out, capped per hour and day, and never repeat the same text across many chats. Follow-ups over a limit wait and send later."
+                badge={
+                    <Badge variant={safety.applies ? 'default' : 'outline'}>
+                        {safety.applies ? 'On' : 'Not needed for this driver'}
+                    </Badge>
+                }
+            />
+            <SurfaceBody className="grid gap-4 text-sm sm:grid-cols-3">
+                <SafetyMeter
+                    label="Automatic, last hour"
+                    used={safety.automatic_last_hour}
+                    limit={safety.limits.auto_per_hour}
+                />
+                <SafetyMeter
+                    label="Automatic, today"
+                    used={safety.automatic_today}
+                    limit={safety.limits.auto_per_day}
+                />
+                <SafetyMeter
+                    label="New chats you started today"
+                    used={safety.new_chats_today}
+                    limit={safety.limits.manual_new_chats_per_day}
+                />
+                <p className="text-xs text-muted-foreground sm:col-span-3">
+                    At least {safety.limits.auto_min_gap_seconds}s between
+                    automatic messages, and each one shows &ldquo;typing…&rdquo;
+                    first. Replies you type yourself are not slowed down.
+                </p>
             </SurfaceBody>
         </Surface>
     );

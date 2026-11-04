@@ -41,7 +41,7 @@ class SendWhatsAppMessage
                 return new OutboundSend($existing, true, false);
             }
 
-            $refusal = $this->guard->refusal($locked, $origin);
+            $refusal = $this->guard->refusal($locked, $origin, $body);
 
             if ($refusal !== null) {
                 return new OutboundSend($this->storeRefusal($locked, $body, $actor, $origin, $refusal), false, false);

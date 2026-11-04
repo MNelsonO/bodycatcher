@@ -9,12 +9,15 @@ use App\WhatsApp\DeskSetting;
 
 class MessagingGuard
 {
-    public function __construct(private ServiceWindow $window) {}
+    public function __construct(
+        private ServiceWindow $window,
+        private SendSafety $safety,
+    ) {}
 
     /**
      * A non-null string is a refusal. The caller must persist it and must not queue a send.
      */
-    public function refusal(Lead $lead, MessageOrigin $origin): ?string
+    public function refusal(Lead $lead, MessageOrigin $origin, ?string $body = null): ?string
     {
         $lead->loadMissing('contact');
         $contact = $lead->contact;
@@ -48,6 +51,12 @@ class MessagingGuard
 
         if (! $this->driverConfigured()) {
             return 'WhatsApp is not configured for the active messaging driver, so nothing was sent.';
+        }
+
+        $safety = $this->safety->reason($lead, $origin, $body);
+
+        if ($safety !== null) {
+            return $safety;
         }
 
         return null;

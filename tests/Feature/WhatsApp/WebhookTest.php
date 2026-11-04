@@ -131,8 +131,9 @@ it('records delivered and failed status events without treating a send as delive
 
     $providerId = (string) $outcome->message->provider_message_id;
 
-    postWhatsAppWebhook(whatsappStatusPayload($providerId, 'delivered', now()->timestamp))->assertOk();
-    postWhatsAppWebhook(whatsappStatusPayload($providerId, 'delivered', now()->timestamp))->assertOk();
+    $deliveredAt = now()->timestamp;
+    postWhatsAppWebhook(whatsappStatusPayload($providerId, 'delivered', $deliveredAt))->assertOk();
+    postWhatsAppWebhook(whatsappStatusPayload($providerId, 'delivered', $deliveredAt))->assertOk();
 
     expect($outcome->message->fresh()?->status)->toBe(MessageStatus::Delivered)
         ->and(MessageStatusEvent::query()->count())->toBe(1);

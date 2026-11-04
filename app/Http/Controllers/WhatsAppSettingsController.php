@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Settings\Product;
 use App\WhatsApp\DeskSetting;
 use App\WhatsApp\EvolutionGateway;
+use App\WhatsApp\Services\SendSafety;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -18,7 +19,7 @@ use Inertia\Response;
 
 class WhatsAppSettingsController extends Controller
 {
-    public function index(Request $request, LlmConfiguration $llm, EvolutionGateway $gateway): Response
+    public function index(Request $request, LlmConfiguration $llm, EvolutionGateway $gateway, SendSafety $safety): Response
     {
         $this->authorize('view', DeskSetting::class);
 
@@ -49,6 +50,10 @@ class WhatsAppSettingsController extends Controller
             'gateway' => [
                 'configured' => $gateway->configured(),
                 'active' => $driver === 'evolution',
+            ],
+            'safety' => [
+                'applies' => $safety->applies(),
+                ...$safety->usage(),
             ],
         ]);
     }

@@ -119,10 +119,17 @@ class EvolutionGateway
 
     public function sendText(string $number, string $text): Response
     {
-        return $this->http()->timeout(25)->post('/message/sendText/'.$this->instance(), [
+        return $this->http()->timeout(30)->post('/message/sendText/'.$this->instance(), [
             'number' => $number,
             'text' => $text,
+            // Shows "typing…" first, roughly as long as a person would take.
+            'delay' => $this->typingDelay($text),
         ]);
+    }
+
+    public function typingDelay(string $text): int
+    {
+        return (int) min(6000, 1200 + mb_strlen($text) * 35);
     }
 
     private function http(): PendingRequest

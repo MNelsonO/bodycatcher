@@ -24,6 +24,23 @@ return [
     | reports both sides of every chat, including messages the owner sends
     | from their phone, and can sync recent history when first linked.
     */
+    /*
+    | Safe sending for WhatsApp Web style connections (evolution, flaresend).
+    | WhatsApp bans numbers that behave like bots: bursts, cold messages to
+    | people who never wrote, the same text to many chats. These limits keep
+    | automatic sends at a human pace and stop accidental mass sending.
+    */
+    'safety' => [
+        'enabled' => env('WHATSAPP_SAFETY_ENABLED', true),
+        'auto_min_gap_seconds' => (int) env('WHATSAPP_AUTO_MIN_GAP_SECONDS', 20),
+        'auto_per_chat_gap_seconds' => (int) env('WHATSAPP_AUTO_PER_CHAT_GAP_SECONDS', 60),
+        'auto_per_hour' => (int) env('WHATSAPP_AUTO_PER_HOUR', 20),
+        'auto_per_day' => (int) env('WHATSAPP_AUTO_PER_DAY', 100),
+        'auto_same_text_chats_per_hour' => (int) env('WHATSAPP_AUTO_SAME_TEXT_CHATS', 4),
+        'manual_new_chats_per_day' => (int) env('WHATSAPP_MANUAL_NEW_CHATS_PER_DAY', 25),
+        'manual_burst_per_10_minutes' => (int) env('WHATSAPP_MANUAL_BURST_PER_10_MIN', 40),
+    ],
+
     'evolution' => [
         'base_url' => env('EVOLUTION_BASE_URL', 'http://127.0.0.1:8080'),
         'api_key' => env('EVOLUTION_API_KEY', ''),

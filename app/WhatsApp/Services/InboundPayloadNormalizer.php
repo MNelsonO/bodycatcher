@@ -15,10 +15,20 @@ class InboundPayloadNormalizer
     public function fromFlareSend(array $payload): array
     {
         $data = is_array($payload['data'] ?? null) ? $payload['data'] : $payload;
+
+        if ($this->isStatusOrGroup($payload, $data)) {
+            // Status posts and group messages are not chats with a client.
+            return $this->withRaw($this->wrap('', 'ignored-'.hash('sha256', json_encode($payload) ?: ''), 'text', '', now()->timestamp, ''), $payload);
+        }
         $from = $this->digits($this->jid((string) ($data['from'] ?? $payload['from'] ?? '')));
         $message = is_array($data['message'] ?? null) ? $data['message'] : [];
         $type = is_string($message['type'] ?? null) ? $message['type'] : 'text';
         $text = $this->textFrom($message, $data);
+
+        if ($text === '' && $message !== []) {
+            $text = '[media]';
+        }
+
         $timestamp = $this->timestamp($data['timestamp'] ?? $payload['timestamp'] ?? null);
         $id = is_string($data['id'] ?? null) && $data['id'] !== ''
             ? $data['id']
@@ -47,6 +57,38 @@ class InboundPayloadNormalizer
         $name = $this->displayName($payload, $data, $message, $from);
 
         return $this->withRaw($this->wrap($from, $id, $type, $text, (int) $timestamp, $name), $payload);
+    }
+
+    /**
+     * FlareSend delivers a contact's Status post as if the poster sent it to
+     * us; the only tell is a sender-key message for "status@broadcast".
+     * Group messages carry the same kind of key with a "@g.us" group id.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $data
+     */
+    private function isStatusOrGroup(array $payload, array $data): bool
+    {
+        $jids = [
+            (string) ($data['from'] ?? $payload['from'] ?? ''),
+            (string) ($data['key']['remoteJid'] ?? ''),
+            (string) ($data['chatId'] ?? ''),
+        ];
+
+        $message = is_array($data['message'] ?? null) ? $data['message'] : [];
+        $skdm = $message['senderKeyDistributionMessage'] ?? null;
+
+        if (is_array($skdm)) {
+            $jids[] = (string) ($skdm['groupId'] ?? 'status@broadcast');
+        }
+
+        foreach ($jids as $jid) {
+            if (str_starts_with($jid, 'status@') || str_ends_with($jid, '@broadcast') || str_ends_with($jid, '@g.us') || str_ends_with($jid, '@newsletter')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
