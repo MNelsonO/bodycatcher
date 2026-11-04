@@ -212,6 +212,15 @@ function ConversationList({
                     ))}
                 </div>
             </div>
+            {filters.filter === 'unnamed' ? (
+                <Link
+                    href="/contacts"
+                    className="border-b bg-amber-50 px-3 py-2 text-xs text-amber-900 hover:underline dark:bg-amber-950/30 dark:text-amber-200"
+                >
+                    Name them all at once: Contacts → Import names from your
+                    phone's contact list →
+                </Link>
+            ) : null}
             <div className="min-h-0 flex-1 overflow-y-auto">
                 {conversations.length === 0 ? (
                     <div className="p-6 text-center text-sm text-muted-foreground">

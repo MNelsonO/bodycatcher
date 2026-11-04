@@ -6,6 +6,7 @@ use App\Billing\BillingSubscription;
 use App\Billing\PaymentMethod;
 use App\Contacts\Actions\AddContactNote;
 use App\Contacts\Actions\CreateOrUpdateContact;
+use App\Contacts\Actions\ImportContactNames;
 use App\Contacts\Actions\MergeContacts;
 use App\Contacts\ConsentStatus;
 use App\Contacts\Contact;
@@ -324,5 +325,40 @@ class ContactController extends Controller
                 $countries->options(),
             ),
         ];
+    }
+
+    public function importNames(Request $request, ImportContactNames $import): RedirectResponse
+    {
+        $this->authorize('viewAny', Contact::class);
+
+        $request->validate([
+            'file' => ['required', 'file', 'max:10240'],
+        ]);
+
+        $file = $request->file('file');
+        $extension = mb_strtolower((string) $file?->getClientOriginalExtension());
+
+        if (! in_array($extension, ['vcf', 'csv', 'txt'], true)) {
+            return back()->withErrors(['file' => 'Upload a .vcf (vCard) or .csv contacts export.']);
+        }
+
+        $result = $import->handle((string) $file?->get(), $extension);
+
+        if ($result['entries'] === 0) {
+            return back()->withErrors(['file' => 'No names with phone numbers were found in that file.']);
+        }
+
+        Inertia::flash('toast', [
+            'type' => $result['named'] > 0 ? 'success' : 'info',
+            'message' => sprintf(
+                '%d names added from %d contacts in the file. %d matched leads already had a name and were kept; %d numbers are not in the desk.',
+                $result['named'],
+                $result['entries'],
+                $result['kept'],
+                $result['unmatched'],
+            ),
+        ]);
+
+        return redirect()->route('contacts.index');
     }
 }

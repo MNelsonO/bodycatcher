@@ -1,4 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 import { SelectField, TextField } from '@/components/crm/fields';
 import {
     Page,
@@ -10,6 +11,16 @@ import {
 } from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import InputError from '@/components/input-error';
 import type { ContactSummary, Option, Paginator } from '@/types/crm';
 
 export default function ContactsIndex({
@@ -41,9 +52,12 @@ export default function ContactsIndex({
                     title="Contacts"
                     description="Name, system they want, intent, and when you last spoke — filter by month, week, and scheduled talks."
                     actions={
-                        <Button asChild>
-                            <Link href="/contacts/create">Add contact</Link>
-                        </Button>
+                        <>
+                            <ImportNamesDialog />
+                            <Button asChild>
+                                <Link href="/contacts/create">Add contact</Link>
+                            </Button>
+                        </>
                     }
                 />
 
@@ -230,10 +244,10 @@ export default function ContactsIndex({
                                                 )}
                                             </p>
                                         </td>
-                                        <td className="px-5 py-4 align-top tabular-nums text-muted-foreground">
+                                        <td className="px-5 py-4 align-top text-muted-foreground tabular-nums">
                                             {contact.last_spoke_at ?? '—'}
                                         </td>
-                                        <td className="px-5 py-4 align-top tabular-nums text-muted-foreground">
+                                        <td className="px-5 py-4 align-top text-muted-foreground tabular-nums">
                                             {contact.next_talk_at ?? '—'}
                                             {contact.open_lead_id ? (
                                                 <div className="mt-1">
@@ -260,3 +274,69 @@ export default function ContactsIndex({
 ContactsIndex.layout = {
     breadcrumbs: [{ title: 'Contacts', href: '/contacts' }],
 };
+
+function ImportNamesDialog() {
+    const [open, setOpen] = useState(false);
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline">Import names</Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Import names from your phone</DialogTitle>
+                    <DialogDescription>
+                        Upload your contacts export. Each number is matched to a
+                        lead, and contacts still showing a number get the name
+                        from your phone. Names already saved in the desk are
+                        kept, and no new contacts are created.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-2 rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                    <p>
+                        <span className="font-medium text-foreground">
+                            Android / Google:
+                        </span>{' '}
+                        contacts.google.com → Export → Google CSV or vCard.
+                    </p>
+                    <p>
+                        <span className="font-medium text-foreground">
+                            iPhone:
+                        </span>{' '}
+                        icloud.com/contacts → select all → Export vCard.
+                    </p>
+                </div>
+                <Form
+                    action="/contacts/import-names"
+                    method="post"
+                    onSuccess={() => setOpen(false)}
+                    className="grid gap-4"
+                >
+                    {({ errors, processing, progress }) => (
+                        <>
+                            <input
+                                type="file"
+                                name="file"
+                                accept=".vcf,.csv,text/vcard,text/csv"
+                                required
+                                className="block w-full text-sm file:mr-3 file:rounded-md file:border-0 file:bg-primary file:px-3 file:py-1.5 file:text-sm file:text-primary-foreground"
+                            />
+                            <InputError message={errors.file} />
+                            {progress ? (
+                                <p className="text-xs text-muted-foreground">
+                                    Uploading… {progress.percentage}%
+                                </p>
+                            ) : null}
+                            <DialogFooter>
+                                <Button type="submit" disabled={processing}>
+                                    {processing ? 'Matching…' : 'Import names'}
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    )}
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
