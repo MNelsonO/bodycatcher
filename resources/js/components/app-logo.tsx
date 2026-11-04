@@ -3,11 +3,11 @@ import { usePage } from '@inertiajs/react';
 export default function AppLogo() {
     const { brand, name } = usePage().props;
     const label = brand?.name || name;
-    const src = brand?.logo_url || '/brand/kemet-mark.svg';
+    const src = brand?.logo_url || '/brand/kemet-mark.png';
 
     return (
         <>
-            <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-md">
+            <div className="flex aspect-square size-8 items-center justify-center overflow-hidden rounded-md bg-white ring-1 ring-white/20">
                 <img src={src} alt={label} className="size-8 object-contain" />
             </div>
             <div className="ml-1 grid flex-1 text-left text-sm">

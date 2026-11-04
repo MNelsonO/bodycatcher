@@ -52,14 +52,15 @@ class HandleInertiaRequests extends Middleware
     }
 
     /**
-     * @return array{name: string, tagline: string, logo_url: string}
+     * @return array{name: string, tagline: string, logo_url: string, full_logo_url: string}
      */
     private function brand(): array
     {
         $fallback = [
             'name' => (string) config('app.name', 'Kemet Tech'),
             'tagline' => 'Laundry sales desk',
-            'logo_url' => '/brand/kemet-mark.svg',
+            'logo_url' => '/brand/kemet-mark.png',
+            'full_logo_url' => '/brand/kemet-logo.jpg',
         ];
 
         try {
@@ -70,6 +71,7 @@ class HandleInertiaRequests extends Middleware
                 'name' => $name,
                 'tagline' => 'Laundry sales desk',
                 'logo_url' => $profile->logoUrl() ?: $fallback['logo_url'],
+                'full_logo_url' => $profile->logoUrl() ?: $fallback['full_logo_url'],
             ];
         } catch (Throwable) {
             return $fallback;

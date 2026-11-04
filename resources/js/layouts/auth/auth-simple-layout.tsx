@@ -1,5 +1,4 @@
-import { Link } from '@inertiajs/react';
-import BrandLogo from '@/components/brand-logo';
+import { Link, usePage } from '@inertiajs/react';
 import { home } from '@/routes';
 import type { AuthLayoutProps } from '@/types';
 
@@ -8,9 +7,11 @@ export default function AuthSimpleLayout({
     title,
     description,
 }: AuthLayoutProps) {
+    const { brand } = usePage().props;
+
     return (
         <div className="relative flex min-h-svh flex-col items-center justify-center bg-background px-4 py-10 sm:px-6 md:py-14">
-            {/* Solid blue accent bar */}
+            {/* Brand accent bar */}
             <div
                 className="absolute inset-x-0 top-0 h-1.5 bg-primary"
                 aria-hidden
@@ -23,11 +24,15 @@ export default function AuthSimpleLayout({
                     <div className="border-b border-border bg-card px-8 pt-8 pb-7">
                         <Link
                             href={home()}
-                            className="inline-flex rounded-md focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                            className="mx-auto flex w-fit rounded-xl focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
                         >
-                            <BrandLogo
-                                markClassName="h-10 w-10"
-                                className="gap-3"
+                            <img
+                                src={
+                                    brand?.full_logo_url ||
+                                    '/brand/kemet-logo.jpg'
+                                }
+                                alt={brand?.name || 'Kemet Technologies'}
+                                className="h-36 w-auto rounded-xl"
                             />
                         </Link>
 

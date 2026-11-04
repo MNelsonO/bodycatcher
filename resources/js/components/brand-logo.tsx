@@ -15,7 +15,7 @@ export default function BrandLogo({
 }: Props) {
     const { brand, name } = usePage().props;
     const label = brand?.name || name || 'Kemet Tech';
-    const src = brand?.logo_url || '/brand/kemet-mark.svg';
+    const src = brand?.logo_url || '/brand/kemet-mark.png';
 
     return (
         <span className={`inline-flex items-center gap-3 ${className}`}>

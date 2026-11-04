@@ -15,6 +15,7 @@ declare module '@inertiajs/core' {
                 name: string;
                 tagline: string;
                 logo_url: string;
+                full_logo_url: string;
             };
             auth: Auth;
             sidebarOpen: boolean;
