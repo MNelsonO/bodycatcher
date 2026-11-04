@@ -137,6 +137,12 @@ class InboundWhatsAppProcessor
             return;
         }
 
+        if (($message['kemet_outbound'] ?? false) === true) {
+            $this->ingestOwnerMessage($message, $providerId, $from);
+
+            return;
+        }
+
         $type = is_string($message['type'] ?? null) ? $message['type'] : 'unknown';
         $parsed = $this->content($message, $type);
         $timestamp = $message['timestamp'] ?? null;
@@ -193,6 +199,76 @@ class InboundWhatsAppProcessor
             CaptureChatFollowUpJob::dispatch($lead->id, $parsed['body']);
             RaiseUnfamiliarQuestionJob::dispatch($lead->id, $parsed['body']);
             RunConditionalAutoReply::dispatch($lead->id, $parsed['body']);
+        }
+
+        $lead->touch();
+    }
+
+    /**
+     * A message the owner sent from their own WhatsApp: store it in the chat
+     * as outbound. No auto-reply, opt-out check or follow-up capture runs.
+     *
+     * @param  array<string, mixed>  $message
+     */
+    private function ingestOwnerMessage(array $message, string $providerId, string $to): void
+    {
+        $type = is_string($message['type'] ?? null) ? $message['type'] : 'unknown';
+        $parsed = $this->content($message, $type);
+        $timestamp = $message['timestamp'] ?? null;
+        $sentAt = is_numeric($timestamp) ? Carbon::createFromTimestamp((int) $timestamp) : now();
+
+        $lead = $this->resolver->resolve($to, null);
+        $conversation = $lead->conversation ?? Conversation::query()->create([
+            'lead_id' => $lead->id,
+            'contact_id' => $lead->contact_id,
+        ]);
+
+        // A send made from the desk can echo back with a different id.
+        $echo = Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('direction', MessageDirection::Outbound->value)
+            ->where('body', $parsed['body'])
+            ->whereBetween('sent_at', [$sentAt->copy()->subMinutes(5), $sentAt->copy()->addMinutes(5)])
+            ->exists();
+
+        if ($echo) {
+            return;
+        }
+
+        $stored = Message::query()->create([
+            'conversation_id' => $conversation->id,
+            'direction' => MessageDirection::Outbound,
+            'channel' => MessageChannel::WhatsApp,
+            'origin' => MessageOrigin::Manual,
+            'status' => MessageStatus::Sent,
+            'body' => $parsed['body'],
+            'sent_at' => $sentAt,
+            'logged_by_user_id' => null,
+            'provider_message_id' => $providerId,
+            'retryable' => false,
+            'send_attempts' => 0,
+        ]);
+
+        if ($parsed['media_id'] !== null) {
+            MessageAttachment::query()->create([
+                'message_id' => $stored->id,
+                'provider_media_id' => $parsed['media_id'],
+                'mime_type' => $parsed['mime_type'],
+                'caption' => $parsed['caption'],
+            ]);
+        }
+
+        $this->activity->handle(ActivityEvent::MessageLogged, $lead, $lead->contact, null, [
+            'direction' => MessageDirection::Outbound->value,
+            'channel' => MessageChannel::WhatsApp->value,
+            'message_id' => $stored->id,
+            'source' => 'phone',
+        ]);
+
+        // Replying from the phone means the owner has seen the chat.
+        if ($conversation->last_read_at === null || $conversation->last_read_at->lessThan($sentAt)) {
+            $conversation->last_read_at = $sentAt;
+            $conversation->saveQuietly();
         }
 
         $lead->touch();

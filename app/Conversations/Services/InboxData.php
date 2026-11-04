@@ -69,6 +69,12 @@ class InboxData
             });
         } elseif ($filter === 'attention') {
             $query->whereHas('lead', fn (Builder $lead) => $lead->where('needs_personal_attention', true)->orWhere('taken_over', true));
+        } elseif ($filter === 'unnamed') {
+            $query->whereHas('contact', fn (Builder $contact) => $contact->where(function (Builder $inner): void {
+                $inner->where('full_name', 'like', '+%')
+                    ->orWhere('full_name', 'like', 'WhatsApp%')
+                    ->orWhereColumn('full_name', 'primary_phone');
+            }));
         } elseif ($filter === 'open') {
             $query->whereHas('lead', fn (Builder $lead) => $lead->whereNull('closed_at'));
         }

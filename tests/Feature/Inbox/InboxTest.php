@@ -194,3 +194,73 @@ it('books a timed calendar activity from the inbox and stays in the chat', funct
     $this->get(route('calendar.index', ['month' => '2026-11']))
         ->assertInertia(fn (Assert $page) => $page->where('activities.0.start_time', '10:30'));
 });
+
+it('stores a message the owner sent from their phone as outbound, without auto-replies', function () {
+    $lead = whatsappOpenLead();
+    whatsappInbound($lead, now()->subMinutes(20));
+    config(['whatsapp.driver' => 'flaresend']);
+
+    $this->postJson('/webhooks/flaresend', [
+        'event' => 'message_received',
+        'data' => [
+            'key' => ['remoteJid' => '254722100201@s.whatsapp.net', 'fromMe' => true, 'id' => 'OWNER1'],
+            'id' => 'OWNER1',
+            'message' => ['conversation' => 'Sawa, I will pass by at 3pm.'],
+            'timestamp' => now()->subMinutes(2)->timestamp,
+        ],
+    ])->assertOk();
+
+    $sent = Message::query()->where('provider_message_id', 'OWNER1')->firstOrFail();
+
+    expect($sent->direction->value)->toBe('outbound')
+        ->and($sent->body)->toBe('Sawa, I will pass by at 3pm.')
+        ->and($sent->conversation->lead_id)->toBe($lead->id)
+        ->and(Contact::query()->count())->toBe(1);
+});
+
+it('treats a FlareSend message with a recipient but no sender as the owner\'s', function () {
+    $lead = whatsappOpenLead();
+    config(['whatsapp.driver' => 'flaresend']);
+
+    $this->postJson('/webhooks/flaresend', [
+        'event' => 'message_received',
+        'data' => [
+            'to' => '254722100201@s.whatsapp.net',
+            'id' => 'OWNER2',
+            'message' => ['extendedTextMessage' => ['text' => 'Price list attached.']],
+            'timestamp' => now()->timestamp,
+        ],
+    ])->assertOk();
+
+    expect(Message::query()->where('provider_message_id', 'OWNER2')->value('direction')?->value)->toBe('outbound');
+});
+
+it('still stores an ordinary FlareSend message from a client as inbound', function () {
+    whatsappOpenLead();
+    config(['whatsapp.driver' => 'flaresend']);
+
+    $this->postJson('/webhooks/flaresend', [
+        'event' => 'message_received',
+        'data' => [
+            'from' => '254722100201@s.whatsapp.net',
+            'id' => 'CLIENT1',
+            'message' => ['extendedTextMessage' => ['text' => 'niaje']],
+            'timestamp' => now()->timestamp,
+        ],
+    ])->assertOk();
+
+    expect(Message::query()->where('provider_message_id', 'CLIENT1')->value('direction')?->value)->toBe('inbound');
+});
+
+it('renames a contact from the inbox', function () {
+    $lead = whatsappOpenLead();
+    $conversation = $lead->conversation()->firstOrFail();
+
+    $this->put(route('inbox.contact.update', $conversation), [
+        'full_name' => 'Mama Njeri',
+        'business_name' => 'Njeri Laundry',
+    ])->assertRedirect(route('inbox.show', $conversation));
+
+    expect($lead->contact->refresh()->full_name)->toBe('Mama Njeri')
+        ->and($lead->contact->business_name)->toBe('Njeri Laundry');
+});

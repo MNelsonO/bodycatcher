@@ -25,9 +25,102 @@ class InboundPayloadNormalizer
             : (is_string($message['id'] ?? null) && $message['id'] !== ''
                 ? $message['id']
                 : 'flaresend-'.hash('sha256', $from.'|'.$text.'|'.$timestamp));
+        $outbound = $this->sentByOwner($payload, $data);
+
+        if ($outbound) {
+            // A message the account owner sent from their own WhatsApp. The
+            // chat partner is the recipient, never the owner's own number.
+            $to = $this->recipient($payload, $data);
+
+            // Baileys-style payloads put the chat partner in "from" even when
+            // the owner wrote the message.
+            if ($to === '') {
+                $to = $from;
+            }
+            $normalized = $this->wrap($to, $id, $type, $text, (int) $timestamp, '');
+            $normalized['entry'][0]['changes'][0]['value']['messages'][0]['kemet_outbound'] = true;
+            unset($normalized['entry'][0]['changes'][0]['value']['contacts']);
+
+            return $this->withRaw($normalized, $payload);
+        }
+
         $name = $this->displayName($payload, $data, $message, $from);
 
-        return $this->wrap($from, $id, $type, $text, (int) $timestamp, $name);
+        return $this->withRaw($this->wrap($from, $id, $type, $text, (int) $timestamp, $name), $payload);
+    }
+
+    /**
+     * FlareSend does not document owner-sent messages, so accept the common
+     * markers: an explicit fromMe flag (also Baileys' key.fromMe), a sent-type
+     * event name, or a message with a recipient but no sender.
+     *
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $data
+     */
+    private function sentByOwner(array $payload, array $data): bool
+    {
+        $key = is_array($data['key'] ?? null) ? $data['key'] : [];
+
+        foreach ([$data['fromMe'] ?? null, $data['from_me'] ?? null, $data['isFromMe'] ?? null, $key['fromMe'] ?? null, $payload['fromMe'] ?? null] as $flag) {
+            if ($flag === true || $flag === 1 || $flag === '1' || $flag === 'true') {
+                return true;
+            }
+        }
+
+        $event = mb_strtolower((string) ($payload['event'] ?? ''));
+
+        if (in_array($event, ['message_sent', 'message.sent', 'message_create', 'message.create', 'messages.sent', 'message_outgoing'], true)) {
+            return true;
+        }
+
+        $from = $this->digits($this->jid((string) ($data['from'] ?? $payload['from'] ?? '')));
+
+        return $from === '' && $this->recipient($payload, $data) !== '';
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @param  array<string, mixed>  $data
+     */
+    private function recipient(array $payload, array $data): string
+    {
+        $key = is_array($data['key'] ?? null) ? $data['key'] : [];
+
+        foreach ([
+            $data['to'] ?? null,
+            $data['recipient'] ?? null,
+            $data['chatId'] ?? null,
+            $data['chat_id'] ?? null,
+            $data['remoteJid'] ?? null,
+            $key['remoteJid'] ?? null,
+            $payload['to'] ?? null,
+        ] as $candidate) {
+            if (is_string($candidate) && $candidate !== '' && ! str_contains($candidate, '@g.us')) {
+                $digits = $this->digits($this->jid($candidate));
+
+                if ($digits !== '') {
+                    return $digits;
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Keep the provider's original body (trimmed) so the payload shape can be
+     * checked later. The processor ignores this key.
+     *
+     * @param  array<string, mixed>  $normalized
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function withRaw(array $normalized, array $payload): array
+    {
+        $json = json_encode($payload, JSON_PARTIAL_OUTPUT_ON_ERROR | JSON_UNESCAPED_UNICODE) ?: '';
+        $normalized['raw'] = strlen($json) <= 20000 ? $payload : ['truncated' => mb_substr($json, 0, 20000)];
+
+        return $normalized;
     }
 
     /**

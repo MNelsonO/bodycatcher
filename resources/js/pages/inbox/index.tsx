@@ -10,6 +10,7 @@ import {
     Loader2,
     MessageSquarePlus,
     NotebookPen,
+    Pencil,
     Paperclip,
     Search,
     Send,
@@ -51,6 +52,7 @@ const FILTERS = [
     { value: 'unread', label: 'Unread' },
     { value: 'open', label: 'Open leads' },
     { value: 'attention', label: 'Attention' },
+    { value: 'unnamed', label: 'No name' },
 ];
 
 function queryString(filters: Filters): string {
@@ -387,9 +389,7 @@ function ThreadView({
                     </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold">
-                        {thread.contact.full_name}
-                    </p>
+                    <RenameContact thread={thread} />
                     <p className="truncate text-xs text-muted-foreground">
                         {thread.contact.primary_phone}
                         {' · '}
@@ -1561,6 +1561,96 @@ function BookDialog({
                             <DialogFooter>
                                 <Button type="submit" disabled={processing}>
                                     <CalendarPlus /> Book
+                                </Button>
+                            </DialogFooter>
+                        </>
+                    )}
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function RenameContact({ thread }: { thread: InboxThread }) {
+    const [open, setOpen] = useState(false);
+    const looksUnnamed =
+        /^\+?\d[\d\s]+$/.test(thread.contact.full_name) ||
+        thread.contact.full_name.startsWith('WhatsApp ');
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <button
+                    type="button"
+                    className="group flex max-w-full items-center gap-1.5 text-left"
+                    title="Rename this contact"
+                >
+                    <span className="truncate text-sm font-semibold">
+                        {thread.contact.full_name}
+                    </span>
+                    {looksUnnamed ? (
+                        <span className="shrink-0 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                            Add name
+                        </span>
+                    ) : (
+                        <Pencil className="size-3 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    )}
+                </button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Name this contact</DialogTitle>
+                    <DialogDescription>
+                        Shown everywhere in the desk instead of the number. A
+                        name you save here is kept; incoming WhatsApp names
+                        never overwrite it.
+                    </DialogDescription>
+                </DialogHeader>
+                <Form
+                    action={`/inbox/${thread.id}/contact`}
+                    method="put"
+                    options={{ preserveScroll: true }}
+                    onSuccess={() => setOpen(false)}
+                    className="grid gap-4"
+                >
+                    {({ errors, processing }) => (
+                        <>
+                            <div className="grid gap-2">
+                                <Label htmlFor="rename_full_name">Name</Label>
+                                <Input
+                                    id="rename_full_name"
+                                    name="full_name"
+                                    required
+                                    autoFocus
+                                    defaultValue={
+                                        looksUnnamed
+                                            ? ''
+                                            : thread.contact.full_name
+                                    }
+                                    placeholder="e.g. Jane Wanjiku"
+                                />
+                                <InputError message={errors.full_name} />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="rename_business">
+                                    Business (optional)
+                                </Label>
+                                <Input
+                                    id="rename_business"
+                                    name="business_name"
+                                    defaultValue={
+                                        thread.contact.business_name ?? ''
+                                    }
+                                    placeholder="e.g. Sparkle Laundry, Kilimani"
+                                />
+                                <InputError message={errors.business_name} />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                {thread.contact.primary_phone}
+                            </p>
+                            <DialogFooter>
+                                <Button type="submit" disabled={processing}>
+                                    Save name
                                 </Button>
                             </DialogFooter>
                         </>

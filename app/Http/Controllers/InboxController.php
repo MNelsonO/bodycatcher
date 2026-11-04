@@ -127,6 +127,27 @@ class InboxController extends Controller
         return redirect()->route('inbox.show', $conversation);
     }
 
+    public function rename(Request $request, Conversation $conversation): RedirectResponse
+    {
+        $contact = $conversation->contact;
+        $this->authorize('update', $conversation->lead);
+
+        $data = $request->validate([
+            'full_name' => ['required', 'string', 'max:120'],
+            'business_name' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $contact->full_name = trim($data['full_name']);
+        $contact->business_name = isset($data['business_name']) && trim($data['business_name']) !== ''
+            ? trim($data['business_name'])
+            : null;
+        $contact->save();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Saved. WhatsApp will not overwrite this name.']);
+
+        return redirect()->route('inbox.show', $conversation);
+    }
+
     private function page(Request $request, InboxData $inbox, ?Conversation $conversation): Response
     {
         return Inertia::render('inbox/index', [
