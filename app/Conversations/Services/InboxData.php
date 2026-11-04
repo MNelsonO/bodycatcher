@@ -58,6 +58,12 @@ class InboxData
             });
         }
 
+        $label = $request->string('label')->toString();
+
+        if ($label !== '') {
+            $query->whereIn('conversations.contact_id', DB::table('contact_whatsapp_label')->where('label_id', $label)->select('contact_id'));
+        }
+
         if ($filter === 'unread') {
             $query->whereExists(function ($exists): void {
                 $exists->from('messages')

@@ -54,6 +54,7 @@ const SECTIONS: Array<[string, string]> = [
     ['/calendar', 'Work · Calendar'],
     ['/follow-ups', 'Work · Follow-ups'],
     ['/inbox', 'Work · Inbox'],
+    ['/labels', 'Work · Labels'],
     ['/invoices', 'Money · Invoices'],
     ['/billing', 'Money · Billing'],
     ['/expenses', 'Money · Expenses'],

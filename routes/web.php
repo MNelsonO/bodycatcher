@@ -26,6 +26,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SharedInvoiceController;
 use App\Http\Controllers\TaxLedgerController;
 use App\Http\Controllers\TwilioWebhookController;
+use App\Http\Controllers\WhatsAppLabelController;
 use App\Http\Controllers\WhatsAppSettingsController;
 use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Support\Facades\Route;
@@ -54,6 +55,10 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    Route::get('labels', [WhatsAppLabelController::class, 'index'])->name('labels.index');
+    Route::post('labels/{labelId}/drafts', [WhatsAppLabelController::class, 'drafts'])->name('labels.drafts');
+    Route::post('labels/{labelId}/send', [WhatsAppLabelController::class, 'send'])->name('labels.send');
 
     Route::get('inbox', [InboxController::class, 'index'])->name('inbox.index');
     Route::post('inbox', [InboxController::class, 'store'])->name('inbox.store');

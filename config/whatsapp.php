@@ -39,6 +39,10 @@ return [
         'auto_same_text_chats_per_hour' => (int) env('WHATSAPP_AUTO_SAME_TEXT_CHATS', 4),
         'manual_new_chats_per_day' => (int) env('WHATSAPP_MANUAL_NEW_CHATS_PER_DAY', 25),
         'manual_burst_per_10_minutes' => (int) env('WHATSAPP_MANUAL_BURST_PER_10_MIN', 40),
+        // Messaging a whole label: at most this many per day, this far apart.
+        'campaign_per_day' => (int) env('WHATSAPP_CAMPAIGN_PER_DAY', 30),
+        'campaign_gap_seconds' => (int) env('WHATSAPP_CAMPAIGN_GAP_SECONDS', 150),
+        'campaign_quiet_hours' => (int) env('WHATSAPP_CAMPAIGN_QUIET_HOURS', 12),
     ],
 
     /*
