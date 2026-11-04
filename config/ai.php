@@ -3,11 +3,13 @@
 $provider = env('LLM_PROVIDER', 'openai');
 
 $defaultBase = match ($provider) {
+    'anthropic' => '',
     'gemini' => 'https://generativelanguage.googleapis.com/v1beta/openai',
     default => 'https://api.openai.com/v1',
 };
 
 $defaultModel = match ($provider) {
+    'anthropic' => 'claude-opus-5-5',
     'gemini' => 'gemini-2.0-flash',
     default => 'gpt-4o-mini',
 };
@@ -15,8 +17,10 @@ $defaultModel = match ($provider) {
 return [
 
     /*
-    | provider: openai | gemini
-    | Both use an OpenAI-compatible chat completions endpoint.
+    | provider: openai | gemini | anthropic
+    | openai and gemini use an OpenAI-compatible chat completions endpoint.
+    | anthropic calls Claude through the official Anthropic PHP SDK; only
+    | LLM_API_KEY is required and LLM_EFFORT (low|medium|high) sets depth.
     | Gemini: https://generativelanguage.googleapis.com/v1beta/openai
     */
 
@@ -28,7 +32,9 @@ return [
 
     'model' => env('LLM_MODEL', $defaultModel),
 
-    'timeout_seconds' => (int) env('LLM_TIMEOUT_SECONDS', 20),
+    'effort' => env('LLM_EFFORT', 'medium'),
+
+    'timeout_seconds' => (int) env('LLM_TIMEOUT_SECONDS', $provider === 'anthropic' ? 60 : 20),
 
     /*
     | When live assistant is on (desk setting), inbound WhatsApp is answered

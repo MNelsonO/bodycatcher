@@ -18,6 +18,7 @@ declare module '@inertiajs/core' {
             };
             auth: Auth;
             sidebarOpen: boolean;
+            inboxUnread: number;
             [key: string]: unknown;
         };
     }

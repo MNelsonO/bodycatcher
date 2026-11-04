@@ -132,6 +132,7 @@ export type LeadDetail = {
             caption: string | null;
         }>;
     }>;
+    conversation_id: number | null;
     whatsapp: {
         configured: boolean;
         driver: string;
@@ -382,4 +383,90 @@ export type DashboardMetrics = {
     };
     today: string;
     timezone: string;
+};
+
+export type InboxRow = {
+    id: number;
+    lead_id: number;
+    contact_name: string;
+    business_name: string | null;
+    phone: string;
+    product: string;
+    stage: string;
+    outcome: string;
+    needs_attention: boolean;
+    opted_out: boolean;
+    unread_count: number;
+    last_message: null | {
+        body: string;
+        direction: string;
+        status: string;
+        channel: string;
+    };
+    last_message_label: string | null;
+};
+
+export type ThreadMessage = {
+    id: number;
+    direction: string;
+    channel: string;
+    origin: string;
+    status: string;
+    body: string;
+    sent_at: string;
+    day_label: string;
+    time_label: string;
+    logged_by: string | null;
+    refusal_reason: string | null;
+    attachments: Array<{
+        id: number;
+        mime_type: string | null;
+        caption: string | null;
+    }>;
+};
+
+export type InboxThread = {
+    id: number;
+    hidden_earlier: number;
+    contact: {
+        id: number;
+        full_name: string;
+        business_name: string | null;
+        primary_phone: string;
+        email: string | null;
+        location: string | null;
+        consent_status: string;
+    };
+    lead: {
+        id: number;
+        product: string;
+        pipeline: string;
+        stage: string;
+        stage_kind: string;
+        outcome: string;
+        next_action: string | null;
+        next_follow_up_label: string | null;
+    };
+    other_leads: Array<{
+        id: number;
+        product: string;
+        stage: string;
+        outcome: string;
+    }>;
+    whatsapp: LeadDetail['whatsapp'];
+    intelligence: LeadDetail['intelligence'];
+    scheduled: Array<{
+        id: number;
+        body: string;
+        due_label: string | null;
+        held_reason: string | null;
+        by_hand: boolean;
+    }>;
+    appointments: Array<{
+        id: number;
+        title: string;
+        kind_label: string;
+        starts_at_label: string | null;
+    }>;
+    messages: ThreadMessage[];
 };

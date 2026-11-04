@@ -1,5 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { MessageCircle } from 'lucide-react';
+import { Inbox, MessageCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
 import { LeadAnalysisPanel } from '@/components/crm/lead-analysis';
@@ -73,6 +73,16 @@ export default function LeadShow({
                                         : ''}
                                 </a>
                             </Button>
+                            {lead.conversation_id ? (
+                                <Button variant="outline" asChild>
+                                    <Link
+                                        href={`/inbox/${lead.conversation_id}`}
+                                    >
+                                        <Inbox className="size-4" />
+                                        Inbox
+                                    </Link>
+                                </Button>
+                            ) : null}
                             <StageDialog lead={lead} />
                             <InteractionDialog leadId={lead.id} />
                             <NoteDialog leadId={lead.id} />
@@ -99,7 +109,11 @@ export default function LeadShow({
                                     </Button>
                                 </Form>
                             ) : (
-                                <Button type="button" variant="outline" disabled>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    disabled
+                                >
                                     Mark won
                                 </Button>
                             )}
@@ -121,11 +135,17 @@ export default function LeadShow({
                     >
                         {lead.outcome}
                     </Badge>
-                    <Badge variant={lead.contact_is_new ? 'default' : 'outline'}>
-                        {lead.contact_is_new ? 'New contact' : 'Existing contact'}
+                    <Badge
+                        variant={lead.contact_is_new ? 'default' : 'outline'}
+                    >
+                        {lead.contact_is_new
+                            ? 'New contact'
+                            : 'Existing contact'}
                     </Badge>
                     <Badge
-                        variant={lead.conversation_is_new ? 'default' : 'outline'}
+                        variant={
+                            lead.conversation_is_new ? 'default' : 'outline'
+                        }
                     >
                         {lead.conversation_is_new
                             ? 'New conversation'
@@ -214,9 +234,7 @@ export default function LeadShow({
                                                 </p>
                                                 {message.refusal_reason ? (
                                                     <p className="mt-1 text-xs text-destructive">
-                                                        {
-                                                            message.refusal_reason
-                                                        }
+                                                        {message.refusal_reason}
                                                     </p>
                                                 ) : null}
                                                 {message.attachments.length >
@@ -253,10 +271,7 @@ export default function LeadShow({
                     </SurfaceBody>
                 </Surface>
 
-                <LeadBriefing
-                    lead={lead}
-                    productOptions={product_options}
-                />
+                <LeadBriefing lead={lead} productOptions={product_options} />
 
                 <div className="grid gap-6 xl:grid-cols-3">
                     <section className="space-y-6 xl:col-span-2">
@@ -326,10 +341,7 @@ export default function LeadShow({
 
                         <Surface>
                             <SurfaceHeader title="Opportunity" />
-                            <Form
-                                action={`/leads/${lead.id}`}
-                                method="put"
-                            >
+                            <Form action={`/leads/${lead.id}`} method="put">
                                 {({ errors, processing }) => (
                                     <SurfaceBody className="grid gap-4">
                                         <TextField
@@ -415,7 +427,7 @@ export default function LeadShow({
                                 </p>
                                 {lead.conversation_topic ? (
                                     <div className="mt-3 rounded-md bg-muted/40 p-3">
-                                        <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                                        <p className="text-xs tracking-wide text-muted-foreground uppercase">
                                             Live topic
                                         </p>
                                         <p className="mt-1 font-medium">
@@ -423,7 +435,9 @@ export default function LeadShow({
                                         </p>
                                         {lead.conversation_topic_summary ? (
                                             <p className="mt-1 text-muted-foreground">
-                                                {lead.conversation_topic_summary}
+                                                {
+                                                    lead.conversation_topic_summary
+                                                }
                                             </p>
                                         ) : null}
                                     </div>
@@ -601,7 +615,7 @@ function LeadBriefing({
             <SurfaceBody className="grid gap-5 lg:grid-cols-[1.4fr_1fr]">
                 <div className="space-y-4">
                     <div>
-                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                             They chased you up for
                         </p>
                         <p className="mt-1 text-base font-medium text-foreground">
@@ -617,7 +631,7 @@ function LeadBriefing({
                     </div>
 
                     <div>
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        <p className="mb-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                             Status · {lead.pipeline.name}
                         </p>
                         <ol className="flex flex-wrap gap-2">
@@ -637,8 +651,8 @@ function LeadBriefing({
                                         key={stage.id}
                                         className={`rounded-lg px-2.5 py-1.5 text-xs font-semibold ${
                                             active
-                                                ? closedTone ??
-                                                  'bg-primary text-primary-foreground'
+                                                ? (closedTone ??
+                                                  'bg-primary text-primary-foreground')
                                                 : passed
                                                   ? 'bg-secondary text-secondary-foreground'
                                                   : 'bg-muted text-muted-foreground'
@@ -1027,14 +1041,14 @@ function WhatsAppSend({ lead }: { lead: LeadDetail }) {
                         ) : null}
                         {!desk.configured ? (
                             <p className="mt-1 text-destructive">
-                                WhatsApp ({desk.driver}) is not configured.
-                                Fix keys on Integrations / WhatsApp settings.
+                                WhatsApp ({desk.driver}) is not configured. Fix
+                                keys on Integrations / WhatsApp settings.
                             </p>
                         ) : null}
                         {!desk.enforces_service_window ? (
                             <p className="mt-1 text-muted-foreground">
-                                FlareSend allows free-form chat anytime (no
-                                Meta 24-hour window). Last inbound{' '}
+                                FlareSend allows free-form chat anytime (no Meta
+                                24-hour window). Last inbound{' '}
                                 {desk.last_inbound_label ?? 'none yet'}.
                             </p>
                         ) : desk.can_send_free_form ? (
@@ -1081,8 +1095,8 @@ function WhatsAppSend({ lead }: { lead: LeadDetail }) {
                                 {desk.automatic_sends_paused
                                     ? ' for the whole desk'
                                     : ' on this lead'}
-                                . A message you send from here is still a
-                                manual send.
+                                . A message you send from here is still a manual
+                                send.
                             </p>
                         ) : null}
                     </div>
@@ -1366,7 +1380,7 @@ function EscalationPanel({
                 className="border-destructive/20"
             />
             <SurfaceBody>
-                <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-destructive">
+                <p className="mb-3 text-xs font-semibold tracking-wide text-destructive uppercase">
                     AI paused — needs your input
                 </p>
                 <dl className="grid gap-2 text-sm sm:grid-cols-2">

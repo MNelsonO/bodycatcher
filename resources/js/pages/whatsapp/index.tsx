@@ -27,8 +27,7 @@ type WebhookPaths = {
     twilio: string;
 };
 
-const code =
-    'rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground';
+const code = 'rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground';
 
 function Panel({
     title,
@@ -177,10 +176,11 @@ export default function WhatsAppSettings({
                         </Badge>
                     </div>
                     <p className="mt-3 max-w-[70ch] leading-relaxed text-muted-foreground">
-                        Set <span className={code}>LLM_PROVIDER</span> to openai
-                        or gemini, plus <span className={code}>LLM_API_KEY</span>
-                        , <span className={code}>LLM_BASE_URL</span>, and{' '}
-                        <span className={code}>LLM_MODEL</span> in{' '}
+                        Set <span className={code}>LLM_PROVIDER</span> to
+                        anthropic (Claude, needs only{' '}
+                        <span className={code}>LLM_API_KEY</span>), openai or
+                        gemini (also <span className={code}>LLM_BASE_URL</span>{' '}
+                        and <span className={code}>LLM_MODEL</span>) in{' '}
                         <span className={code}>.env</span>.
                     </p>
                 </Panel>

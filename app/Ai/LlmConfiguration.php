@@ -4,8 +4,14 @@ namespace App\Ai;
 
 class LlmConfiguration
 {
+    public const ANTHROPIC = 'anthropic';
+
     public function ready(): bool
     {
+        if ($this->provider() === self::ANTHROPIC) {
+            return $this->value('ai.api_key') !== '' && $this->model() !== '';
+        }
+
         return $this->value('ai.api_key') !== ''
             && $this->value('ai.base_url') !== ''
             && $this->value('ai.model') !== '';
@@ -18,6 +24,11 @@ class LlmConfiguration
         return $provider !== '' ? $provider : 'openai';
     }
 
+    public function model(): string
+    {
+        return $this->value('ai.model');
+    }
+
     /**
      * @return list<array{key: string, configured: bool}>
      */
@@ -26,7 +37,7 @@ class LlmConfiguration
         return [
             ['key' => 'LLM_PROVIDER', 'configured' => $this->provider() !== ''],
             ['key' => 'LLM_API_KEY', 'configured' => $this->value('ai.api_key') !== ''],
-            ['key' => 'LLM_BASE_URL', 'configured' => $this->value('ai.base_url') !== ''],
+            ['key' => 'LLM_BASE_URL', 'configured' => $this->provider() === self::ANTHROPIC || $this->value('ai.base_url') !== ''],
             ['key' => 'LLM_MODEL', 'configured' => $this->value('ai.model') !== ''],
         ];
     }

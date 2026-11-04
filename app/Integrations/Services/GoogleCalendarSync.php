@@ -5,6 +5,7 @@ namespace App\Integrations\Services;
 use App\Calendar\CalendarActivity;
 use App\Integrations\IntegrationAccount;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -67,6 +68,18 @@ class GoogleCalendarSync
             'start' => ['date' => $date],
             'end' => ['date' => $date],
         ];
+
+        if (is_string($activity->start_time) && preg_match('/^\d{2}:\d{2}$/', $activity->start_time) === 1) {
+            $timezone = (string) config('app.display_timezone', 'Africa/Nairobi');
+            $startsAt = Carbon::parse($date.' '.$activity->start_time, $timezone);
+            $endsAt = $startsAt->copy()->addMinutes($activity->duration_minutes ?? 30);
+            $payload['start'] = ['dateTime' => $startsAt->toIso8601String(), 'timeZone' => $timezone];
+            $payload['end'] = ['dateTime' => $endsAt->toIso8601String(), 'timeZone' => $timezone];
+        }
+
+        if (is_string($activity->location) && $activity->location !== '') {
+            $payload['location'] = $activity->location;
+        }
 
         try {
             $response = Http::withToken($token)

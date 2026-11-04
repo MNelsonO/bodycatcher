@@ -23,6 +23,9 @@ type Activity = {
     activity_type: string;
     color: string;
     lead_id: number | null;
+    start_time: string | null;
+    duration_minutes: number | null;
+    location: string | null;
 };
 
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -212,19 +215,35 @@ export default function CalendarIndex({
                                                         className={
                                                             activity.color ===
                                                             'white'
-                                                                ? 'pill-white rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide'
-                                                                : 'pill-blue rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide'
+                                                                ? 'pill-white rounded-full px-2 py-0.5 text-[10px] tracking-wide uppercase'
+                                                                : 'pill-blue rounded-full px-2 py-0.5 text-[10px] tracking-wide uppercase'
                                                         }
                                                     >
                                                         {activity.activity_type}
                                                     </span>
                                                     <span className="text-xs text-muted-foreground">
                                                         {activity.activity_on}
+                                                        {activity.start_time
+                                                            ? ` · ${activity.start_time}${activity.duration_minutes ? ` (${activity.duration_minutes} min)` : ''}`
+                                                            : ''}
                                                     </span>
                                                 </div>
                                                 <p className="mt-1 font-medium">
                                                     {activity.title}
                                                 </p>
+                                                {activity.location ? (
+                                                    <p className="mt-1 text-sm text-muted-foreground">
+                                                        {activity.location}
+                                                    </p>
+                                                ) : null}
+                                                {activity.lead_id ? (
+                                                    <Link
+                                                        href={`/leads/${activity.lead_id}`}
+                                                        className="mt-1 inline-block text-xs underline"
+                                                    >
+                                                        Open lead
+                                                    </Link>
+                                                ) : null}
                                                 {activity.notes ? (
                                                     <p className="mt-1 text-sm text-muted-foreground">
                                                         {activity.notes}
@@ -272,10 +291,30 @@ export default function CalendarIndex({
                                             }
                                             error={errors.activity_on}
                                         />
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <TextField
+                                                name="start_time"
+                                                label="Time (optional)"
+                                                type="time"
+                                                error={errors.start_time}
+                                            />
+                                            <TextField
+                                                name="duration_minutes"
+                                                label="Minutes"
+                                                type="number"
+                                                defaultValue={30}
+                                                error={errors.duration_minutes}
+                                            />
+                                        </div>
                                         <TextField
                                             name="title"
                                             label="Title"
                                             error={errors.title}
+                                        />
+                                        <TextField
+                                            name="location"
+                                            label="Where (optional)"
+                                            error={errors.location}
                                         />
                                         <SelectField
                                             name="activity_type"

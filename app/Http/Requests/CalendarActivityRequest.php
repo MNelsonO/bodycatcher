@@ -24,6 +24,9 @@ class CalendarActivityRequest extends FormRequest
             'activity_type' => ['required', Rule::in(['task', 'visit', 'call', 'delivery', 'other'])],
             'color' => ['required', Rule::in(['blue', 'white'])],
             'lead_id' => ['nullable', 'integer', 'exists:leads,id'],
+            'start_time' => ['nullable', 'date_format:H:i'],
+            'duration_minutes' => ['nullable', 'integer', 'min:5', 'max:1440'],
+            'location' => ['nullable', 'string', 'max:255'],
         ];
     }
 }

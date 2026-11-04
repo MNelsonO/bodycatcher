@@ -9,17 +9,18 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeskUserController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FlareSendWebhookController;
-use App\Http\Controllers\OperatorEscalationController;
 use App\Http\Controllers\FollowUpController;
+use App\Http\Controllers\InboxController;
 use App\Http\Controllers\IntegrationController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\InvoiceGenerationController;
 use App\Http\Controllers\LeadAnalysisController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadMessagingController;
+use App\Http\Controllers\MoneyController;
+use App\Http\Controllers\OperatorEscalationController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\ProductController;
-use App\Http\Controllers\MoneyController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SharedInvoiceController;
 use App\Http\Controllers\TaxLedgerController;
@@ -51,6 +52,12 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    Route::get('inbox', [InboxController::class, 'index'])->name('inbox.index');
+    Route::post('inbox', [InboxController::class, 'store'])->name('inbox.store');
+    Route::get('inbox/{conversation}', [InboxController::class, 'show'])->name('inbox.show');
+    Route::post('inbox/{conversation}/messages', [InboxController::class, 'message'])->name('inbox.messages.store');
+    Route::post('inbox/{conversation}/schedule', [InboxController::class, 'schedule'])->name('inbox.schedule');
 
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::get('contacts/create', [ContactController::class, 'create'])->name('contacts.create');

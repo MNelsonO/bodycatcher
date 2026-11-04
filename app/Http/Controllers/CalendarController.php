@@ -30,6 +30,8 @@ class CalendarController extends Controller
             ->whereBetween('activity_on', [$gridStart->toDateString(), $gridEnd->toDateString()])
             ->when($day !== '', fn ($query) => $query->whereDate('activity_on', $day))
             ->orderBy('activity_on')
+            ->orderByRaw('start_time is null desc')
+            ->orderBy('start_time')
             ->orderBy('id')
             ->get()
             ->map(fn (CalendarActivity $activity): array => [
@@ -40,6 +42,9 @@ class CalendarController extends Controller
                 'activity_type' => $activity->activity_type,
                 'color' => $activity->color,
                 'lead_id' => $activity->lead_id,
+                'start_time' => $activity->start_time,
+                'duration_minutes' => $activity->duration_minutes,
+                'location' => $activity->location,
                 'external_calendar_id' => $activity->external_calendar_id,
             ]);
 
@@ -76,6 +81,10 @@ class CalendarController extends Controller
             'type' => $google->activated() && ! ($push['ok'] ?? true) ? 'warning' : 'success',
             'message' => $message,
         ]);
+
+        if ($request->input('return_to') === 'back') {
+            return back();
+        }
 
         return redirect()->route('calendar.index', [
             'month' => substr($request->string('activity_on')->toString(), 0, 7),

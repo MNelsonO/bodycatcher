@@ -237,7 +237,7 @@ class FollowUpEngine
 
     private function execute(FollowUpTask $task, ?User $actor): void
     {
-        $task->load('lead.contact', 'lead.conversation', 'rule');
+        $task->load('lead.contact', 'lead.conversation', 'rule', 'scheduledBy');
         $lead = $task->lead;
 
         if ($lead->closed_at !== null) {
@@ -252,7 +252,16 @@ class FollowUpEngine
             return;
         }
 
-        $pause = $this->guard->pauseReason($lead);
+        // A message an operator wrote and scheduled is a manual send made
+        // later: it is sent word for word and skips the automation pauses.
+        // Opt-out and the messaging driver's own rules still apply.
+        $manual = $task->automation_rule_id === null && $task->scheduled_by_user_id !== null;
+
+        if ($manual) {
+            $actor = $task->scheduledBy ?? $actor;
+        }
+
+        $pause = $manual ? null : $this->guard->pauseReason($lead);
 
         if ($pause !== null) {
             $this->hold($task, $lead, $pause);
@@ -270,7 +279,7 @@ class FollowUpEngine
         $task->save();
 
         try {
-            $body = $this->composer->compose($task, $lead, $task->body);
+            $body = $manual ? $task->body : $this->composer->compose($task, $lead, $task->body);
 
             if ($body === null) {
                 $this->hold($task, $lead->fresh() ?? $lead, 'Waiting for operator input after AI escalation.');
@@ -282,7 +291,7 @@ class FollowUpEngine
                 $lead,
                 $body,
                 $actor,
-                MessageOrigin::Automatic,
+                $manual ? MessageOrigin::Manual : MessageOrigin::Automatic,
                 'follow-up-task-'.$task->id,
             );
         } catch (ValidationException $exception) {

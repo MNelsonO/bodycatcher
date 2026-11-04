@@ -4,6 +4,8 @@ import {
     ChartColumn,
     ChartPie,
     FileText,
+    Inbox,
+    Landmark,
     LayoutGrid,
     ListTodo,
     MessageCircle,
@@ -12,7 +14,6 @@ import {
     Sparkles,
     UserRound,
     Users,
-    Landmark,
     Wallet,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -30,11 +31,17 @@ import {
 import type { NavItem } from '@/types';
 
 export function AppSidebar() {
-    const { auth, displayTimezone } = usePage().props;
+    const { auth, displayTimezone, inboxUnread } = usePage().props;
     const owner = auth.user.role === 'owner';
 
     const mainNavItems: NavItem[] = [
         { title: 'Command centre', href: '/dashboard', icon: LayoutGrid },
+        {
+            title: 'Inbox',
+            href: '/inbox',
+            icon: Inbox,
+            badge: inboxUnread,
+        },
         { title: 'Leads', href: '/leads', icon: Rows3 },
         { title: 'Contacts', href: '/contacts', icon: UserRound },
         { title: 'Calendar', href: '/calendar', icon: CalendarDays },

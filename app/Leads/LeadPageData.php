@@ -171,6 +171,7 @@ class LeadPageData
                 ])->all(),
             ])->all() ?? [],
             'whatsapp' => $this->whatsapp($lead),
+            'conversation_id' => $lead->conversation?->id,
             'escalation' => $this->openEscalation($lead),
             'intelligence' => $this->intelligence($lead),
             'follow_ups' => $this->followUps($lead),
@@ -273,6 +274,10 @@ class LeadPageData
                     ? ': '.$properties['reason']
                     : ''),
             ActivityEvent::FollowUpCompleted => 'Follow-up marked done',
+            ActivityEvent::MessageScheduled => 'WhatsApp message scheduled'
+                .(isset($properties['due']) && is_string($properties['due'])
+                    ? ' for '.$properties['due']
+                    : ''),
             ActivityEvent::ChatFollowUpCaptured => 'Follow-up date captured from chat',
             ActivityEvent::EscalatedToOperator => 'AI paused — needs your input'
                 .(isset($properties['reason']) && is_string($properties['reason'])
@@ -321,7 +326,7 @@ class LeadPageData
     /**
      * @return array<string, mixed>
      */
-    private function whatsapp(Lead $lead): array
+    public function whatsapp(Lead $lead): array
     {
         $guard = app(MessagingGuard::class);
         $lastInbound = $this->window->lastInboundAt($lead->contact);
@@ -370,7 +375,7 @@ class LeadPageData
         foreach ($tasks as $task) {
             $rows[] = [
                 'id' => $task->id,
-                'rule' => $task->rule?->name,
+                'rule' => $task->rule->name ?? ($task->scheduled_by_user_id !== null ? 'Scheduled by hand' : null),
                 'action' => $task->action->value,
                 'body' => $task->body,
                 'status' => $task->status->value,
@@ -387,7 +392,7 @@ class LeadPageData
     /**
      * @return array<string, mixed>
      */
-    private function intelligence(Lead $lead): array
+    public function intelligence(Lead $lead): array
     {
         $configured = $this->llm->ready();
         $latest = LeadAnalysis::query()

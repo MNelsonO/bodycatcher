@@ -15,11 +15,7 @@ import {
 import type { ComponentType, ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
-import {
-    Page,
-    PageHeader,
-    surfaceClass,
-} from '@/components/crm/page-frame';
+import { Page, PageHeader, surfaceClass } from '@/components/crm/page-frame';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { Option } from '@/types/crm';
@@ -230,9 +226,7 @@ export default function IntelligenceSettings({
                                 {provider}
                             </Badge>
                             <Badge
-                                variant={
-                                    configured ? 'default' : 'destructive'
-                                }
+                                variant={configured ? 'default' : 'destructive'}
                             >
                                 {configured
                                     ? 'Provider ready'
@@ -271,7 +265,7 @@ export default function IntelligenceSettings({
                                 aria-selected={selected}
                                 aria-controls={`panel-${item.key}`}
                                 onClick={() => setTab(item.key)}
-                                className={`-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${
+                                className={`-mb-px inline-flex shrink-0 items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                                     selected
                                         ? 'border-primary text-foreground'
                                         : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -335,7 +329,7 @@ export default function IntelligenceSettings({
                                                     </Badge>
                                                 ) : null}
                                             </div>
-                                            <p className="mt-3 text-base font-medium leading-snug">
+                                            <p className="mt-3 text-base leading-snug font-medium">
                                                 {gap.contact_name ? (
                                                     <span className="text-muted-foreground">
                                                         {gap.contact_name}:{' '}
@@ -429,7 +423,7 @@ export default function IntelligenceSettings({
                                 className={card}
                                 open={articles.length === 0}
                             >
-                                <summary className="flex cursor-pointer select-none items-center gap-2 px-5 py-4 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                <summary className="flex cursor-pointer items-center gap-2 px-5 py-4 text-sm font-semibold outline-none select-none focus-visible:ring-2 focus-visible:ring-ring">
                                     <Plus className="size-4 text-primary" />
                                     Add a note
                                 </summary>
@@ -521,7 +515,9 @@ export default function IntelligenceSettings({
                                         <button
                                             key={value}
                                             type="button"
-                                            aria-pressed={statusFilter === value}
+                                            aria-pressed={
+                                                statusFilter === value
+                                            }
                                             onClick={() =>
                                                 setStatusFilter(value)
                                             }
@@ -592,7 +588,7 @@ export default function IntelligenceSettings({
 
                                         {can_manage ? (
                                             <details className="border-t border-border">
-                                                <summary className="cursor-pointer select-none px-5 py-3 text-sm font-medium text-primary outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                                <summary className="cursor-pointer px-5 py-3 text-sm font-medium text-primary outline-none select-none focus-visible:ring-2 focus-visible:ring-ring">
                                                     Edit note
                                                 </summary>
                                                 <Form
@@ -699,7 +695,7 @@ export default function IntelligenceSettings({
                                 className={card}
                                 open={auto_reply_rules.length === 0}
                             >
-                                <summary className="flex cursor-pointer select-none items-center gap-2 px-5 py-4 text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                                <summary className="flex cursor-pointer items-center gap-2 px-5 py-4 text-sm font-semibold outline-none select-none focus-visible:ring-2 focus-visible:ring-ring">
                                     <Plus className="size-4 text-primary" />
                                     Add a rule
                                 </summary>
@@ -759,9 +755,7 @@ export default function IntelligenceSettings({
                                                         label: stage.name,
                                                     })),
                                                 ]}
-                                                error={
-                                                    errors.pipeline_stage_id
-                                                }
+                                                error={errors.pipeline_stage_id}
                                             />
                                             <SelectField
                                                 name="reply_mode"
@@ -784,9 +778,7 @@ export default function IntelligenceSettings({
                                                     name="template_body"
                                                     label="Template body"
                                                     hint="Placeholders: {contact}, {business}, {message}"
-                                                    error={
-                                                        errors.template_body
-                                                    }
+                                                    error={errors.template_body}
                                                 />
                                             </div>
                                             <TextField
@@ -809,7 +801,10 @@ export default function IntelligenceSettings({
                                                 label="Require 24h window"
                                                 defaultValue="1"
                                                 options={[
-                                                    { value: '1', label: 'Yes' },
+                                                    {
+                                                        value: '1',
+                                                        label: 'Yes',
+                                                    },
                                                     { value: '0', label: 'No' },
                                                 ]}
                                                 error={
@@ -978,9 +973,8 @@ export default function IntelligenceSettings({
                                                     {run.status}
                                                 </Badge>
                                                 <span className="text-sm font-medium tabular-nums">
-                                                    {run.articles_created}{' '}
-                                                    notes ·{' '}
-                                                    {run.messages_scanned}{' '}
+                                                    {run.articles_created} notes
+                                                    · {run.messages_scanned}{' '}
                                                     messages
                                                 </span>
                                                 {run.completed_at ? (
@@ -994,7 +988,9 @@ export default function IntelligenceSettings({
                                             <p
                                                 className={`mt-1.5 text-sm ${failed ? 'text-destructive' : 'text-muted-foreground'}`}
                                             >
-                                                {run.summary ?? run.error ?? '—'}
+                                                {run.summary ??
+                                                    run.error ??
+                                                    '—'}
                                             </p>
                                         </li>
                                     );
@@ -1046,9 +1042,9 @@ export default function IntelligenceSettings({
                             ))}
                         </ul>
                         <p className="text-xs text-muted-foreground">
-                            LLM_BASE_URL is the OpenAI-compatible root, for
-                            example the provider&apos;s /v1 path. The desk posts
-                            to /chat/completions on that root.
+                            {provider === 'anthropic'
+                                ? 'Claude runs through the official Anthropic SDK. LLM_MODEL defaults to claude-opus-5-5 and LLM_EFFORT (low, medium, high) trades depth for cost.'
+                                : "LLM_BASE_URL is the OpenAI-compatible root, for example the provider's /v1 path. The desk posts to /chat/completions on that root. Set LLM_PROVIDER=anthropic to use Claude."}
                         </p>
                     </Panel>
                 ) : null}
