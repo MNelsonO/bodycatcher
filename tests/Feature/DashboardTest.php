@@ -2,8 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Contacts\Contact;
+use App\Conversations\Message;
+use App\Leads\Lead;
 use App\Models\User;
+use App\SalesPipelines\PipelineStage;
+use App\SalesPipelines\StageKind;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Inertia\Testing\AssertableInertia;
 use Tests\TestCase;
 
 class DashboardTest extends TestCase
@@ -48,28 +54,28 @@ class DashboardTest extends TestCase
 
     public function test_dashboard_filters_board_by_status_hot_and_timeline(): void
     {
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $desk = crmDesk();
         $this->actingAs($user);
 
-        $hot = \App\Contacts\Contact::factory()->create(['full_name' => 'Hot Buyer']);
-        $cold = \App\Contacts\Contact::factory()->create(['full_name' => 'Cold Lead']);
+        $hot = Contact::factory()->create(['full_name' => 'Hot Buyer']);
+        $cold = Contact::factory()->create(['full_name' => 'Cold Lead']);
 
-        $hotStage = \App\SalesPipelines\PipelineStage::query()
+        $hotStage = PipelineStage::query()
             ->where('pipeline_id', $desk['pipeline']->id)
             ->where('name', 'Proposal')
             ->first();
 
         if ($hotStage === null) {
-            $hotStage = \App\SalesPipelines\PipelineStage::factory()->create([
+            $hotStage = PipelineStage::factory()->create([
                 'pipeline_id' => $desk['pipeline']->id,
                 'name' => 'Proposal',
-                'kind' => \App\SalesPipelines\StageKind::Active,
+                'kind' => StageKind::Active,
                 'position' => 20,
             ]);
         }
 
-        \App\Leads\Lead::factory()->create([
+        Lead::factory()->create([
             'contact_id' => $hot->id,
             'product_id' => $desk['product']->id,
             'pipeline_id' => $desk['pipeline']->id,
@@ -77,7 +83,7 @@ class DashboardTest extends TestCase
             'business_problem' => 'Needs laundry OS this month',
         ]);
 
-        \App\Leads\Lead::factory()->create([
+        Lead::factory()->create([
             'contact_id' => $cold->id,
             'product_id' => $desk['product']->id,
             'pipeline_id' => $desk['pipeline']->id,
@@ -102,3 +108,22 @@ class DashboardTest extends TestCase
             );
     }
 }
+
+it('lists chats waiting on a reply, not ones already answered', function () {
+    $lead = whatsappOpenLead();
+    whatsappInbound($lead, now()->subMinutes(90));
+
+    $this->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page
+            ->has('waiting', 1)
+            ->where('waiting.0.contact_name', 'Amina Wanjiku'));
+
+    Message::query()->create([
+        'conversation_id' => $lead->conversation()->firstOrFail()->id,
+        'direction' => 'outbound', 'channel' => 'whatsapp', 'origin' => 'manual', 'status' => 'sent',
+        'body' => 'Replied', 'sent_at' => now()->subMinutes(5),
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertInertia(fn (AssertableInertia $page) => $page->has('waiting', 0));
+});

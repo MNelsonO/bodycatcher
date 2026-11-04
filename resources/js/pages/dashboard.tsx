@@ -125,7 +125,35 @@ function scoreClass(score: number | null | undefined): string {
 /* Page                                                                */
 /* ------------------------------------------------------------------ */
 
-export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
+type WaitingRow = {
+    id: number;
+    contact_name: string;
+    stage: string;
+    body: string;
+    waiting_for: string;
+    minutes: number;
+};
+
+type AgendaRow = {
+    id: number;
+    title: string;
+    time: string | null;
+    type: string;
+    location: string | null;
+    lead_id: number | null;
+};
+
+export default function Dashboard({
+    metrics,
+    waiting = [],
+    agenda = [],
+    whatsapp_link,
+}: {
+    metrics: DashboardMetrics;
+    waiting?: WaitingRow[];
+    agenda?: AgendaRow[];
+    whatsapp_link?: { driver: string; state: string };
+}) {
     const speak = speakToday(metrics);
     const BannerIcon = bannerIcon[speak.tone];
     const stageMax = Math.max(
@@ -163,8 +191,19 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                 {/* Header ---------------------------------------------------- */}
                 <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                     <div>
-                        <p className="text-sm font-medium text-primary">
+                        <p className="flex flex-wrap items-center gap-2 text-sm font-medium text-primary">
                             {metrics.today} · {metrics.timezone}
+                            {whatsapp_link &&
+                            whatsapp_link.driver === 'evolution' ? (
+                                <Link
+                                    href="/whatsapp"
+                                    className={`rounded-full px-2 py-0.5 text-xs font-semibold ${whatsapp_link.state === 'open' ? 'bg-secondary text-secondary-foreground' : 'bg-destructive text-white hover:text-white'}`}
+                                >
+                                    {whatsapp_link.state === 'open'
+                                        ? 'WhatsApp linked'
+                                        : 'WhatsApp not linked — fix'}
+                                </Link>
+                            ) : null}
                         </p>
                         <h1 className="mt-1 text-3xl font-semibold tracking-tight text-foreground">
                             Command centre
@@ -262,6 +301,119 @@ export default function Dashboard({ metrics }: { metrics: DashboardMetrics }) {
                         )}
                         icon={Wallet}
                     />
+                </section>
+
+                {/* Waiting on you + Today ----------------------------------- */}
+                <section className="grid gap-6 xl:grid-cols-12">
+                    <div className={`${surfaceClass} xl:col-span-7`}>
+                        <SectionTitle
+                            title="Waiting on you"
+                            hint="Clients who wrote last and have no reply yet, longest wait first."
+                            badge={
+                                waiting.length > 0
+                                    ? String(waiting.length)
+                                    : undefined
+                            }
+                            action={
+                                <Button variant="ghost" size="sm" asChild>
+                                    <Link href="/inbox">Inbox</Link>
+                                </Button>
+                            }
+                        />
+                        {waiting.length === 0 ? (
+                            <EmptyState
+                                icon={CheckCircle2}
+                                title="Everyone has a reply"
+                                body="No client is waiting on you from the last 7 days."
+                            />
+                        ) : (
+                            <ul className="divide-y divide-border">
+                                {waiting.map((row) => (
+                                    <li key={row.id}>
+                                        <Link
+                                            href={`/inbox/${row.id}`}
+                                            className="flex items-start gap-3 px-5 py-3 text-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                                        >
+                                            <span
+                                                className={`mt-1.5 size-2 shrink-0 rounded-full ${row.minutes >= 240 ? 'bg-destructive' : row.minutes >= 60 ? 'bg-cta' : 'bg-primary'}`}
+                                            />
+                                            <span className="min-w-0 flex-1">
+                                                <span className="flex items-baseline justify-between gap-3">
+                                                    <span className="truncate font-medium">
+                                                        {row.contact_name}
+                                                    </span>
+                                                    <span
+                                                        className={`shrink-0 text-xs tabular-nums ${row.minutes >= 240 ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}
+                                                    >
+                                                        {row.waiting_for}
+                                                    </span>
+                                                </span>
+                                                <span className="line-clamp-1 text-sm text-muted-foreground">
+                                                    {row.body}
+                                                </span>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {row.stage}
+                                                </span>
+                                            </span>
+                                        </Link>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
+
+                    <div
+                        className={`${surfaceClass} flex flex-col xl:col-span-5`}
+                    >
+                        <SectionTitle
+                            title="Today"
+                            hint="Your calendar for today."
+                            action={
+                                <Button variant="ghost" size="sm" asChild>
+                                    <Link href="/calendar">Calendar</Link>
+                                </Button>
+                            }
+                        />
+                        {agenda.length === 0 ? (
+                            <EmptyState
+                                icon={CalendarDays}
+                                title="Nothing booked today"
+                                body="Book calls and visits from a chat or the calendar."
+                            />
+                        ) : (
+                            <ul className="divide-y divide-border">
+                                {agenda.map((item) => (
+                                    <li
+                                        key={item.id}
+                                        className="flex items-start gap-3 px-5 py-3"
+                                    >
+                                        <span className="w-12 shrink-0 text-sm font-semibold text-primary tabular-nums">
+                                            {item.time ?? 'All day'}
+                                        </span>
+                                        <span className="min-w-0">
+                                            <span className="block truncate text-sm font-medium">
+                                                {item.title}
+                                            </span>
+                                            <span className="block truncate text-xs text-muted-foreground capitalize">
+                                                {item.type}
+                                                {item.location
+                                                    ? ` · ${item.location}`
+                                                    : ''}
+                                            </span>
+                                        </span>
+                                        {item.lead_id ? (
+                                            <Link
+                                                href={`/leads/${item.lead_id}`}
+                                                className="ml-auto shrink-0 text-xs"
+                                            >
+                                                Lead
+                                            </Link>
+                                        ) : null}
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </div>
                 </section>
 
                 {/* Work now + Pipeline --------------------------------------- */}
