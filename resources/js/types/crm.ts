@@ -396,6 +396,7 @@ export type InboxRow = {
     outcome: string;
     needs_attention: boolean;
     opted_out: boolean;
+    labels: WhatsAppLabelChip[];
     unread_count: number;
     last_message: null | {
         body: string;
@@ -436,6 +437,7 @@ export type InboxThread = {
         email: string | null;
         location: string | null;
         consent_status: string;
+        labels: WhatsAppLabelChip[];
     };
     lead: {
         id: number;
@@ -470,3 +472,5 @@ export type InboxThread = {
     }>;
     messages: ThreadMessage[];
 };
+
+export type WhatsAppLabelChip = { name: string; color: string };

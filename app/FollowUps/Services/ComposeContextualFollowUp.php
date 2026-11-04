@@ -124,7 +124,19 @@ PROMPT;
 
         $reply = $parsed['reply'] !== '' ? $parsed['reply'] : $fallback;
 
-        return mb_substr($reply, 0, 1500);
+        if ($this->playbook->fitForWhatsApp($reply) === null) {
+            $this->escalate->handle(
+                $lead,
+                'The follow-up draft was too long or busy to send automatically. Please review it.',
+                'follow_up',
+                null,
+                $reply,
+            );
+
+            return null;
+        }
+
+        return $reply;
     }
 
     private function shouldUseMemory(?AutomationRule $rule): bool

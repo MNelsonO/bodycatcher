@@ -12,6 +12,7 @@ use App\FollowUps\FollowUpTask;
 use App\FollowUps\FollowUpTaskStatus;
 use App\Leads\LeadPageData;
 use App\Settings\DisplayClock;
+use App\WhatsApp\Labels\WhatsAppLabel;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -167,6 +168,7 @@ class InboxData
                 'email' => $contact->email,
                 'location' => $contact->location,
                 'consent_status' => $contact->consent_status->value,
+                'labels' => $this->labelsFor($contact->id),
             ],
             'lead' => [
                 'id' => $lead->id,
@@ -215,6 +217,21 @@ class InboxData
     }
 
     /**
+     * @return list<array{name: string, color: string}>
+     */
+    public function labelsFor(int $contactId): array
+    {
+        return WhatsAppLabel::query()
+            ->whereIn('label_id', DB::table('contact_whatsapp_label')->where('contact_id', $contactId)->pluck('label_id'))
+            ->where('deleted', false)
+            ->orderBy('name')
+            ->get()
+            ->map(fn (WhatsAppLabel $label): array => ['name' => $label->name, 'color' => $label->hex()])
+            ->values()
+            ->all();
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function row(Conversation $conversation): array
@@ -233,6 +250,7 @@ class InboxData
             'stage' => $lead->currentStage->name,
             'outcome' => $lead->outcome(),
             'needs_attention' => $lead->needs_personal_attention || $lead->taken_over,
+            'labels' => $this->labelsFor($contact->id),
             'opted_out' => $contact->consent_status->value === 'opted_out',
             'unread_count' => (int) $conversation->getAttribute('unread_count'),
             'last_message' => $latest === null ? null : [

@@ -145,6 +145,7 @@ class ConditionalAutoReply
             return null;
         }
 
-        return trim($response) !== '' ? trim($response) : null;
+        // Anything long or busy is not sent automatically.
+        return $this->playbook->fitForWhatsApp($response);
     }
 }

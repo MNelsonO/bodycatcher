@@ -274,6 +274,9 @@ class LeadPageData
                     ? ': '.$properties['reason']
                     : ''),
             ActivityEvent::FollowUpCompleted => 'Follow-up marked done',
+            ActivityEvent::WhatsAppLabelChanged => is_string($properties['label'] ?? null)
+                ? $properties['label']
+                : 'WhatsApp label changed',
             ActivityEvent::ChatImported => 'WhatsApp chat history imported'
                 .(isset($properties['imported']) && is_numeric($properties['imported'])
                     ? ': '.$properties['imported'].' messages'

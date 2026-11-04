@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\WhatsApp\Labels\LabelSync;
 use App\WhatsApp\Services\InboundPayloadNormalizer;
 use App\WhatsApp\WebhookDispatcher;
 use App\WhatsApp\WebhookEvent;
@@ -18,6 +19,7 @@ class EvolutionWebhookController extends Controller
         string $token,
         InboundPayloadNormalizer $normalizer,
         WebhookDispatcher $dispatcher,
+        LabelSync $labels,
     ): Response {
         $expected = (string) config('whatsapp.evolution.webhook_token');
 
@@ -49,6 +51,13 @@ class EvolutionWebhookController extends Controller
             return response('OK', 200);
         }
 
+        if ($event === 'labels.edit' || $event === 'labels.association') {
+            Cache::put('evolution.last_label_payload', mb_substr((string) json_encode($payload), 0, 4000), now()->addDay());
+            $this->labels($event, $payload, $labels);
+
+            return response('OK', 200);
+        }
+
         $normalized = $normalizer->fromEvolution($payload);
 
         if ($normalized === null) {
@@ -74,5 +83,33 @@ class EvolutionWebhookController extends Controller
         }
 
         return response('OK', 200);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function labels(string $event, array $payload, LabelSync $labels): void
+    {
+        $data = $payload['data'] ?? null;
+        $items = is_array($data) && array_is_list($data) ? $data : [$data];
+
+        foreach ($items as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            if ($event === 'labels.edit') {
+                $labels->upsertLabel($item);
+
+                continue;
+            }
+
+            $association = is_array($item['association'] ?? null) ? $item['association'] : $item;
+            $chat = (string) ($association['chatId'] ?? $association['chat_id'] ?? $association['remoteJid'] ?? '');
+            $labelId = (string) ($association['labelId'] ?? $association['label_id'] ?? $item['labelId'] ?? '');
+            $type = mb_strtolower((string) ($item['type'] ?? $association['type'] ?? 'add'));
+
+            $labels->associate($chat, $labelId, $type !== 'remove');
+        }
     }
 }

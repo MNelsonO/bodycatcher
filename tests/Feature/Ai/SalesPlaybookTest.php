@@ -43,3 +43,13 @@ it('sends the playbook and a labelled two-sided transcript to the model when rea
         ->and($call['user'])->toContain('Client: Can you visit the shop on Saturday?')
         ->toContain('Us: Yes, Saturday at 10am works.');
 });
+
+it('only lets short, focused replies go out automatically', function () {
+    $playbook = app(SalesPlaybook::class);
+
+    expect($playbook->fitForWhatsApp('Sawa Amina! Saturday at 10am works. Want me to send the POS page? https://kemettech.com/products/pos'))->not->toBeNull()
+        ->and($playbook->fitForWhatsApp(str_repeat('This is a very long reply that goes on and on. ', 20)))->toBeNull()
+        ->and($playbook->fitForWhatsApp('Which branch? How many tills? When? Who decides?'))->toBeNull()
+        ->and($playbook->fitForWhatsApp('See https://kemettech.com and https://kemettech.com/purchase'))->toBeNull()
+        ->and($playbook->block())->toContain('Stay on topic')->toContain('never restart');
+});

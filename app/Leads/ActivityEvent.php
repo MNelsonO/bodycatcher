@@ -35,4 +35,5 @@ enum ActivityEvent: string
     case FollowUpCompleted = 'follow_up_completed';
     case MessageScheduled = 'message_scheduled';
     case ChatImported = 'chat_imported';
+    case WhatsAppLabelChanged = 'whatsapp_label_changed';
 }

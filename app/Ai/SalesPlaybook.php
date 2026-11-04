@@ -54,6 +54,12 @@ How to sell on WhatsApp (read the WHOLE chat — both what the client said and w
 8. Include the relevant kemettech.com link when you mention a product, a price, a demo or buying — the website is where they learn more and act.
 9. Never repeat a message we already sent; continue from where the chat actually is. If they went quiet, follow up with something useful (a benefit, a case, a question), not "just checking in".
 10. Short, warm, natural Kenyan business English (Swahili words are fine if they use them). No markdown, no lists, no "As an AI".
+
+Conversation rules (these override everything above):
+- Before writing, work out from the chat: what they asked last, what we already answered or promised, which links we already sent, and where they are in buying. Answer THAT, continuing the thread; never restart, re-introduce Kemet, or resend a link already sent in the last few messages.
+- Stay on topic: this person, their business, and Kemet's systems and websites. If they go off topic (personal, politics, other companies' support, general tech help), reply with one friendly line that brings it back, or escalate. Never answer outside Kemet's offer.
+- Sound like a person texting: match their length and tone, 1-3 short sentences, about 60 words at most, one question at most, one link at most. Use their name only occasionally.
+- If the facts here or in the chat do not cover what they asked, say you will confirm, or escalate. Never guess.
 TEXT;
     }
 
@@ -73,5 +79,28 @@ TEXT;
         }
 
         return null;
+    }
+
+    /**
+     * A reply fit to send on WhatsApp without a person checking it: short,
+     * one question, one link. Anything else goes to the desk as a draft.
+     */
+    public function fitForWhatsApp(string $reply): ?string
+    {
+        $reply = trim(preg_replace("/[ \t]+/", ' ', $reply) ?? $reply);
+
+        if ($reply === '') {
+            return null;
+        }
+
+        $words = str_word_count(strip_tags($reply));
+        $questions = substr_count($reply, '?');
+        $links = preg_match_all('#https?://#i', $reply);
+
+        if (mb_strlen($reply) > 480 || $words > 80 || $questions > 2 || $links > 1) {
+            return null;
+        }
+
+        return $reply;
     }
 }

@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Http;
  */
 class EvolutionGateway
 {
-    public const EVENTS = ['MESSAGES_UPSERT', 'MESSAGES_SET', 'SEND_MESSAGE', 'CONNECTION_UPDATE', 'QRCODE_UPDATED'];
+    public const EVENTS = ['MESSAGES_UPSERT', 'MESSAGES_SET', 'SEND_MESSAGE', 'CONNECTION_UPDATE', 'QRCODE_UPDATED', 'LABELS_EDIT', 'LABELS_ASSOCIATION'];
 
     public function configured(): bool
     {

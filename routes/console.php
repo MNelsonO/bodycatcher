@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('follow-ups:run')->everyMinute()->withoutOverlapping();
 Schedule::command('whatsapp:gateway-watch')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('whatsapp:labels-reapply')->everyFifteenMinutes()->withoutOverlapping();

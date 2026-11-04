@@ -213,6 +213,19 @@ PROMPT;
             return;
         }
 
+        // Too long, too many questions or links: a person checks it first.
+        if ($this->playbook->fitForWhatsApp($reply) === null) {
+            $this->escalate->handle(
+                $lead,
+                'The drafted reply was too long or busy to send automatically. Please review it.',
+                'live_assistant',
+                $body,
+                $reply,
+            );
+
+            return;
+        }
+
         if ($parsed['topic'] !== '') {
             $conversation->topic = mb_substr($parsed['topic'], 0, 160);
         }

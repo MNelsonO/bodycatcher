@@ -41,6 +41,17 @@ return [
         'manual_burst_per_10_minutes' => (int) env('WHATSAPP_MANUAL_BURST_PER_10_MIN', 40),
     ],
 
+    /*
+    | What a WhatsApp Business label does in the desk. Labels are matched by
+    | name (case-insensitive, partial). Stage moves only happen when the
+    | pipeline permits that move; otherwise the label is just recorded.
+    */
+    'label_rules' => [
+        ['match' => ['follow up', 'follow-up', 'followup', 'call back'], 'action' => 'follow_up'],
+        ['match' => ['order complete', 'completed', 'paid', 'won', 'closed deal'], 'action' => 'won'],
+        ['match' => ['lost', 'not interested', 'dead'], 'action' => 'lost'],
+    ],
+
     'evolution' => [
         'base_url' => env('EVOLUTION_BASE_URL', 'http://127.0.0.1:8080'),
         'api_key' => env('EVOLUTION_API_KEY', ''),

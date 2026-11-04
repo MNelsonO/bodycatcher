@@ -330,6 +330,7 @@ function ConversationRow({
                                 aria-label="Needs attention"
                             />
                         ) : null}
+                        <LabelChips labels={row.labels ?? []} />
                         {row.opted_out ? (
                             <span className="text-destructive">Opted out</span>
                         ) : null}
@@ -405,6 +406,10 @@ function ThreadView({
                         {' · '}
                         {thread.lead.product} · {thread.lead.stage}
                     </p>
+                    <LabelChips
+                        labels={thread.contact.labels ?? []}
+                        className="mt-0.5"
+                    />
                 </div>
                 <WindowBadge thread={thread} />
                 <ImportChatDialog
@@ -1955,5 +1960,35 @@ function ImportChatDialog({
                 </DialogFooter>
             </DialogContent>
         </Dialog>
+    );
+}
+
+function LabelChips({
+    labels,
+    className,
+}: {
+    labels: Array<{ name: string; color: string }>;
+    className?: string;
+}) {
+    if (labels.length === 0) {
+        return null;
+    }
+
+    return (
+        <span className={cn('flex flex-wrap gap-1', className)}>
+            {labels.map((label) => (
+                <span
+                    key={label.name}
+                    className="inline-flex items-center gap-1 rounded-full border px-1.5 py-px text-[10px] font-medium"
+                    title="WhatsApp label"
+                >
+                    <span
+                        className="size-1.5 rounded-full"
+                        style={{ backgroundColor: label.color }}
+                    />
+                    {label.name}
+                </span>
+            ))}
+        </span>
     );
 }
