@@ -76,7 +76,7 @@ class IntegrationConfigResolver
 
         $driver = DeskSetting::query()->value('messaging_driver');
 
-        if (is_string($driver) && in_array($driver, ['meta', 'flaresend', 'twilio'], true)) {
+        if (is_string($driver) && in_array($driver, ['meta', 'flaresend', 'twilio', 'evolution'], true)) {
             config(['whatsapp.driver' => $driver]);
         }
     }

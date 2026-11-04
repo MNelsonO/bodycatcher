@@ -1,4 +1,5 @@
 import { Form, Head } from '@inertiajs/react';
+import { useCallback, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { SelectField } from '@/components/crm/fields';
 import {
@@ -58,6 +59,7 @@ export default function WhatsAppSettings({
     products,
     opt_out_keywords,
     can_manage,
+    gateway,
 }: {
     driver: string;
     variables: Variable[];
@@ -70,6 +72,7 @@ export default function WhatsAppSettings({
     products: ProductOption[];
     opt_out_keywords: string[];
     can_manage: boolean;
+    gateway: { configured: boolean; active: boolean };
 }) {
     return (
         <>
@@ -90,6 +93,8 @@ export default function WhatsAppSettings({
                         </>
                     }
                 />
+
+                <GatewayPanel gateway={gateway} canManage={can_manage} />
 
                 <Panel title="Configuration">
                     <ul className="divide-y divide-border">
@@ -284,3 +289,206 @@ export default function WhatsAppSettings({
 WhatsAppSettings.layout = {
     breadcrumbs: [{ title: 'WhatsApp', href: '/whatsapp' }],
 };
+
+type GatewayStatus = {
+    configured: boolean;
+    state: string;
+    active: boolean;
+    qr: string | null;
+};
+
+const STATE_LABEL: Record<string, string> = {
+    open: 'Linked',
+    connecting: 'Waiting for scan',
+    close: 'Not linked',
+    missing: 'Not linked',
+    offline: 'Gateway offline',
+    unconfigured: 'Not installed',
+};
+
+function gatewayXsrf(): string {
+    const match = document.cookie
+        .split('; ')
+        .find((part) => part.startsWith('XSRF-TOKEN='));
+
+    return match ? decodeURIComponent(match.split('=')[1]) : '';
+}
+
+function GatewayPanel({
+    gateway,
+    canManage,
+}: {
+    gateway: { configured: boolean; active: boolean };
+    canManage: boolean;
+}) {
+    const [status, setStatus] = useState<GatewayStatus | null>(null);
+    const [qr, setQr] = useState<string | null>(null);
+    const [pairing, setPairing] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [busy, setBusy] = useState(false);
+
+    const refresh = useCallback(async () => {
+        try {
+            const response = await fetch('/whatsapp/gateway', {
+                headers: { Accept: 'application/json' },
+                credentials: 'same-origin',
+            });
+            const json = (await response.json()) as GatewayStatus;
+            setStatus(json);
+
+            if (json.state === 'open') {
+                setQr(null);
+                setPairing(null);
+            } else if (json.qr) {
+                setQr(json.qr);
+            }
+        } catch {
+            setStatus(null);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!gateway.configured) {
+            return;
+        }
+
+        void refresh();
+        const timer = setInterval(() => void refresh(), qr ? 3000 : 15000);
+
+        return () => clearInterval(timer);
+    }, [refresh, qr, gateway.configured]);
+
+    const connect = async () => {
+        setBusy(true);
+        setError(null);
+
+        try {
+            const response = await fetch('/whatsapp/gateway/connect', {
+                method: 'POST',
+                headers: {
+                    Accept: 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-XSRF-TOKEN': gatewayXsrf(),
+                },
+                credentials: 'same-origin',
+            });
+            const json = await response.json();
+
+            if (!response.ok) {
+                setError(json?.message ?? 'Could not reach the gateway.');
+            } else {
+                setQr(json.qr ?? null);
+                setPairing(json.pairing_code ?? null);
+                void refresh();
+            }
+        } catch {
+            setError('Could not reach the gateway.');
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const state =
+        status?.state ?? (gateway.configured ? 'close' : 'unconfigured');
+    const linked = state === 'open';
+
+    return (
+        <Surface>
+            <SurfaceHeader
+                title="Your WhatsApp gateway"
+                description="Self-hosted on this server. It captures both sides of every chat, including replies you send from your phone, and fills in recent history for people already in the desk."
+                badge={
+                    <Badge variant={linked ? 'default' : 'outline'}>
+                        {STATE_LABEL[state] ?? state}
+                    </Badge>
+                }
+            />
+            <SurfaceBody className="grid gap-4 text-sm">
+                {state === 'unconfigured' ? (
+                    <p className="text-muted-foreground">
+                        The gateway is not installed on the server yet.
+                    </p>
+                ) : linked ? (
+                    <div className="grid gap-3">
+                        <p>
+                            Your phone is linked. New messages, yours and your
+                            clients&apos;, arrive here automatically.
+                        </p>
+                        {gateway.active || status?.active ? (
+                            <p className="text-muted-foreground">
+                                The desk sends through this gateway.
+                            </p>
+                        ) : canManage ? (
+                            <Form
+                                action="/whatsapp/gateway/activate"
+                                method="post"
+                            >
+                                {({ processing }) => (
+                                    <Button type="submit" disabled={processing}>
+                                        Send through this gateway
+                                    </Button>
+                                )}
+                            </Form>
+                        ) : null}
+                    </div>
+                ) : (
+                    <div className="grid gap-4">
+                        <ol className="grid gap-1 text-muted-foreground">
+                            <li>1. Click Show QR code.</li>
+                            <li>
+                                2. On your phone open WhatsApp → Settings →
+                                Linked devices → Link a device.
+                            </li>
+                            <li>
+                                3. Scan the code. This page updates by itself.
+                            </li>
+                        </ol>
+                        {qr ? (
+                            <div className="flex flex-col items-start gap-2">
+                                <img
+                                    src={qr}
+                                    alt="WhatsApp link QR code"
+                                    className="size-64 rounded-lg border bg-white p-2"
+                                />
+                                {pairing ? (
+                                    <p className="text-xs text-muted-foreground">
+                                        Or link with a code:{' '}
+                                        <span className="font-mono font-semibold text-foreground">
+                                            {pairing}
+                                        </span>
+                                    </p>
+                                ) : null}
+                                <p className="text-xs text-muted-foreground">
+                                    Codes expire quickly; click again for a new
+                                    one.
+                                </p>
+                            </div>
+                        ) : null}
+                        {canManage ? (
+                            <div>
+                                <Button
+                                    type="button"
+                                    onClick={() => void connect()}
+                                    disabled={busy}
+                                >
+                                    {busy
+                                        ? 'Loading…'
+                                        : qr
+                                          ? 'New QR code'
+                                          : 'Show QR code'}
+                                </Button>
+                            </div>
+                        ) : (
+                            <p className="text-muted-foreground">
+                                Ask the desk owner to link WhatsApp.
+                            </p>
+                        )}
+                        {error ? (
+                            <p className="text-destructive">{error}</p>
+                        ) : null}
+                    </div>
+                )}
+            </SurfaceBody>
+        </Surface>
+    );
+}

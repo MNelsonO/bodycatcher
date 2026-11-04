@@ -137,6 +137,12 @@ class InboundWhatsAppProcessor
             return;
         }
 
+        if (($message['kemet_history'] ?? false) === true) {
+            $this->ingestHistoryMessage($message, $providerId, $from);
+
+            return;
+        }
+
         if (($message['kemet_outbound'] ?? false) === true) {
             $this->ingestOwnerMessage($message, $providerId, $from);
 
@@ -202,6 +208,66 @@ class InboundWhatsAppProcessor
         }
 
         $lead->touch();
+    }
+
+    /**
+     * A message from the history WhatsApp syncs when the phone is linked.
+     * Only chats with people already in the desk are filled in; nothing is
+     * created, sent or triggered, and history never shows as unread.
+     *
+     * @param  array<string, mixed>  $message
+     */
+    private function ingestHistoryMessage(array $message, string $providerId, string $chat): void
+    {
+        $lead = $this->resolver->existing($chat);
+
+        if ($lead === null) {
+            return;
+        }
+
+        $outbound = ($message['kemet_outbound'] ?? false) === true;
+        $type = is_string($message['type'] ?? null) ? $message['type'] : 'unknown';
+        $parsed = $this->content($message, $type);
+        $timestamp = $message['timestamp'] ?? null;
+        $sentAt = is_numeric($timestamp) ? Carbon::createFromTimestamp((int) $timestamp) : now();
+        $conversation = $lead->conversation ?? Conversation::query()->create([
+            'lead_id' => $lead->id,
+            'contact_id' => $lead->contact_id,
+        ]);
+        $direction = $outbound ? MessageDirection::Outbound : MessageDirection::Inbound;
+
+        // Already here from a webhook or a chat-export import.
+        $known = Message::query()
+            ->where('conversation_id', $conversation->id)
+            ->where('direction', $direction->value)
+            ->where('body', $parsed['body'])
+            ->whereBetween('sent_at', [$sentAt->copy()->subMinutes(2), $sentAt->copy()->addMinutes(2)])
+            ->exists();
+
+        if ($known) {
+            return;
+        }
+
+        Message::query()->create([
+            'conversation_id' => $conversation->id,
+            'direction' => $direction,
+            'channel' => MessageChannel::WhatsApp,
+            'origin' => $outbound ? MessageOrigin::Manual : MessageOrigin::Inbound,
+            'status' => $outbound ? MessageStatus::Sent : MessageStatus::Received,
+            'body' => $parsed['body'],
+            'sent_at' => $sentAt,
+            'logged_by_user_id' => null,
+            'provider_message_id' => $providerId,
+            'retryable' => false,
+            'send_attempts' => 0,
+        ]);
+
+        $conversation->refresh();
+
+        if ($conversation->last_read_at === null || $conversation->last_read_at->lessThan($sentAt)) {
+            $conversation->last_read_at = $sentAt;
+            $conversation->saveQuietly();
+        }
     }
 
     /**

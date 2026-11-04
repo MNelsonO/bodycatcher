@@ -5,6 +5,7 @@ namespace App\WhatsApp\Services;
 use App\Contacts\ConsentStatus;
 use App\Contacts\Contact;
 use App\Contacts\ContactPhone;
+use App\Contacts\InvalidPhoneNumber;
 use App\Contacts\PhoneNormalizer;
 use App\Contacts\PreferredChannel;
 use App\Conversations\Conversation;
@@ -45,6 +46,30 @@ class InboundConversationResolver
         }
 
         return $this->openLead($contact);
+    }
+
+    /**
+     * The lead for a number that is already a desk contact, without creating
+     * anything: the open lead if there is one, otherwise the latest.
+     */
+    public function existing(string $waId): ?Lead
+    {
+        try {
+            $phone = $this->phones->normalize($waId);
+        } catch (InvalidPhoneNumber) {
+            return null;
+        }
+
+        $match = ContactPhone::query()->where('phone', $phone)->first();
+
+        if ($match === null) {
+            return null;
+        }
+
+        $contact = $match->contact->survivor();
+
+        return $contact->leads()->open()->orderByDesc('updated_at')->first()
+            ?? $contact->leads()->orderByDesc('updated_at')->first();
     }
 
     private function contact(string $phone, string $name): Contact

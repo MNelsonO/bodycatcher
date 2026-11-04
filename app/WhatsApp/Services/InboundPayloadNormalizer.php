@@ -124,6 +124,130 @@ class InboundPayloadNormalizer
     }
 
     /**
+     * Evolution API (Baileys). "messages.upsert" is a live message, sent or
+     * received; "messages.set" is the history synced when the phone links.
+     * Groups, status updates and channels are ignored.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>|null
+     */
+    public function fromEvolution(array $payload): ?array
+    {
+        $event = mb_strtolower(str_replace('_', '.', (string) ($payload['event'] ?? '')));
+        $data = $payload['data'] ?? null;
+
+        if (! is_array($data)) {
+            return null;
+        }
+
+        $history = $event === 'messages.set';
+
+        if (! in_array($event, ['messages.upsert', 'messages.set', 'send.message'], true)) {
+            return null;
+        }
+
+        $items = $history ? ($data['messages'] ?? $data) : (array_is_list($data) ? $data : [$data]);
+        $messages = [];
+        $profiles = [];
+
+        foreach (is_array($items) ? $items : [] as $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $key = is_array($item['key'] ?? null) ? $item['key'] : [];
+            $jid = $this->evolutionChatJid($key, $item);
+
+            if ($jid === null) {
+                continue;
+            }
+
+            $id = is_string($key['id'] ?? null) ? $key['id'] : '';
+            $message = is_array($item['message'] ?? null) ? $item['message'] : [];
+            $text = $this->textFrom($message, $item);
+            $type = $text !== '' ? 'text' : 'unknown';
+
+            if ($id === '' || ($text === '' && $message === [])) {
+                continue;
+            }
+
+            if ($text === '') {
+                $text = '[media]';
+                $type = 'text';
+            }
+
+            $fromMe = ($key['fromMe'] ?? false) === true || $event === 'send.message';
+            $timestamp = $this->timestamp($item['messageTimestamp'] ?? null);
+            $row = ['from' => $jid, 'id' => $id, 'timestamp' => (string) $timestamp, 'type' => $type, 'text' => ['body' => $text]];
+
+            if ($fromMe) {
+                $row['kemet_outbound'] = true;
+            } else {
+                $name = $this->cleanName((string) ($item['pushName'] ?? ''));
+
+                if ($name !== null) {
+                    $profiles[$jid] = ['profile' => ['name' => $name], 'wa_id' => $jid];
+                }
+            }
+
+            if ($history) {
+                $row['kemet_history'] = true;
+            }
+
+            $messages[] = $row;
+        }
+
+        if ($messages === []) {
+            return null;
+        }
+
+        return $this->withRaw([
+            'object' => 'whatsapp_business_account',
+            'provider' => 'evolution',
+            'entry' => [[
+                'id' => 'INBOUND',
+                'changes' => [[
+                    'field' => 'messages',
+                    'value' => [
+                        'messaging_product' => 'whatsapp',
+                        'contacts' => array_values($profiles),
+                        'messages' => $messages,
+                    ],
+                ]],
+            ]],
+        ], $history ? ['event' => $payload['event'] ?? null, 'count' => count($messages)] : $payload);
+    }
+
+    /**
+     * The chat partner's number. Newer WhatsApp ids are privacy "@lid" ids;
+     * prefer the phone-number id when Baileys provides it.
+     *
+     * @param  array<string, mixed>  $key
+     * @param  array<string, mixed>  $item
+     */
+    private function evolutionChatJid(array $key, array $item): ?string
+    {
+        $remote = (string) ($key['remoteJid'] ?? '');
+
+        if ($remote === '' || str_ends_with($remote, '@g.us') || str_starts_with($remote, 'status@') || str_ends_with($remote, '@newsletter') || str_ends_with($remote, '@broadcast')) {
+            return null;
+        }
+
+        if (str_ends_with($remote, '@lid')) {
+            foreach ([$key['remoteJidAlt'] ?? null, $key['senderPn'] ?? null, $item['senderPn'] ?? null] as $alt) {
+                if (is_string($alt) && str_contains($alt, '@s.whatsapp.net')) {
+                    $remote = $alt;
+                    break;
+                }
+            }
+        }
+
+        $digits = $this->digits($this->jid($remote));
+
+        return $digits !== '' ? $digits : null;
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      * @return array<string, mixed>
      */

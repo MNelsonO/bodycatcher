@@ -7,14 +7,18 @@ use App\Http\Requests\WhatsAppSettingsRequest;
 use App\Models\User;
 use App\Settings\Product;
 use App\WhatsApp\DeskSetting;
+use App\WhatsApp\EvolutionGateway;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class WhatsAppSettingsController extends Controller
 {
-    public function index(Request $request, LlmConfiguration $llm): Response
+    public function index(Request $request, LlmConfiguration $llm, EvolutionGateway $gateway): Response
     {
         $this->authorize('view', DeskSetting::class);
 
@@ -42,7 +46,57 @@ class WhatsAppSettingsController extends Controller
                 ->get(['id', 'name']),
             'opt_out_keywords' => config('whatsapp.opt_out_keywords'),
             'can_manage' => $user instanceof User && $user->isOwner(),
+            'gateway' => [
+                'configured' => $gateway->configured(),
+                'active' => $driver === 'evolution',
+            ],
         ]);
+    }
+
+    public function gatewayStatus(EvolutionGateway $gateway): JsonResponse
+    {
+        $this->authorize('view', DeskSetting::class);
+
+        return response()->json([
+            'configured' => $gateway->configured(),
+            'state' => $gateway->state(),
+            'active' => config('whatsapp.driver') === 'evolution',
+            'qr' => Cache::get('evolution.qr'),
+        ]);
+    }
+
+    public function gatewayConnect(EvolutionGateway $gateway): JsonResponse
+    {
+        $this->authorize('update', DeskSetting::class);
+
+        if (! $gateway->configured()) {
+            return response()->json(['message' => 'The gateway is not installed on the server yet.'], 422);
+        }
+
+        try {
+            return response()->json($gateway->connect());
+        } catch (ConnectionException) {
+            return response()->json(['message' => 'The gateway on the server is not responding.'], 503);
+        }
+    }
+
+    public function gatewayActivate(EvolutionGateway $gateway): RedirectResponse
+    {
+        $this->authorize('update', DeskSetting::class);
+
+        if ($gateway->state() !== 'open') {
+            Inertia::flash('toast', ['type' => 'error', 'message' => 'Link your phone first by scanning the QR code.']);
+
+            return redirect()->route('whatsapp.settings');
+        }
+
+        $settings = DeskSetting::current();
+        $settings->messaging_driver = 'evolution';
+        $settings->save();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'The desk now sends through your own WhatsApp gateway.']);
+
+        return redirect()->route('whatsapp.settings');
     }
 
     public function update(WhatsAppSettingsRequest $request): RedirectResponse

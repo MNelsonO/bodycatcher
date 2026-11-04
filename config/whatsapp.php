@@ -19,6 +19,18 @@ return [
     'graph_version' => env('WHATSAPP_GRAPH_VERSION', 'v21.0'),
     'graph_url' => env('WHATSAPP_GRAPH_URL', 'https://graph.facebook.com'),
 
+    /*
+    | Self-hosted Evolution API (WhatsApp Web / Baileys) on this server. It
+    | reports both sides of every chat, including messages the owner sends
+    | from their phone, and can sync recent history when first linked.
+    */
+    'evolution' => [
+        'base_url' => env('EVOLUTION_BASE_URL', 'http://127.0.0.1:8080'),
+        'api_key' => env('EVOLUTION_API_KEY', ''),
+        'instance' => env('EVOLUTION_INSTANCE', 'kemet'),
+        'webhook_token' => env('EVOLUTION_WEBHOOK_TOKEN', ''),
+    ],
+
     'flaresend' => [
         'api_key' => env('FLARESEND_API_KEY', ''),
         'webhook_secret' => env('FLARESEND_WEBHOOK_SECRET', ''),

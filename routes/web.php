@@ -7,6 +7,7 @@ use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeskUserController;
+use App\Http\Controllers\EvolutionWebhookController;
 use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\FlareSendWebhookController;
 use App\Http\Controllers\FollowUpController;
@@ -33,6 +34,7 @@ use Inertia\Inertia;
 Route::get('webhooks/whatsapp', [WhatsAppWebhookController::class, 'verify'])->name('whatsapp.webhook.verify');
 Route::post('webhooks/whatsapp', [WhatsAppWebhookController::class, 'store'])->name('whatsapp.webhook.store');
 Route::post('webhooks/flaresend', [FlareSendWebhookController::class, 'store'])->name('flaresend.webhook.store');
+Route::post('webhooks/evolution/{token}', [EvolutionWebhookController::class, 'store'])->name('evolution.webhook.store');
 Route::post('webhook', [FlareSendWebhookController::class, 'store']);
 Route::post('webhooks/flare-send', [FlareSendWebhookController::class, 'store']);
 Route::post('api/webhook', [FlareSendWebhookController::class, 'store']);
@@ -139,6 +141,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('whatsapp', [WhatsAppSettingsController::class, 'index'])->name('whatsapp.settings');
     Route::put('whatsapp', [WhatsAppSettingsController::class, 'update'])->name('whatsapp.settings.update');
+    Route::get('whatsapp/gateway', [WhatsAppSettingsController::class, 'gatewayStatus'])->name('whatsapp.gateway.status');
+    Route::post('whatsapp/gateway/connect', [WhatsAppSettingsController::class, 'gatewayConnect'])->name('whatsapp.gateway.connect');
+    Route::post('whatsapp/gateway/activate', [WhatsAppSettingsController::class, 'gatewayActivate'])->name('whatsapp.gateway.activate');
 
     Route::get('products', [ProductController::class, 'index'])->name('products.index');
     Route::post('products', [ProductController::class, 'store'])->name('products.store');

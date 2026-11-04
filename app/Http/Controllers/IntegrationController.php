@@ -92,7 +92,7 @@ class IntegrationController extends Controller
         $rules = [
             'label' => ['required', 'string', 'max:120'],
             'is_active' => ['nullable', 'boolean'],
-            'messaging_driver' => ['nullable', 'in:meta,flaresend,twilio'],
+            'messaging_driver' => ['nullable', 'in:meta,flaresend,twilio,evolution'],
         ];
 
         foreach ($secretKeys as $key) {

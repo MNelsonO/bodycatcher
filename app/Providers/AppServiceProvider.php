@@ -12,6 +12,7 @@ use App\Ai\OpenAiCompatibleClient;
 use App\Billing\BusinessProfile;
 use App\Integrations\Services\IntegrationConfigResolver;
 use App\WhatsApp\CloudWhatsAppClient;
+use App\WhatsApp\EvolutionWhatsAppClient;
 use App\WhatsApp\FakeWhatsAppClient;
 use App\WhatsApp\FlareSendWhatsAppClient;
 use App\WhatsApp\LaravelWebhookDispatcher;
@@ -42,6 +43,7 @@ class AppServiceProvider extends ServiceProvider
 
             return match ((string) config('whatsapp.driver', 'meta')) {
                 'flaresend' => $app->make(FlareSendWhatsAppClient::class),
+                'evolution' => $app->make(EvolutionWhatsAppClient::class),
                 'twilio' => $app->make(TwilioWhatsAppClient::class),
                 default => $app->make(CloudWhatsAppClient::class),
             };

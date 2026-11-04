@@ -60,7 +60,7 @@ class MessagingGuard
     public function enforcesServiceWindow(): bool
     {
         return match ((string) config('whatsapp.driver', 'meta')) {
-            'flaresend' => false,
+            'flaresend', 'evolution' => false,
             default => true,
         };
     }
@@ -75,6 +75,7 @@ class MessagingGuard
     {
         return match ((string) config('whatsapp.driver', 'meta')) {
             'flaresend' => filled(config('whatsapp.flaresend.api_key')),
+            'evolution' => filled(config('whatsapp.evolution.api_key')) && filled(config('whatsapp.evolution.base_url')),
             'twilio' => filled(config('whatsapp.twilio.account_sid'))
                 && filled(config('whatsapp.twilio.auth_token'))
                 && filled(config('whatsapp.twilio.from')),
