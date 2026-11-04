@@ -2,6 +2,8 @@ import { Form, Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { AreaField, SelectField, TextField } from '@/components/crm/fields';
 import { LeadAnalysisPanel } from '@/components/crm/lead-analysis';
+import { CalendarPlus, MessageCircle } from 'lucide-react';
+import { AppointmentDialog } from '@/components/crm/appointment-dialog';
 import { FollowUpTasks } from '@/components/crm/follow-up-tasks';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -56,6 +58,26 @@ export default function LeadShow({
                         </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                        {lead.conversation_id ? (
+                            <Button
+                                asChild
+                                className="bg-emerald-600 hover:bg-emerald-700"
+                            >
+                                <Link href={`/inbox/${lead.conversation_id}`}>
+                                    <MessageCircle /> Open chat
+                                </Link>
+                            </Button>
+                        ) : null}
+                        <AppointmentDialog
+                            defaultLeadId={lead.id}
+                            defaultContactId={lead.contact.id}
+                            defaultTitle={`Call with ${lead.contact.full_name}`}
+                            trigger={
+                                <Button type="button" variant="outline">
+                                    <CalendarPlus /> Book
+                                </Button>
+                            }
+                        />
                         <StageDialog lead={lead} />
                         <NoteDialog leadId={lead.id} />
                         <MessageDialog leadId={lead.id} />
@@ -230,8 +252,8 @@ export default function LeadShow({
                                 <p className="mt-2 text-xs text-muted-foreground">
                                     This stage stores a delay of{' '}
                                     {lead.stage.default_follow_up_delay_hours}{' '}
-                                    hours. A stage-delay rule on Follow-ups
-                                    uses that number, and a reply cancels it.
+                                    hours. A stage-delay rule on Follow-ups uses
+                                    that number, and a reply cancels it.
                                 </p>
                             ) : null}
                             {lead.outcome === 'lost' ? (
@@ -255,10 +277,55 @@ export default function LeadShow({
                 <FollowUpTasks leadId={lead.id} tasks={lead.follow_ups} />
 
                 <section className="rounded-lg border p-4">
+                    <div className="flex items-center justify-between gap-2">
+                        <h2 className="text-sm font-medium">Appointments</h2>
+                        <Button variant="ghost" size="sm" asChild>
+                            <Link href="/calendar">Calendar</Link>
+                        </Button>
+                    </div>
+                    {lead.appointments.length === 0 ? (
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            Nothing booked for this lead yet.
+                        </p>
+                    ) : (
+                        <ul className="mt-2 divide-y text-sm">
+                            {lead.appointments.map((appointment) => (
+                                <li
+                                    key={appointment.id}
+                                    className="flex items-center justify-between gap-3 py-2"
+                                >
+                                    <span>
+                                        <span className="font-medium">
+                                            {appointment.title}
+                                        </span>
+                                        <span className="block text-xs text-muted-foreground">
+                                            {appointment.kind_label} ·{' '}
+                                            {appointment.starts_at_label}
+                                            {appointment.location
+                                                ? ` · ${appointment.location}`
+                                                : ''}
+                                        </span>
+                                    </span>
+                                    <Badge
+                                        variant={
+                                            appointment.status === 'scheduled'
+                                                ? 'default'
+                                                : 'outline'
+                                        }
+                                    >
+                                        {appointment.status_label}
+                                    </Badge>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </section>
+
+                <section className="rounded-lg border p-4">
                     <h2 className="text-sm font-medium">Conversation</h2>
                     <p className="mt-1 text-xs text-muted-foreground">
-                        Desk logs stay on this lead. WhatsApp rows are the
-                        Cloud API messages, with their real status.
+                        Desk logs stay on this lead. WhatsApp rows are the Cloud
+                        API messages, with their real status.
                     </p>
                     <WhatsAppSend lead={lead} />
                     {lead.messages.length === 0 ? (
@@ -302,7 +369,9 @@ export default function LeadShow({
                                                 (attachment) => (
                                                     <li key={attachment.id}>
                                                         Attachment{' '}
-                                                        {attachment.provider_media_id}
+                                                        {
+                                                            attachment.provider_media_id
+                                                        }
                                                         {attachment.mime_type
                                                             ? ` · ${attachment.mime_type}`
                                                             : ''}
@@ -588,8 +657,8 @@ function WhatsAppSend({ lead }: { lead: LeadDetail }) {
                                 {desk.automatic_sends_paused
                                     ? ' for the whole desk'
                                     : ' on this lead'}
-                                . A message you send from here is still a
-                                manual send.
+                                . A message you send from here is still a manual
+                                send.
                             </p>
                         ) : null}
                     </div>

@@ -2,9 +2,16 @@
 
 namespace App\Leads\Services;
 
+use App\Calendar\Appointment;
+use App\Calendar\AppointmentStatus;
+use App\Calendar\CalendarData;
+use App\Conversations\Message;
+use App\Conversations\MessageDirection;
+use App\Conversations\Services\InboxData;
 use App\Leads\Lead;
 use App\SalesPipelines\StageKind;
 use App\Settings\DisplayClock;
+use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
 class CommandCentre
@@ -12,6 +19,8 @@ class CommandCentre
     public function __construct(
         private DisplayClock $clock,
         private FollowUpQuery $followUps,
+        private InboxData $inbox,
+        private CalendarData $calendar,
     ) {}
 
     /**
@@ -51,7 +60,20 @@ class CommandCentre
             'leads_by_stage' => $byStage,
             'follow_up_rows' => $followUpRows,
             'today' => $today,
+            'today_label' => $this->clock->now()->format('l, d F'),
             'timezone' => $this->clock->timezone(),
+            'unread_conversations' => $this->inbox->unreadConversationCount(),
+            'messages_today' => Message::query()
+                ->where('direction', MessageDirection::Inbound->value)
+                ->whereBetween('sent_at', [$start, $end])
+                ->count(),
+            'appointments_today' => Appointment::query()
+                ->where('status', AppointmentStatus::Scheduled)
+                ->whereBetween('starts_at', [$start, $end])
+                ->count(),
+            'open_leads' => Lead::query()->whereNull('closed_at')->count(),
+            'upcoming_appointments' => $this->calendar->upcoming(6),
+            'recent_conversations' => array_slice($this->inbox->conversations(new Request), 0, 6),
         ];
     }
 

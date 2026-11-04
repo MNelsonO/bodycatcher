@@ -3,9 +3,14 @@
 return [
 
     /*
-    | OpenAI-compatible chat completions. All three must be set or the desk
-    | reports the model as missing and does not invent a summary or a score.
+    | "anthropic" calls Claude through the official Anthropic SDK and needs only
+    | LLM_API_KEY (LLM_MODEL defaults to claude-opus-5-5). Anything else uses an
+    | OpenAI-compatible chat completions endpoint, where all three of
+    | LLM_API_KEY, LLM_BASE_URL, and LLM_MODEL must be set. If the provider is
+    | not ready the desk reports it as missing and does not invent a summary.
     */
+
+    'provider' => env('LLM_PROVIDER', 'openai'),
 
     'api_key' => env('LLM_API_KEY', ''),
 
@@ -13,6 +18,8 @@ return [
 
     'model' => env('LLM_MODEL', ''),
 
-    'timeout_seconds' => (int) env('LLM_TIMEOUT_SECONDS', 20),
+    'effort' => env('LLM_EFFORT', 'medium'),
+
+    'timeout_seconds' => (int) env('LLM_TIMEOUT_SECONDS', 60),
 
 ];

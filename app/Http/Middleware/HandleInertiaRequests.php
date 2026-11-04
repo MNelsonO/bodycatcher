@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Conversations\Services\InboxData;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -42,6 +43,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $request->user(),
             ],
+            'inboxUnread' => fn () => $request->user() === null ? 0 : app(InboxData::class)->unreadConversationCount(),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
     }

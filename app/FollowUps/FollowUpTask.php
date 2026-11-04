@@ -4,6 +4,7 @@ namespace App\FollowUps;
 
 use App\Conversations\Message;
 use App\Leads\Lead;
+use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property string|null $held_reason
  * @property string|null $failure_reason
  * @property int|null $message_id
+ * @property int|null $scheduled_by_user_id
  * @property CarbonInterface|null $executed_at
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
@@ -44,6 +46,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'failure_reason',
     'message_id',
     'executed_at',
+    'scheduled_by_user_id',
 ])]
 class FollowUpTask extends Model
 {
@@ -84,5 +87,13 @@ class FollowUpTask extends Model
     public function message(): BelongsTo
     {
         return $this->belongsTo(Message::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function scheduledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'scheduled_by_user_id');
     }
 }

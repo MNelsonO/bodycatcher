@@ -158,6 +158,17 @@ export type LeadDetail = {
         author: string;
         at: string | null;
     }>;
+    appointments: Array<{
+        id: number;
+        title: string;
+        kind: string;
+        kind_label: string;
+        status: string;
+        status_label: string;
+        starts_at_label: string | null;
+        location: string | null;
+    }>;
+    conversation_id: number | null;
     activities: Array<{
         id: number;
         event: string;
@@ -196,5 +207,129 @@ export type DashboardMetrics = {
     }>;
     follow_up_rows: FollowUpRow[];
     today: string;
+    today_label: string;
     timezone: string;
+    unread_conversations: number;
+    messages_today: number;
+    appointments_today: number;
+    open_leads: number;
+    upcoming_appointments: CalendarEvent[];
+    recent_conversations: InboxRow[];
+};
+
+export type InboxRow = {
+    id: number;
+    lead_id: number;
+    contact_name: string;
+    whatsapp_profile_name: string | null;
+    business_name: string | null;
+    phone: string;
+    product: string;
+    stage: string;
+    outcome: string;
+    needs_attention: boolean;
+    opted_out: boolean;
+    unread_count: number;
+    last_message: null | {
+        body: string;
+        direction: string;
+        status: string;
+        channel: string;
+    };
+    last_message_label: string | null;
+};
+
+export type ThreadMessage = {
+    id: number;
+    direction: string;
+    channel: string;
+    origin: string;
+    status: string;
+    body: string;
+    sent_at: string;
+    day_label: string;
+    time_label: string;
+    logged_by: string | null;
+    refusal_reason: string | null;
+    attachments: Array<{
+        id: number;
+        mime_type: string | null;
+        caption: string | null;
+    }>;
+};
+
+export type InboxThread = {
+    id: number;
+    hidden_earlier: number;
+    contact: {
+        id: number;
+        full_name: string;
+        whatsapp_profile_name: string | null;
+        business_name: string | null;
+        primary_phone: string;
+        email: string | null;
+        location: string | null;
+        consent_status: string;
+    };
+    lead: {
+        id: number;
+        product: string;
+        pipeline: string;
+        stage: string;
+        stage_kind: string;
+        outcome: string;
+        next_action: string | null;
+        next_follow_up_label: string | null;
+    };
+    other_leads: Array<{
+        id: number;
+        product: string;
+        stage: string;
+        outcome: string;
+    }>;
+    whatsapp: LeadDetail['whatsapp'];
+    intelligence: LeadDetail['intelligence'];
+    scheduled: Array<{
+        id: number;
+        body: string;
+        due_label: string | null;
+        held_reason: string | null;
+        by_hand: boolean;
+    }>;
+    appointments: Array<{
+        id: number;
+        title: string;
+        kind_label: string;
+        starts_at_label: string | null;
+    }>;
+    messages: ThreadMessage[];
+};
+
+export type CalendarEvent = {
+    key: string;
+    type: 'appointment' | 'follow_up' | 'scheduled_message' | 'task';
+    date: string;
+    time: string | null;
+    end_time: string | null;
+    title: string;
+    subtitle: string | null;
+    status: string;
+    href: string | null;
+    id?: number;
+    kind?: string;
+    kind_label?: string;
+    starts_at_local?: string;
+    duration_minutes?: number;
+    day_label?: string;
+    location?: string | null;
+    notes?: string | null;
+    status_label?: string;
+    contact_id?: number | null;
+    lead_id?: number | null;
+};
+
+export type LeadOption = {
+    id: number;
+    contact_id: number;
+    label: string;
 };

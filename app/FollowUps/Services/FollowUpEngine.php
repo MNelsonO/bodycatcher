@@ -236,7 +236,7 @@ class FollowUpEngine
 
     private function execute(FollowUpTask $task, ?User $actor): void
     {
-        $task->load('lead.contact', 'lead.conversation');
+        $task->load('lead.contact', 'lead.conversation', 'scheduledBy');
         $lead = $task->lead;
 
         if ($lead->closed_at !== null) {
@@ -251,7 +251,15 @@ class FollowUpEngine
             return;
         }
 
-        $pause = $this->guard->pauseReason($lead);
+        // A message an operator scheduled by hand is a manual send made later:
+        // it skips the automation pauses but keeps opt-out and the 24-hour window.
+        $manual = $task->automation_rule_id === null && $task->scheduled_by_user_id !== null;
+
+        if ($manual) {
+            $actor = $task->scheduledBy ?? $actor;
+        }
+
+        $pause = $manual ? null : $this->guard->pauseReason($lead);
 
         if ($pause !== null) {
             $this->hold($task, $lead, $pause);
@@ -273,7 +281,7 @@ class FollowUpEngine
                 $lead,
                 $this->render($task->body, $lead),
                 $actor,
-                MessageOrigin::Automatic,
+                $manual ? MessageOrigin::Manual : MessageOrigin::Automatic,
                 'follow-up-task-'.$task->id,
             );
         } catch (ValidationException $exception) {

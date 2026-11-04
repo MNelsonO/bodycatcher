@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonInterface|null $opted_out_at
  * @property string|null $lead_source
  * @property int|null $merged_into_contact_id
+ * @property string|null $whatsapp_profile_name
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  */
@@ -40,6 +41,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'opted_out_at',
     'lead_source',
     'merged_into_contact_id',
+    'whatsapp_profile_name',
 ])]
 #[UseFactory(ContactFactory::class)]
 class Contact extends Model

@@ -1,10 +1,12 @@
 <?php
 
 use App\Http\Controllers\AiSettingsController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DeskUserController;
 use App\Http\Controllers\FollowUpController;
+use App\Http\Controllers\InboxController;
 use App\Http\Controllers\LeadAnalysisController;
 use App\Http\Controllers\LeadController;
 use App\Http\Controllers\LeadMessagingController;
@@ -28,6 +30,18 @@ Route::get('/', function () {
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
+
+    Route::get('inbox', [InboxController::class, 'index'])->name('inbox.index');
+    Route::post('inbox', [InboxController::class, 'store'])->name('inbox.store');
+    Route::get('inbox/{conversation}', [InboxController::class, 'show'])->name('inbox.show');
+    Route::post('inbox/{conversation}/messages', [InboxController::class, 'message'])->name('inbox.messages.store');
+    Route::post('inbox/{conversation}/schedule', [InboxController::class, 'schedule'])->name('inbox.schedule');
+
+    Route::get('calendar', [CalendarController::class, 'index'])->name('calendar.index');
+    Route::post('calendar', [CalendarController::class, 'store'])->name('calendar.store');
+    Route::put('calendar/{appointment}', [CalendarController::class, 'update'])->name('calendar.update');
+    Route::post('calendar/{appointment}/status', [CalendarController::class, 'status'])->name('calendar.status');
+    Route::delete('calendar/{appointment}', [CalendarController::class, 'destroy'])->name('calendar.destroy');
 
     Route::get('contacts', [ContactController::class, 'index'])->name('contacts.index');
     Route::get('contacts/create', [ContactController::class, 'create'])->name('contacts.create');

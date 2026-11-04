@@ -25,4 +25,7 @@ enum ActivityEvent: string
     case FollowUpSent = 'follow_up_sent';
     case FollowUpRefused = 'follow_up_refused';
     case FollowUpCompleted = 'follow_up_completed';
+    case MessageScheduled = 'message_scheduled';
+    case AppointmentBooked = 'appointment_booked';
+    case AppointmentChanged = 'appointment_changed';
 }

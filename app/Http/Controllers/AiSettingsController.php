@@ -22,6 +22,7 @@ class AiSettingsController extends Controller
         return Inertia::render('ai/index', [
             'variables' => $configuration->variables(),
             'configured' => $configuration->ready(),
+            'model' => $configuration->summary(),
             'can_manage' => $user instanceof User && $user->isOwner(),
             'products' => Product::query()
                 ->where('is_active', true)

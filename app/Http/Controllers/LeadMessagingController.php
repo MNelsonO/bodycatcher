@@ -3,13 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Conversations\MessageOrigin;
-use App\Conversations\MessageStatus;
 use App\Http\Requests\LeadMessagingRequest;
 use App\Http\Requests\WhatsAppSendRequest;
 use App\Leads\Actions\RecordActivity;
 use App\Leads\ActivityEvent;
 use App\Leads\Lead;
 use App\Models\User;
+use App\WhatsApp\SendOutcomeToast;
 use App\WhatsApp\Services\SendWhatsAppMessage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Validation\ValidationException;
@@ -29,34 +29,7 @@ class LeadMessagingController extends Controller
             $request->string('idempotency_key')->toString(),
         );
 
-        $message = $outcome->message;
-
-        if ($outcome->duplicate) {
-            Inertia::flash('toast', [
-                'type' => 'info',
-                'message' => 'That send was already recorded. WhatsApp was not called again.',
-            ]);
-        } elseif ($message->status === MessageStatus::Sent) {
-            Inertia::flash('toast', [
-                'type' => 'success',
-                'message' => 'WhatsApp accepted the message. Delivery is not confirmed yet.',
-            ]);
-        } elseif ($message->status === MessageStatus::Unknown) {
-            Inertia::flash('toast', [
-                'type' => 'error',
-                'message' => 'The request timed out after it might have reached WhatsApp. It was not sent again.',
-            ]);
-        } elseif ($message->status === MessageStatus::Failed) {
-            Inertia::flash('toast', [
-                'type' => 'error',
-                'message' => 'WhatsApp rejected the message. It was not marked delivered.',
-            ]);
-        } elseif ($message->status === MessageStatus::Queued) {
-            Inertia::flash('toast', [
-                'type' => 'warning',
-                'message' => 'WhatsApp did not accept the message. The same row can be retried.',
-            ]);
-        }
+        SendOutcomeToast::flash($outcome);
 
         return redirect()->route('leads.show', $lead);
     }

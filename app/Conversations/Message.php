@@ -48,6 +48,19 @@ use Illuminate\Support\Carbon;
 ])]
 class Message extends Model
 {
+    protected static function booted(): void
+    {
+        static::created(function (Message $message): void {
+            Conversation::query()
+                ->whereKey($message->conversation_id)
+                ->where(function ($query) use ($message): void {
+                    $query->whereNull('last_message_at')
+                        ->orWhere('last_message_at', '<', $message->sent_at);
+                })
+                ->update(['last_message_at' => $message->sent_at]);
+        });
+    }
+
     /**
      * @return array<string, string>
      */

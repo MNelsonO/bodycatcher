@@ -3,9 +3,11 @@
 namespace App\Providers;
 
 use App\Ai\AnalysisDispatcher;
+use App\Ai\AnthropicClient;
 use App\Ai\FakeLlmClient;
 use App\Ai\LaravelAnalysisDispatcher;
 use App\Ai\LlmClient;
+use App\Ai\LlmConfiguration;
 use App\Ai\OpenAiCompatibleClient;
 use App\WhatsApp\CloudWhatsAppClient;
 use App\WhatsApp\FakeWhatsAppClient;
@@ -39,6 +41,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(LlmClient::class, function (Application $app): LlmClient {
             if ($app->environment('testing')) {
                 return $app->make(FakeLlmClient::class);
+            }
+
+            if ($app->make(LlmConfiguration::class)->provider() === LlmConfiguration::ANTHROPIC) {
+                return $app->make(AnthropicClient::class);
             }
 
             return $app->make(OpenAiCompatibleClient::class);

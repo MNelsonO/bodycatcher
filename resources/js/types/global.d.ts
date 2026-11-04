@@ -13,6 +13,7 @@ declare module '@inertiajs/core' {
             displayTimezone: string;
             auth: Auth;
             sidebarOpen: boolean;
+            inboxUnread: number;
             [key: string]: unknown;
         };
     }

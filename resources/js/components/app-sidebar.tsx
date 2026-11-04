@@ -1,5 +1,8 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    CalendarDays,
+    Inbox,
+    KanbanSquare,
     LayoutGrid,
     ListTodo,
     MessageCircle,
@@ -25,22 +28,27 @@ import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 
 export function AppSidebar() {
-    const { auth, displayTimezone } = usePage().props;
+    const { auth, displayTimezone, inboxUnread } = usePage().props;
     const owner = auth.user.role === 'owner';
 
-    const mainNavItems: NavItem[] = [
+    const workItems: NavItem[] = [
         { title: 'Command centre', href: dashboard(), icon: LayoutGrid },
+        { title: 'Inbox', href: '/inbox', icon: Inbox, badge: inboxUnread },
+        { title: 'Calendar', href: '/calendar', icon: CalendarDays },
         { title: 'Leads', href: '/leads', icon: Rows3 },
         { title: 'Contacts', href: '/contacts', icon: UserRound },
-        { title: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
-        { title: 'Intelligence', href: '/ai', icon: Sparkles },
         { title: 'Follow-ups', href: '/follow-ups', icon: ListTodo },
     ];
 
+    const setupItems: NavItem[] = [
+        { title: 'WhatsApp', href: '/whatsapp', icon: MessageCircle },
+        { title: 'Intelligence', href: '/ai', icon: Sparkles },
+    ];
+
     if (owner) {
-        mainNavItems.push(
+        setupItems.push(
             { title: 'Products', href: '/products', icon: Package },
-            { title: 'Pipelines', href: '/pipelines', icon: Rows3 },
+            { title: 'Pipelines', href: '/pipelines', icon: KanbanSquare },
             { title: 'Users', href: '/users', icon: Users },
         );
     }
@@ -59,8 +67,9 @@ export function AppSidebar() {
                 </SidebarMenu>
             </SidebarHeader>
 
-            <SidebarContent>
-                <NavMain items={mainNavItems} />
+            <SidebarContent className="gap-4">
+                <NavMain items={workItems} label="Work" />
+                <NavMain items={setupItems} label="Setup" />
             </SidebarContent>
 
             <SidebarFooter>

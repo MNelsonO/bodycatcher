@@ -41,7 +41,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                     autoFocus
                                     tabIndex={1}
                                     autoComplete="email"
-                                    placeholder="email@example.com"
+                                    placeholder="you@kemet.co.ke"
                                 />
                                 <InputError message={errors.email} />
                             </div>
@@ -108,7 +108,6 @@ export default function Login({ status, canResetPassword }: Props) {
 }
 
 Login.layout = {
-    title: 'Kemet Tech sales desk',
-    description:
-        'Sign in to the lead book. Nothing here sends a message or calls a model.',
+    title: 'Welcome back',
+    description: 'Sign in to your inbox, calendar and leads.',
 };

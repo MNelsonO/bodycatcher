@@ -27,6 +27,10 @@ class LeadAnalysisController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Analysis recorded.']);
 
+        if ($request->input('return_to') === 'inbox' && $lead->conversation !== null) {
+            return redirect()->route('inbox.show', $lead->conversation);
+        }
+
         return redirect()->route('leads.show', $lead);
     }
 

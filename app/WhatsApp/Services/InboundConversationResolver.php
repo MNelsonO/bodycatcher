@@ -49,17 +49,22 @@ class InboundConversationResolver
     {
         $existing = ContactPhone::query()->where('phone', $phone)->first();
 
+        $name = trim((string) $profileName);
+
         if ($existing !== null) {
-            return $existing->contact->survivor();
+            $contact = $existing->contact->survivor();
+            $this->refreshProfileName($contact, $phone, $name);
+
+            return $contact;
         }
 
-        $name = trim((string) $profileName);
         $contact = Contact::query()->create([
             'full_name' => $name !== '' ? $name : $phone,
             'primary_phone' => $phone,
             'preferred_channel' => PreferredChannel::Whatsapp,
             'consent_status' => ConsentStatus::Unknown,
             'lead_source' => (string) config('whatsapp.inbound_source'),
+            'whatsapp_profile_name' => $name !== '' ? $name : null,
         ]);
 
         ContactPhone::query()->create([
@@ -73,6 +78,28 @@ class InboundConversationResolver
         ]);
 
         return $contact;
+    }
+
+    /**
+     * Keep the WhatsApp display name current. A contact still named after its
+     * phone number takes the profile name; a name typed by the desk is kept.
+     */
+    private function refreshProfileName(Contact $contact, string $phone, string $name): void
+    {
+        if ($name === '' || $contact->whatsapp_profile_name === $name && $contact->full_name !== $phone) {
+            return;
+        }
+
+        $contact->whatsapp_profile_name = $name;
+
+        $placeholder = trim($contact->full_name);
+        $digits = preg_replace('/\D+/', '', $placeholder) ?? '';
+
+        if ($placeholder === '' || $placeholder === $phone || ($digits !== '' && $digits === ltrim($phone, '+'))) {
+            $contact->full_name = $name;
+        }
+
+        $contact->save();
     }
 
     private function openLead(Contact $contact): Lead

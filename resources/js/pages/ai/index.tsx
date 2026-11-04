@@ -26,12 +26,14 @@ type Article = {
 export default function IntelligenceSettings({
     variables,
     configured,
+    model,
     can_manage,
     products,
     articles,
 }: {
     variables: Variable[];
     configured: boolean;
+    model: { provider: string; provider_label: string; model: string };
     can_manage: boolean;
     products: ProductOption[];
     articles: Article[];
@@ -58,14 +60,26 @@ export default function IntelligenceSettings({
                     </h1>
                     <p className="text-sm text-muted-foreground">
                         The model reads a lead and proposes a summary, a score
-                        with reasons, extracted fields, and a reply draft.
-                        This page shows whether each variable is set. It never
-                        shows the secret.
+                        with reasons, extracted fields, and a reply draft. This
+                        page shows whether each variable is set. It never shows
+                        the secret.
                     </p>
                 </div>
 
                 <section className="rounded-lg border p-4">
-                    <h2 className="text-sm font-medium">Configuration</h2>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h2 className="text-sm font-medium">Configuration</h2>
+                        <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary">
+                                {model.provider_label}
+                            </Badge>
+                            {model.model ? (
+                                <Badge variant="outline" className="font-mono">
+                                    {model.model}
+                                </Badge>
+                            ) : null}
+                        </div>
+                    </div>
                     <ul className="mt-3 divide-y text-sm">
                         {variables.map((variable) => (
                             <li
@@ -91,13 +105,13 @@ export default function IntelligenceSettings({
                     </ul>
                     <p className="mt-3 text-sm text-muted-foreground">
                         {configured
-                            ? 'All three variables are set. A read still waits for you to apply fields or send a reply.'
+                            ? 'The model is ready. A read still waits for you to apply fields or send a reply.'
                             : 'Missing variables mean a read is stored as unavailable. The desk does not invent a summary or a score.'}
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
-                        LLM_BASE_URL is the OpenAI-compatible root, for example
-                        the provider&apos;s /v1 path. The desk posts to
-                        /chat/completions on that root.
+                        {model.provider === 'anthropic'
+                            ? 'LLM_PROVIDER=anthropic calls Claude through the official Anthropic SDK. Only LLM_API_KEY is required; LLM_MODEL defaults to claude-opus-5-5 and LLM_EFFORT (low, medium, high) trades depth for cost.'
+                            : "LLM_BASE_URL is the OpenAI-compatible root, for example the provider's /v1 path. The desk posts to /chat/completions on that root. Set LLM_PROVIDER=anthropic to use Claude natively."}
                     </p>
                 </section>
 

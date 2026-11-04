@@ -5,6 +5,7 @@ namespace App\Leads;
 use App\Ai\KnowledgeArticle;
 use App\Ai\LeadAnalysis;
 use App\Ai\LlmConfiguration;
+use App\Calendar\Appointment;
 use App\Conversations\Message;
 use App\Conversations\MessageAttachment;
 use App\FollowUps\FollowUpTask;
@@ -143,6 +144,22 @@ class LeadPageData
             'whatsapp' => $this->whatsapp($lead),
             'intelligence' => $this->intelligence($lead),
             'follow_ups' => $this->followUps($lead),
+            'appointments' => Appointment::query()
+                ->where('lead_id', $lead->id)
+                ->orderByDesc('starts_at')
+                ->limit(10)
+                ->get()
+                ->map(fn (Appointment $appointment): array => [
+                    'id' => $appointment->id,
+                    'title' => $appointment->title,
+                    'kind' => $appointment->kind->value,
+                    'kind_label' => $appointment->kind->label(),
+                    'status' => $appointment->status->value,
+                    'status_label' => $appointment->status->label(),
+                    'starts_at_label' => $this->clock->formatDateTime($appointment->starts_at),
+                    'location' => $appointment->location,
+                ])->all(),
+            'conversation_id' => $lead->conversation?->id,
             'notes' => $lead->notes->map(fn (LeadNote $note): array => [
                 'id' => $note->id,
                 'body' => $note->body,
@@ -218,13 +235,24 @@ class LeadPageData
                     ? ': '.$properties['reason']
                     : ''),
             ActivityEvent::FollowUpCompleted => 'Follow-up marked done',
+            ActivityEvent::MessageScheduled => 'WhatsApp message scheduled'
+                .(isset($properties['due']) && is_string($properties['due'])
+                    ? ' for '.$properties['due']
+                    : ''),
+            ActivityEvent::AppointmentBooked => 'Appointment booked'
+                .(isset($properties['title']) && is_string($properties['title'])
+                    ? ': '.$properties['title']
+                    : ''),
+            ActivityEvent::AppointmentChanged => is_string($properties['label'] ?? null)
+                ? $properties['label']
+                : 'Appointment changed',
         };
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function whatsapp(Lead $lead): array
+    public function whatsapp(Lead $lead): array
     {
         $token = config('whatsapp.token');
         $phoneNumberId = config('whatsapp.phone_number_id');
@@ -263,7 +291,7 @@ class LeadPageData
         foreach ($tasks as $task) {
             $rows[] = [
                 'id' => $task->id,
-                'rule' => $task->rule?->name,
+                'rule' => $task->rule->name ?? ($task->scheduled_by_user_id !== null ? 'Scheduled by hand' : null),
                 'action' => $task->action->value,
                 'body' => $task->body,
                 'status' => $task->status->value,
@@ -280,7 +308,7 @@ class LeadPageData
     /**
      * @return array<string, mixed>
      */
-    private function intelligence(Lead $lead): array
+    public function intelligence(Lead $lead): array
     {
         $configured = $this->llm->ready();
         $latest = LeadAnalysis::query()
