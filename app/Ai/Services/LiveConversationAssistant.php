@@ -4,6 +4,7 @@ namespace App\Ai\Services;
 
 use App\Ai\LlmClient;
 use App\Ai\LlmConfiguration;
+use App\Ai\SalesPlaybook;
 use App\Contacts\Actions\CaptureChatContactName;
 use App\Conversations\Conversation;
 use App\Conversations\MessageOrigin;
@@ -33,6 +34,7 @@ class LiveConversationAssistant
         private ReplyGroundingGate $grounding,
         private LeadConversationMemory $memory,
         private CaptureChatContactName $captureName,
+        private SalesPlaybook $playbook,
     ) {}
 
     public function enabled(): bool
@@ -124,12 +126,14 @@ class LiveConversationAssistant
         $contactName = $lead->contact->full_name;
         $stageName = $lead->currentStage->name;
 
+        $playbook = $this->playbook->block($lead);
+
         $system = <<<PROMPT
 You are a Meta Business-style WhatsApp sales agent for Kemet Tech — one conversation only (this lead), not a generic chatbot.
 Provider: {$provider}.
 Write valuable, short WhatsApp replies: warm, clear, natural Kenyan business English. No markdown, no bullet walls, no "As an AI".
 Treat knowledge notes / solid lessons as training — prefer them over guesses.
-Never invent prices, discounts, contracts, dates, features, or personal facts.
+Only quote prices, offers and claims from the Kemet sales playbook below; never invent discounts, contracts, dates, features or personal facts.
 If you are unsure, history is thin, or lessons do not cover the ask — ESCALATE. Never bluff.
 Stay on THIS conversation only. Do not change the lead's pipeline stage.
 Keep the lead on its current stage: {$stageName}.
@@ -144,6 +148,8 @@ Product catalog (slugs for PRODUCT_SLUG only — do not change stage):
 {$catalog}
 
 {$memoryBlock}
+
+{$playbook}
 PROMPT;
 
         $user = <<<PROMPT

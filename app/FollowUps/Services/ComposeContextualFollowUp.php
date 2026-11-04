@@ -4,6 +4,7 @@ namespace App\FollowUps\Services;
 
 use App\Ai\LlmClient;
 use App\Ai\LlmConfiguration;
+use App\Ai\SalesPlaybook;
 use App\Ai\Services\EscalateToOperator;
 use App\Ai\Services\LeadConversationMemory;
 use App\Ai\Services\ReplyGroundingGate;
@@ -27,6 +28,7 @@ class ComposeContextualFollowUp
         private LlmConfiguration $llmConfig,
         private EscalateToOperator $escalate,
         private ReplyGroundingGate $grounding,
+        private SalesPlaybook $playbook,
     ) {}
 
     /**
@@ -62,10 +64,11 @@ class ComposeContextualFollowUp
             ->map(fn ($article): string => '- ['.($article->category ?? 'fact').'] '.$article->title.': '.mb_substr(trim($article->body), 0, 500))
             ->implode("\n");
 
-        $system = <<<'PROMPT'
+        $system = $this->playbook->block($lead)."\n\n".<<<'PROMPT'
 You are a Kemet Tech sales person sending a WhatsApp follow-up — sound human, not corporate-bot.
 Continue THIS person's conversation using history + solid lessons only.
-Never invent prices, discounts, contracts, or meetings.
+Only quote prices and offers from the Kemet sales playbook; never invent discounts, contracts or meetings.
+Never repeat a message we already sent. Bring something useful (a benefit, a matching client result, a question) and one small next step with the right kemettech.com link.
 No markdown. 1–4 short natural sentences.
 If history is thin or lessons do not cover what you would say, escalate instead of sending vague filler.
 PROMPT;

@@ -46,7 +46,10 @@ class Conversation extends Model
      */
     public function latestMessage(): HasOne
     {
-        return $this->hasOne(Message::class)->ofMany(['sent_at' => 'max', 'id' => 'max']);
+        return $this->hasOne(Message::class)->ofMany(
+            ['sent_at' => 'max', 'id' => 'max'],
+            fn ($query) => $query->where('body', '!=', ''),
+        );
     }
 
     /**
@@ -62,6 +65,7 @@ class Conversation extends Model
                 ->selectRaw('count(*)')
                 ->whereColumn('messages.conversation_id', 'conversations.id')
                 ->where('messages.direction', MessageDirection::Inbound->value)
+                ->where('messages.body', '!=', '')
                 ->where(function ($inner): void {
                     $inner->whereNull('conversations.last_read_at')
                         ->orWhereColumn('messages.sent_at', '>', 'conversations.last_read_at');
@@ -96,6 +100,11 @@ class Conversation extends Model
      */
     public function messages(): HasMany
     {
-        return $this->hasMany(Message::class)->orderBy('sent_at')->orderBy('id');
+        // Empty messages are old WhatsApp Status posts with no text; they
+        // carry nothing to read, so chats, the lead page and the AI skip them.
+        return $this->hasMany(Message::class)
+            ->where('body', '!=', '')
+            ->orderBy('sent_at')
+            ->orderBy('id');
     }
 }

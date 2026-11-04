@@ -94,6 +94,7 @@ class InboxData
         return (int) DB::table('messages')
             ->join('conversations', 'conversations.id', '=', 'messages.conversation_id')
             ->where('messages.direction', MessageDirection::Inbound->value)
+            ->where('messages.body', '!=', '')
             ->where(function ($inner): void {
                 $inner->whereNull('conversations.last_read_at')
                     ->orWhereColumn('messages.sent_at', '>', 'conversations.last_read_at');
@@ -114,6 +115,7 @@ class InboxData
         $messages = Message::query()
             ->with(['loggedBy', 'attachments'])
             ->where('conversation_id', $conversation->id)
+            ->where('body', '!=', '')
             ->orderByDesc('sent_at')
             ->orderByDesc('id')
             ->limit(self::THREAD_LIMIT)
@@ -121,7 +123,7 @@ class InboxData
             ->reverse()
             ->values();
 
-        $total = Message::query()->where('conversation_id', $conversation->id)->count();
+        $total = Message::query()->where('conversation_id', $conversation->id)->where('body', '!=', '')->count();
 
         $scheduled = FollowUpTask::query()
             ->where('lead_id', $lead->id)

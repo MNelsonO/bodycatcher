@@ -40,7 +40,7 @@ SERVER_URL=http://127.0.0.1:8080
 AUTHENTICATION_API_KEY=$APIKEY
 AUTHENTICATION_EXPOSE_IN_FETCH_INSTANCES=true
 DATABASE_PROVIDER=postgresql
-DATABASE_CONNECTION_URI=postgresql://evolution:$DBPW@127.0.0.1:5432/evolution?schema=evolution_api
+DATABASE_CONNECTION_URI=postgresql://evolution:$DBPW@127.0.0.1:5432/evolution?schema=evolution_api&connection_limit=10&pool_timeout=30
 DATABASE_CONNECTION_CLIENT_NAME=evolution_kemet
 DATABASE_SAVE_DATA_INSTANCE=true
 DATABASE_SAVE_DATA_NEW_MESSAGE=true

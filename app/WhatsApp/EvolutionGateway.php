@@ -112,6 +112,18 @@ class EvolutionGateway
         ]);
     }
 
+    /**
+     * Reconnects the WhatsApp socket using the saved session (no new QR).
+     */
+    public function restart(): bool
+    {
+        try {
+            return $this->http()->post('/instance/restart/'.$this->instance())->successful();
+        } catch (ConnectionException) {
+            return false;
+        }
+    }
+
     public function logout(): void
     {
         $this->http()->delete('/instance/logout/'.$this->instance());

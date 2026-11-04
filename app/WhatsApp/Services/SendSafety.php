@@ -139,6 +139,7 @@ class SendSafety
     {
         return Message::query()
             ->where('direction', MessageDirection::Inbound->value)
+            ->where('body', '!=', '')
             ->whereHas('conversation', fn (Builder $query) => $query->where('contact_id', $lead->contact_id))
             ->exists();
     }

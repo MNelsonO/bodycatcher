@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Ai;
+
+use App\Leads\Lead;
+use App\Settings\Product;
+
+/**
+ * One shared brief for every AI task on the desk: who Kemet is, what it
+ * sells (from kemettech.com), and how to sell on WhatsApp. Every reply and
+ * follow-up points the person to the website for detail, demos and buying.
+ */
+class SalesPlaybook
+{
+    public function block(?Lead $lead = null): string
+    {
+        $company = (array) config('kemet.company', []);
+        $website = (string) ($company['website'] ?? 'https://kemettech.com');
+        $product = $lead?->product;
+        $match = $product !== null ? $this->productFor($product) : null;
+
+        $catalog = collect((array) ($company['products'] ?? []))
+            ->map(fn (array $p): string => '- '.$p['name'].': '.$p['url'].($p['price'] ? ' | '.$p['price'] : '').' | '.$p['pitch'])
+            ->implode("\n");
+
+        $proof = collect((array) ($company['proof'] ?? []))->map(fn ($line) => '- '.$line)->implode("\n");
+
+        $focus = $match !== null
+            ? "This lead's product page: {$match['name']} — {$match['url']}".($match['price'] ? " ({$match['price']})" : '')
+            : "No exact product page; send people to {$website}";
+
+        return <<<TEXT
+KEMET SALES PLAYBOOK
+Company: {$company['name']} — {$company['tagline']}
+Website (always the reference): {$website}
+{$focus}
+Free demo: {$company['demo_url']} · Buy: {$company['purchase_url']} · Work we have done: {$company['portfolio_url']}
+WhatsApp {$company['whatsapp']} · {$company['email']} · {$company['location']}
+
+Published offers (the only prices and claims you may quote):
+{$catalog}
+
+Proof you may use:
+{$proof}
+
+How to sell on WhatsApp (read the WHOLE chat — both what the client said and what we already said — before writing):
+1. Mirror their words. Name the exact problem they described (lost stock, cash leaks, double bookings, manual books) before any product talk.
+2. One question at a time to learn the next missing fact: business type, branches, current method, who decides, when they want it.
+3. Paint the outcome, not features: money saved, time saved, control from their phone, M-Pesa reconciled.
+4. Use social proof that fits their industry and a guarantee to lower risk (money-back, free demo, setup in about 48 hours).
+5. Handle objections calmly: price → one-time payment vs monthly fees and what the leak costs them; "later" → offer the free demo now; trust → portfolio and 500+ businesses.
+6. Create honest urgency only from published offers (for example a listed limited-time price). Never pressure, never invent deadlines or discounts.
+7. Always end with one clear, small next step: book the free demo, open the product page, or reply with one detail.
+8. Include the relevant kemettech.com link when you mention a product, a price, a demo or buying — the website is where they learn more and act.
+9. Never repeat a message we already sent; continue from where the chat actually is. If they went quiet, follow up with something useful (a benefit, a case, a question), not "just checking in".
+10. Short, warm, natural Kenyan business English (Swahili words are fine if they use them). No markdown, no lists, no "As an AI".
+TEXT;
+    }
+
+    /**
+     * @return array{name: string, url: string, price: ?string, pitch: string}|null
+     */
+    public function productFor(Product $product): ?array
+    {
+        $haystack = mb_strtolower($product->name.' '.($product->slug ?? '').' '.($product->description ?? ''));
+
+        foreach ((array) config('kemet.company.products', []) as $entry) {
+            foreach ((array) $entry['match'] as $word) {
+                if (str_contains($haystack, (string) $word)) {
+                    return $entry;
+                }
+            }
+        }
+
+        return null;
+    }
+}

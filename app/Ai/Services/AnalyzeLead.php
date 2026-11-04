@@ -10,6 +10,7 @@ use App\Ai\LeadAnalysis;
 use App\Ai\LlmClient;
 use App\Ai\LlmConfiguration;
 use App\Ai\ReplyDraft;
+use App\Ai\SalesPlaybook;
 use App\Conversations\Message;
 use App\Leads\Actions\RecordActivity;
 use App\Leads\ActivityEvent;
@@ -30,6 +31,7 @@ class AnalyzeLead
         private KnowledgeRetriever $knowledge,
         private AnalysisDispatcher $dispatcher,
         private RecordActivity $activity,
+        private SalesPlaybook $playbook,
     ) {}
 
     public function request(Lead $lead, User $actor): LeadAnalysis
@@ -93,7 +95,7 @@ class AnalyzeLead
         $permitted = $this->permittedStages($lead);
         $products = $this->activeProducts();
         $raw = $this->client->complete(
-            $this->systemPrompt(),
+            $this->systemPrompt($lead),
             $this->userPrompt($lead, $articles, $permitted, $products),
         );
         $parsed = $this->parser->parse($raw, $this->stageIds($permitted), $this->productIds($products));
@@ -178,12 +180,12 @@ class AnalyzeLead
         return $stages;
     }
 
-    private function systemPrompt(): string
+    private function systemPrompt(Lead $lead): string
     {
-        return <<<'PROMPT'
-You help a sales desk read one lead. Reply with one JSON object and no other text.
+        return $this->playbook->block($lead)."\n\n".<<<'PROMPT'
+You help a Kemet sales desk read one lead and decide the best next move. Read the whole conversation: lines marked "Client" are the customer, lines marked "Us" are what Kemet already said. Reply with one JSON object and no other text.
 Keys:
-summary: string, a short brief of the conversation.
+summary: string, a short brief of where the conversation stands (what they need, what we already offered, objections), ending with one sentence that starts "Next best action:" saying exactly what to do next and why.
 extraction: object with only facts the contact stated. Allowed keys are business_problem, current_solution, branch_count, budget_note, decision_maker_status (unknown, yes, or no), purchase_timeline_note, next_action, next_follow_up_on (YYYY-MM-DD), suggested_product_id (active product id from the list), product_reason (why that product fits). Omit keys you cannot support from the conversation.
 score: integer from 0 to 100 for how ready this lead is to buy.
 score_reasons: array of short strings that explain the score.
@@ -191,8 +193,8 @@ suggested_stage_id: one permitted stage id, or null.
 stage_reason: why that stage fits, or null.
 suggested_product_id: optional active product id when a different catalog product fits better than the assigned one, or null.
 product_reason: why that product fits, or null.
-reply_draft: a short WhatsApp reply in plain language, or null if a reply would be wrong.
-Do not invent prices, dates, branch counts, or stages that were not provided.
+reply_draft: the WhatsApp message to send next, following the playbook: continue from the last message (never repeat what Us already said), address their exact words, one clear next step, and the relevant kemettech.com link. Null if a reply would be wrong.
+Only quote prices and claims listed in the playbook. Do not invent dates, branch counts, discounts or stages.
 PROMPT;
     }
 
@@ -212,8 +214,8 @@ PROMPT;
         $messages = $lead->conversation?->messages;
         $transcript = $messages
             ?->sortBy('id')
-            ->take(-30)
-            ->map(fn (Message $message): string => $message->direction->value.': '.mb_substr($message->body, 0, 1000))
+            ->take(-40)
+            ->map(fn (Message $message): string => '['.$message->sent_at->format('d M H:i').'] '.($message->direction->value === 'outbound' ? 'Us' : 'Client').': '.mb_substr($message->body, 0, 1000))
             ->implode("\n");
 
         $clientContext = $lead->contact->aiContextBlock();

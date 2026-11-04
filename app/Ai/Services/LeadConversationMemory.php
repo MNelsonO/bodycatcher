@@ -108,6 +108,7 @@ TEXT;
         /** @var Collection<int, Message> $messages */
         $messages = Message::query()
             ->where('conversation_id', $conversation->id)
+            ->where('body', '!=', '')
             ->orderByDesc('sent_at')
             ->orderByDesc('id')
             ->limit(max(5, $limit))

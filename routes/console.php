@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('follow-ups:run')->everyMinute()->withoutOverlapping();
+Schedule::command('whatsapp:gateway-watch')->everyFiveMinutes()->withoutOverlapping();

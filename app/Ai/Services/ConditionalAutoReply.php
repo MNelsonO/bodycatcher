@@ -5,6 +5,7 @@ namespace App\Ai\Services;
 use App\Ai\AutoReplyRule;
 use App\Ai\LlmClient;
 use App\Ai\LlmConfiguration;
+use App\Ai\SalesPlaybook;
 use App\Conversations\MessageOrigin;
 use App\Leads\Lead;
 use App\Models\User;
@@ -25,6 +26,7 @@ class ConditionalAutoReply
         private MessagingGuard $guard,
         private LlmClient $llm,
         private LlmConfiguration $llmConfig,
+        private SalesPlaybook $playbook,
     ) {}
 
     public function handle(Lead $lead, string $inboundBody): void
@@ -129,9 +131,15 @@ class ConditionalAutoReply
         }
 
         try {
+            $recent = $lead->conversation?->messages
+                ?->sortBy('id')
+                ->take(-15)
+                ->map(fn ($m): string => ($m->direction->value === 'outbound' ? 'Us' : 'Client').': '.mb_substr($m->body, 0, 500))
+                ->implode("\n") ?? '';
+
             $response = $this->llm->complete(
-                'You write short WhatsApp replies for a Kenyan B2B sales desk. Stay factual. Do not invent prices or promises. Reply in plain text only.',
-                "Contact: {$lead->contact->full_name}\nInbound message:\n{$inboundBody}\n\nWrite one short reply.",
+                $this->playbook->block($lead)."\n\nYou write the next WhatsApp reply for the Kemet sales desk. Follow the playbook. Plain text only, 1-4 short sentences.",
+                "Contact: {$lead->contact->full_name}\nConversation so far:\n".($recent !== '' ? $recent : 'none')."\n\nLatest client message:\n{$inboundBody}\n\nWrite the reply.",
             );
         } catch (Throwable) {
             return null;
