@@ -38,7 +38,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
-import type { InboxRow, InboxThread, ThreadMessage } from '@/types/crm';
+import type {
+    InboxRow,
+    InboxThread,
+    Interest,
+    ThreadMessage,
+} from '@/types/crm';
 
 type Filters = { q: string; filter: string };
 type ContactOption = {
@@ -330,6 +335,7 @@ function ConversationRow({
                                 aria-label="Needs attention"
                             />
                         ) : null}
+                        <SystemChip interest={row.interest} />
                         <LabelChips labels={row.labels ?? []} />
                         {row.opted_out ? (
                             <span className="text-destructive">Opted out</span>
@@ -406,11 +412,12 @@ function ThreadView({
                         {' · '}
                         {thread.lead.product} · {thread.lead.stage}
                     </p>
-                    <LabelChips
-                        labels={thread.contact.labels ?? []}
-                        className="mt-0.5"
-                    />
+                    <span className="mt-0.5 flex flex-wrap items-center gap-1">
+                        <SystemChip interest={thread.lead.interest} />
+                        <LabelChips labels={thread.contact.labels ?? []} />
+                    </span>
                 </div>
+                <SystemPicker thread={thread} />
                 <WindowBadge thread={thread} />
                 <ImportChatDialog
                     thread={thread}
@@ -1318,6 +1325,34 @@ function ThreadDetails({ thread }: { thread: InboxThread }) {
                 </Link>
             </section>
 
+            {thread.lead.ad ? (
+                <section className="rounded-lg border border-cta/40 bg-cta/5 p-3">
+                    <h2 className="text-xs font-semibold tracking-wide text-cta uppercase">
+                        Came from your ad
+                    </h2>
+                    {thread.lead.ad.title ? (
+                        <p className="mt-1 font-medium">
+                            {thread.lead.ad.title}
+                        </p>
+                    ) : null}
+                    {thread.lead.ad.body ? (
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                            {thread.lead.ad.body}
+                        </p>
+                    ) : null}
+                    {thread.lead.ad.url ? (
+                        <a
+                            href={thread.lead.ad.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="mt-1 inline-block text-xs underline"
+                        >
+                            Open the ad
+                        </a>
+                    ) : null}
+                </section>
+            ) : null}
+
             <section>
                 <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                     Lead
@@ -1990,5 +2025,69 @@ function LabelChips({
                 </span>
             ))}
         </span>
+    );
+}
+
+const SYSTEM_TONE: Record<string, string> = {
+    laundry: 'bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200',
+    hotel: 'bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-200',
+    pos: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-200',
+    carwash: 'bg-teal-100 text-teal-800 dark:bg-teal-900/40 dark:text-teal-200',
+};
+
+function SystemChip({ interest }: { interest: Interest | undefined }) {
+    if (!interest || interest.key === null) {
+        return (
+            <span className="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-px text-[10px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                Ask: system?
+            </span>
+        );
+    }
+
+    const short = (interest.label ?? interest.key)
+        .replace(/^Kemet /, '')
+        .replace(/ system$/i, '');
+
+    return (
+        <span
+            className={cn(
+                'inline-flex items-center gap-1 rounded-full px-1.5 py-px text-[10px] font-semibold',
+                SYSTEM_TONE[interest.key] ?? 'bg-muted text-foreground',
+            )}
+            title={
+                interest.source === 'ad'
+                    ? 'From the ad they clicked'
+                    : interest.source === 'manual'
+                      ? 'Set by the desk'
+                      : 'From what they wrote'
+            }
+        >
+            {short}
+            {interest.source === 'ad' ? ' · ad' : ''}
+        </span>
+    );
+}
+
+function SystemPicker({ thread }: { thread: InboxThread }) {
+    return (
+        <select
+            aria-label="System this chat is about"
+            value={thread.lead.interest.key ?? ''}
+            onChange={(event) =>
+                router.post(
+                    `/inbox/${thread.id}/interest`,
+                    { system: event.target.value || null },
+                    { preserveScroll: true },
+                )
+            }
+            className="h-7 max-w-36 rounded-md border bg-background px-1.5 text-xs"
+        >
+            <option value="">System: not known</option>
+            {thread.systems.map((system) => (
+                <option key={system.value} value={system.value}>
+                    {system.label}
+                </option>
+            ))}
+        </select>
     );
 }

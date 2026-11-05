@@ -17,7 +17,9 @@ class SalesPlaybook
         $company = (array) config('kemet.company', []);
         $website = (string) ($company['website'] ?? 'https://kemettech.com');
         $product = $lead?->product;
-        $match = $product !== null ? $this->productFor($product) : null;
+        $match = $lead?->interest_system !== null ? $this->productByKey((string) $lead->interest_system) : null;
+        $match ??= $product !== null ? $this->productFor($product) : null;
+        $interest = $this->interestLine($lead);
 
         $catalog = collect((array) ($company['products'] ?? []))
             ->map(fn (array $p): string => '- '.$p['name'].': '.$p['url'].($p['price'] ? ' | '.$p['price'] : '').' | '.$p['pitch'])
@@ -34,6 +36,7 @@ KEMET SALES PLAYBOOK
 Company: {$company['name']} — {$company['tagline']}
 Website (always the reference): {$website}
 {$focus}
+{$interest}
 Free demo: {$company['demo_url']} · Buy: {$company['purchase_url']} · Work we have done: {$company['portfolio_url']}
 WhatsApp {$company['whatsapp']} · {$company['email']} · {$company['location']}
 
@@ -102,5 +105,39 @@ TEXT;
         }
 
         return $reply;
+    }
+
+    /**
+     * @return array{key?: string, name: string, url: string, price: ?string, pitch: string}|null
+     */
+    public function productByKey(string $key): ?array
+    {
+        foreach ((array) config('kemet.company.products', []) as $entry) {
+            if (($entry['key'] ?? null) === $key) {
+                return $entry;
+            }
+        }
+
+        return null;
+    }
+
+    private function interestLine(?Lead $lead): string
+    {
+        if ($lead === null) {
+            return '';
+        }
+
+        if ($lead->interest_system !== null) {
+            $name = $this->productByKey((string) $lead->interest_system)['name'] ?? $lead->interest_system;
+            $how = match ($lead->interest_source) {
+                'ad' => 'they came from our ad'.($lead->ad_title !== null && ! str_contains((string) $lead->ad_title, 'whatsapp.com') ? ' "'.$lead->ad_title.'"' : ''),
+                'manual' => 'set by the desk',
+                default => 'from what they wrote',
+            };
+
+            return "This person is interested in: {$name} ({$how}). Talk about that system only unless they ask for another.";
+        }
+
+        return 'Their system is NOT known yet. Before any pitch, ask in one friendly line which one they need: laundry, hotel/Airbnb, car wash, or a POS for a shop (or say what their business is). Then answer about that system.';
     }
 }

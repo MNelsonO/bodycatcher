@@ -11,6 +11,7 @@ use App\Conversations\Conversation;
 use App\Conversations\MessageDirection;
 use App\Conversations\MessageOrigin;
 use App\Conversations\Services\InboxData;
+use App\Leads\Interest\InterestClassifier;
 use App\Leads\Lead;
 use App\Models\User;
 use App\Settings\DisplayClock;
@@ -222,6 +223,17 @@ class InboxController extends Controller
         }
 
         return $import->readFile((string) $file?->getRealPath(), $extension);
+    }
+
+    public function interest(Request $request, Conversation $conversation, InterestClassifier $classifier): RedirectResponse
+    {
+        $this->authorize('update', $conversation->lead);
+        $data = $request->validate(['system' => ['nullable', 'string', 'max:40']]);
+        $classifier->setManually($conversation->lead, $data['system'] ?? null);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'System saved for this chat.']);
+
+        return redirect()->route('inbox.show', $conversation);
     }
 
     private function page(Request $request, InboxData $inbox, ?Conversation $conversation): Response

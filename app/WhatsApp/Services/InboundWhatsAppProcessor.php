@@ -16,6 +16,7 @@ use App\Conversations\MessageStatus;
 use App\FollowUps\Services\CancelFollowUpsOnReply;
 use App\Leads\Actions\RecordActivity;
 use App\Leads\ActivityEvent;
+use App\Leads\Interest\InterestClassifier;
 use App\Leads\Jobs\CaptureChatFollowUpJob;
 use App\Leads\Lead;
 use App\WhatsApp\Labels\LabelSync;
@@ -33,6 +34,7 @@ class InboundWhatsAppProcessor
         private CancelFollowUpsOnReply $cancellations,
         private CaptureChatContactName $captureName,
         private LabelSync $labels,
+        private InterestClassifier $interest,
     ) {}
 
     public function process(int $eventId): void
@@ -169,6 +171,12 @@ class InboundWhatsAppProcessor
 
         $lead = $this->resolver->resolve($from, $this->profileName($profiles, $from));
         $this->learnPrivacyId($message, $lead);
+
+        if (is_array($message['kemet_ad'] ?? null)) {
+            /** @var array{id: ?string, title: ?string, body: ?string, url: ?string, source: ?string} $ad */
+            $ad = $message['kemet_ad'];
+            $this->interest->recordAd($lead, $ad);
+        }
         $conversation = $lead->conversation ?? Conversation::query()->create([
             'lead_id' => $lead->id,
             'contact_id' => $lead->contact_id,
@@ -195,6 +203,11 @@ class InboundWhatsAppProcessor
                 'mime_type' => $parsed['mime_type'],
                 'caption' => $parsed['caption'],
             ]);
+        }
+
+        if ($lead->interest_system === null || $lead->interest_source === 'chat') {
+            $this->interest->classifyFromChat($lead->fresh(['conversation']) ?? $lead);
+            $lead->refresh();
         }
 
         $this->activity->handle(ActivityEvent::MessageLogged, $lead, $lead->contact, null, [

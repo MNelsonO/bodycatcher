@@ -10,6 +10,8 @@ use App\Conversations\MessageDirection;
 use App\FollowUps\FollowUpAction;
 use App\FollowUps\FollowUpTask;
 use App\FollowUps\FollowUpTaskStatus;
+use App\Leads\Interest\InterestClassifier;
+use App\Leads\Lead;
 use App\Leads\LeadPageData;
 use App\Settings\DisplayClock;
 use App\WhatsApp\Labels\WhatsAppLabel;
@@ -185,7 +187,14 @@ class InboxData
                 'outcome' => $lead->outcome(),
                 'next_action' => $lead->next_action,
                 'next_follow_up_label' => $this->clock->formatDate($lead->next_follow_up_on),
+                'interest' => $this->interest($lead),
+                'ad' => $lead->ad_first_seen_at === null ? null : [
+                    'title' => $lead->ad_title,
+                    'body' => $lead->ad_body !== null ? mb_strimwidth($lead->ad_body, 0, 220, '…') : null,
+                    'url' => $lead->ad_url,
+                ],
             ],
+            'systems' => collect(app(InterestClassifier::class)->systems())->map(fn ($name, $key) => ['value' => $key, 'label' => $name])->values()->all(),
             'other_leads' => $contact->leads
                 ->where('id', '!=', $lead->id)
                 ->sortByDesc('updated_at')
@@ -223,18 +232,29 @@ class InboxData
     }
 
     /**
+     * @return array{key: ?string, label: ?string, source: ?string}
+     */
+    private function interest(Lead $lead): array
+    {
+        return [
+            'key' => $lead->interest_system,
+            'label' => app(InterestClassifier::class)->label($lead->interest_system),
+            'source' => $lead->interest_source,
+        ];
+    }
+
+    /**
      * @return list<array{name: string, color: string}>
      */
     public function labelsFor(int $contactId): array
     {
-        return WhatsAppLabel::query()
+        return array_values(WhatsAppLabel::query()
             ->whereIn('label_id', DB::table('contact_whatsapp_label')->where('contact_id', $contactId)->pluck('label_id'))
             ->where('deleted', false)
             ->orderBy('name')
             ->get()
             ->map(fn (WhatsAppLabel $label): array => ['name' => $label->name, 'color' => $label->hex()])
-            ->values()
-            ->all();
+            ->all());
     }
 
     /**
@@ -257,6 +277,7 @@ class InboxData
             'outcome' => $lead->outcome(),
             'needs_attention' => $lead->needs_personal_attention || $lead->taken_over,
             'labels' => $this->labelsFor($contact->id),
+            'interest' => $this->interest($lead),
             'opted_out' => $contact->consent_status->value === 'opted_out',
             'unread_count' => (int) $conversation->getAttribute('unread_count'),
             'last_message' => $latest === null ? null : [

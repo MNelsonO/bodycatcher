@@ -397,6 +397,7 @@ export type InboxRow = {
     needs_attention: boolean;
     opted_out: boolean;
     labels: WhatsAppLabelChip[];
+    interest: Interest;
     unread_count: number;
     last_message: null | {
         body: string;
@@ -448,7 +449,14 @@ export type InboxThread = {
         outcome: string;
         next_action: string | null;
         next_follow_up_label: string | null;
+        interest: Interest;
+        ad: null | {
+            title: string | null;
+            body: string | null;
+            url: string | null;
+        };
     };
+    systems: Array<{ value: string; label: string }>;
     other_leads: Array<{
         id: number;
         product: string;
@@ -474,3 +482,9 @@ export type InboxThread = {
 };
 
 export type WhatsAppLabelChip = { name: string; color: string };
+
+export type Interest = {
+    key: string | null;
+    label: string | null;
+    source: string | null;
+};

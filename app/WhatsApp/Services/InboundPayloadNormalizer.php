@@ -2,6 +2,8 @@
 
 namespace App\WhatsApp\Services;
 
+use App\Leads\Interest\InterestClassifier;
+
 /**
  * Turns FlareSend and Twilio webhook bodies into the Meta-shaped payload
  * that InboundWhatsAppProcessor already understands.
@@ -55,8 +57,14 @@ class InboundPayloadNormalizer
         }
 
         $name = $this->displayName($payload, $data, $message, $from);
+        $wrapped = $this->wrap($from, $id, $type, $text, (int) $timestamp, $name);
+        $ad = (new InterestClassifier)->adFromMessage($message);
 
-        return $this->withRaw($this->wrap($from, $id, $type, $text, (int) $timestamp, $name), $payload);
+        if ($ad !== null) {
+            $wrapped['entry'][0]['changes'][0]['value']['messages'][0]['kemet_ad'] = $ad;
+        }
+
+        return $this->withRaw($wrapped, $payload);
     }
 
     /**
@@ -282,6 +290,12 @@ class InboundPayloadNormalizer
 
             if ($privacyId !== null) {
                 $row['kemet_lid'] = $privacyId;
+            }
+
+            $ad = (new InterestClassifier)->adFromMessage($message);
+
+            if ($ad !== null) {
+                $row['kemet_ad'] = $ad;
             }
 
             $messages[] = $row;

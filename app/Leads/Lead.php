@@ -51,6 +51,13 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  * @property-read Contact $contact
+ * @property string|null $interest_system
+ * @property string|null $interest_source
+ * @property string|null $ad_id
+ * @property string|null $ad_title
+ * @property string|null $ad_body
+ * @property string|null $ad_url
+ * @property CarbonInterface|null $ad_first_seen_at
  * @property-read Product $product
  * @property-read Pipeline $pipeline
  * @property-read PipelineStage $currentStage
@@ -95,6 +102,7 @@ class Lead extends Model
     protected function casts(): array
     {
         return [
+            'ad_first_seen_at' => 'datetime',
             'branch_count' => 'integer',
             'decision_maker_status' => DecisionMakerStatus::class,
             'next_follow_up_on' => 'date',

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdReportController;
 use App\Http\Controllers\AiSettingsController;
 use App\Http\Controllers\BillingSubscriptionController;
 use App\Http\Controllers\BusinessProfileController;
@@ -56,6 +57,7 @@ Route::get('/', function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
 
+    Route::get('ads', [AdReportController::class, 'index'])->name('ads.index');
     Route::get('labels', [WhatsAppLabelController::class, 'index'])->name('labels.index');
     Route::post('labels/{labelId}/drafts', [WhatsAppLabelController::class, 'drafts'])->name('labels.drafts');
     Route::post('labels/{labelId}/send', [WhatsAppLabelController::class, 'send'])->name('labels.send');
@@ -66,6 +68,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('inbox/{conversation}/messages', [InboxController::class, 'message'])->name('inbox.messages.store');
     Route::post('inbox/{conversation}/schedule', [InboxController::class, 'schedule'])->name('inbox.schedule');
     Route::put('inbox/{conversation}/contact', [InboxController::class, 'rename'])->name('inbox.contact.update');
+    Route::post('inbox/{conversation}/interest', [InboxController::class, 'interest'])->name('inbox.interest');
     Route::post('inbox/{conversation}/import/preview', [InboxController::class, 'importPreview'])->name('inbox.import.preview');
     Route::post('inbox/{conversation}/import', [InboxController::class, 'import'])->name('inbox.import');
 
